@@ -1,44 +1,53 @@
 LIST AllCargo = 
     // Earth cargo 001 through 099
-    (001_Plums), (002_Fish), (003_Water),
+    (001_Plums), (002_Fish), (003_Water), (004_Seafood),
 
     // Moon cargo 101 through 199
-    (101_Helium), (102_Moonshine), (103_Rocks),
+    (101_Helium), (102_Moonshine), (103_Rocks), (104_Helium),
 
     // Mars cargo 201 through 299
-    (201_Plums), (202_Beef), (203_Bugs)
+    (201_Plums), (202_Beef), (203_Bugs), (204_Platinum)
 
 /*
 
     Cargo Database
 
 */
-=== function CargoData(id, stat)
+=== function CargoData(id, data)
 { id:
 - 001_Plums:
-    ~ return cargo_db(stat, Earth, Mars, 20, 200, "Juicy plums")
+    ~ return cargo_db(data, Earth, Luna, 10, 200, "juicy plums")
 - 002_Fish:
-    ~ return cargo_db(stat, Earth, Mars, 30, 300, "Fresh fish")
+    ~ return cargo_db(data, Earth, Luna, 20, 400, "fresh fish")
 - 003_Water:
-    ~ return cargo_db(stat, Earth, Mars, 40, 1000, "Clean water")
+    ~ return cargo_db(data, Earth, Mars, 40, 800, "clean water")
+- 004_Seafood:
+    ~ return cargo_db(data, Earth, Mars, 20, 400, "assorted seafood")
+
 - 101_Helium:
-    ~ return cargo_db(stat, Moon, Earth, 20, 300, "Helium-3")
+    ~ return cargo_db(data, Luna, Earth, 20, 400, "helium-3")
 - 102_Moonshine:
-    ~ return cargo_db(stat, Moon, Earth, 30, 300, "Moonshine")
+    ~ return cargo_db(data, Luna, Earth, 40, 800, "moonshine")
 - 103_Rocks:
-    ~ return cargo_db(stat, Moon, Earth, 20, 100, "Moon rocks")
+    ~ return cargo_db(data, Luna, Mars, 10, 200, "moon rocks")
+- 104_Helium:
+    ~ return cargo_db(data, Luna, Mars, 20, 400, "helium-3")
+
 - 201_Plums:
-    ~ return cargo_db(stat, Mars, Earth, 20, 200, "Martian plums")
+    ~ return cargo_db(data, Mars, Earth, 10, 200, "red plums")
 - 202_Beef:
-    ~ return cargo_db(stat, Mars, Earth, 30, 300, "Martian beef")
+    ~ return cargo_db(data, Mars, Earth, 20, 400, "vat-grown beef")
 - 203_Bugs:
-    ~ return cargo_db(stat, Mars, Earth, 20, 100, "Martian bugs")
+    ~ return cargo_db(data, Mars, Luna, 10, 200, "nutritious bugs")
+- 204_Platinum:
+    ~ return cargo_db(data, Mars, Luna, 40, 800, "platinum")
+
 - else:
     [ Error: no data associated with {id}. ]
 }
 
-=== function cargo_db(id, fromData, toData, massData, payData, titleData)
-{id:
+=== function cargo_db(data, fromData, toData, massData, payData, titleData)
+{data:
 - From:  ~ return fromData
 - To:    ~ return toData
 - Mass:  ~ return massData
