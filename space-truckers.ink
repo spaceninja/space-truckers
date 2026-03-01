@@ -1,136 +1,89 @@
-LIST Ports = Earth, Mars
+INCLUDE cargo.ink
+INCLUDE functions.ink
 
+LIST Locations = Transit, Earth, Mars, Moon
 LIST Data = From, To, Mass, Pay, Title
 
-LIST Cargo = 
-    // Earth cargo 001 through 099
-    (001_Plums), (002_Fish), (003_Water),
-    // Mars cargo 101 through 199
-    (101_Plums), (102_Beef), (103_Bugs)
-
 VAR here = Earth
+VAR BankBalance = 1000
+VAR ShipCapacity = 40
+VAR ShipCargo = ()
+VAR PortCargo = ()
 
-TODO track weight
-TODO track bank balance
-TODO track inventory
-TODO allow adding multiple cargos
-TODO unload on arrival
-TODO prevent leaving if overloaded
+TODO unload on arrival (add payment)
 TODO allow removing loaded cargo
 
--> choose_shipment(here)
+-> arrive_in_port(here)
 
-=== choose_shipment(port)
-~ temp choices = available_cargo(port, 3)
+/*
+
+    Arrive in Port
+
+*/
+=== arrive_in_port(port)
+// Randomly select available cargo when arriving in port
+// ~ temp choices = available_cargo(port, 3)
+~ here = port
+~ PortCargo = list_random_subset_of_size(AllCargo, 3)
 
 Welcome to {port}! What do you want to ship?
 
+- (port_opts)
++ [Choose cargo] -> choose_cargo
++ [Ship out!] -> ship_out
+- -> port_opts
+
+/*
+
+    Choose Cargo
+
+*/
+= choose_cargo
+~ temp _choices = PortCargo
+current mass = {total_mass(ShipCargo)} / {ShipCapacity}t
 - (top)
-    ~ temp cargo = pop(choices)
+    ~ temp cargo = pop(_choices)
     { cargo:
-        <- cargo_choice(cargo)
+        <- accept(cargo)
         -> top
     }
-- (bottom)
-+ [Nevermind] -> DONE
+-
++ [Done] -> port_opts
 
-=== cargo_choice(cargo)
+= accept(cargo)
 + [{CargoData(cargo, Title)} ({CargoData(cargo, Mass)}t, {CargoData(cargo, Pay)} €)]
-    ~ Cargo -= cargo
-    -> ship_it(cargo)
+    ~ AllCargo -= cargo  // not available for future selection
+    ~ PortCargo -= cargo // not available for current selection
+    ~ ShipCargo += cargo // add to ship's cargo
+    Your cargo is {CargoData(cargo, Title)} from {CargoData(cargo, From)} bound for {CargoData(cargo, To)}, with a mass of {CargoData(cargo, Mass)} metric tons, which pays {CargoData(cargo, Pay)} euros.
+    -> choose_cargo
 
-=== ship_it(cargo)
-Your cargo is {CargoData(cargo, Title)} from {CargoData(cargo, From)} bound for {CargoData(cargo, To)}, with a mass of {CargoData(cargo, Mass)} metric tons, which pays {CargoData(cargo, Pay)} euros.
+/*
+
+    Ship Out
+
+*/
+= ship_out
+{ total_mass(ShipCargo) > ShipCapacity:
+    Oops! You've added more mass than your ship can haul to your destination. You'll need to put something back before you can ship out.
+    -> port_opts
+}
+Have a nice trip!
 { here:
     - Earth:
-        Flying to Mars…
-        ~ here = Mars
-        -> choose_shipment(Mars)
+        -> transit(Mars)
     - Mars:
-        Flying to Earth…
-        ~ here = Earth
-        -> choose_shipment(Earth)
+        -> transit(Earth)
+    - else:
+        -> END // something went very wrong
 }
 
 /*
 
-    Cargo Database
+    Transit
 
 */
-=== function CargoData(id, stat)
-{ id:
-- 001_Plums:
-    ~ return cargo_db(stat, Earth, Mars, 20, 200, "Juicy plums")
-- 002_Fish:
-    ~ return cargo_db(stat, Earth, Mars, 30, 300, "Fresh fish")
-- 003_Water:
-    ~ return cargo_db(stat, Earth, Mars, 40, 1000, "Clean water")
-- 101_Plums:
-    ~ return cargo_db(stat, Mars, Earth, 20, 200, "Martian plums")
-- 102_Beef:
-    ~ return cargo_db(stat, Mars, Earth, 30, 300, "Martian beef")
-- 103_Bugs:
-    ~ return cargo_db(stat, Mars, Earth, 20, 100, "Martian bugs")
-- else:
-    [ Error: no data associated with {id}. ]
-}
-
-=== function cargo_db(id, fromData, toData, massData, payData, titleData)
-{id:
-- From:  ~ return fromData
-- To:    ~ return toData
-- Mass:  ~ return massData
-- Pay:   ~ return payData
-- Title: ~ return titleData
-}
-
-/*
-
-    Cargo Functions
-
-*/
-=== function available_cargo(port, count)
-~ temp CargoCopy = Cargo
-~ return validated_list_random_subset_of_size(CargoCopy, -> is_from, port, count)
-
-=== function is_from(cargo, port)
-~ temp from = CargoData(cargo, From)
-~ return from == port
-
-/*
-
-    Standard Functions
-
-*/
-=== function pop(ref _list) 
-~ temp el = LIST_MIN(_list) 
-~ _list -= el
-~ return el 
-
-=== function pop_random(ref list) 
-~ temp el = LIST_RANDOM(list) 
-~ list -= el 
-~ return el
-
-=== function list_random_subset_of_size(sourceList, n) 
-{ n > 0:
-    ~ temp el = pop_random(sourceList) 
-    { el: 
-        ~ return el + list_random_subset_of_size(sourceList, n-1)
-    }
-}
-~ return () 
-
-=== function validated_list_random_subset_of_size(sourceList, -> validator, arg, n) 
-{ n > 0:
-    ~ temp el = pop_random(sourceList) 
-    { el: 
-        {
-        - validator(el, arg):
-            ~ return el + validated_list_random_subset_of_size(sourceList, validator, arg, n-1)
-        - else:
-            ~ return validated_list_random_subset_of_size(sourceList, validator, arg, n)
-        }
-    }
-}
-~ return () 
+= transit(destination)
+~ here = Transit
+Flying to {destination}…
+-> arrive_in_port(destination)
