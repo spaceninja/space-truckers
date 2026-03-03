@@ -1,4 +1,6 @@
 LIST AllCargo = 
+    000_Ship,
+
     // Earth cargo 001 through 099
     (001_Plums), (002_Fish), (003_Water), (004_Seafood),
 
