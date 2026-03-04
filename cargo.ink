@@ -1,3 +1,4 @@
+LIST CargoStats = From, To, Mass, Pay, Title
 LIST AllCargo = 
     000_Ship,
 
@@ -62,16 +63,16 @@ LIST AllCargo =
     Gets a randomized selection of cargo from the specified port.
 
 */
-=== function available_cargo(port, count)
+=== function get_available_cargo(port, count)
 ~ temp _cargo = AllCargo
-~ return validated_list_random_subset_of_size(_cargo, -> is_from, port, count)
+~ return validated_list_random_subset_of_size(_cargo, -> cargo_is_from, port, count)
 
 /*
 
     Check if a piece of cargo is from the specified port.
 
 */
-=== function is_from(cargo, port)
+=== function cargo_is_from(cargo, port)
 ~ temp from = CargoData(cargo, From)
 ~ return from == port
 
