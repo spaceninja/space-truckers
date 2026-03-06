@@ -61,6 +61,8 @@ DEBUG {distance}km * {mass}t * {efficiency}e = {cost} fuel
     Get Trip Duration
     
     TODO: should mass factor in?
+    Should never be shorter than 2 days
+    Should probably never be longer than 14 days
 
 */
 === function get_trip_duration(from, to, efficiency)

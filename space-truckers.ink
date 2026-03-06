@@ -15,5 +15,5 @@ VAR ShipFuelCapacity = 1000
 VAR ShipFuel = 750
 VAR ShipCargo = ()
 
-//-> arrive_in_port(here)
--> transit(Mars, 300, 7)
+-> arrive_in_port(here)
+//-> transit(Mars, 300, 7)

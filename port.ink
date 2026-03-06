@@ -171,6 +171,7 @@ The current unit cost of fuel is {PortFuelCost} €. Your fuel gauge reads {Ship
 ~ temp slow_time = get_trip_duration(here, to, ShipEconomyMode)
 ~ temp norm_time = get_trip_duration(here, to, ShipBalanceMode)
 ~ temp fast_time = get_trip_duration(here, to, ShipTurboMode)
+You have {ShipFuel} fuel, and a total mass of {total_mass(ShipCargo)}t.
 + {ShipFuel >= slow_cost}
     [Economy Mode ({slow_cost} fuel, {slow_time} days)]
     -> transit(to, slow_cost, slow_time)
