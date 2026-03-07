@@ -1,4 +1,4 @@
-LIST AllLocations = Transit, Earth, Luna, Mars, Ceres, Ganymede, Titan
+LIST AllLocations = None, Transit, Earth, Luna, Mars, Ceres, Ganymede, Titan
 LIST LocationStats = Name
 
 VAR here = Earth
