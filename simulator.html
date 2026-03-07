@@ -148,6 +148,7 @@
     border: 1px solid #30363d;
     border-radius: 8px;
     padding: 14px 16px;
+    margin-bottom: 16px;
   }
 
   .legend-title {
@@ -195,6 +196,143 @@
     height: 200px;
     color: #8b949e;
     font-size: 15px;
+  }
+
+  /* ── Engine Editor ── */
+
+  .editor-wrap {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .editor-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: #e6edf3;
+    list-style: none;
+  }
+  .editor-toggle::-webkit-details-marker { display: none; }
+
+  .editor-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .editor-badge {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #f85149;
+    font-weight: 700;
+    display: none;
+  }
+  .editor-badge.visible { display: inline; }
+
+  .editor-chevron {
+    color: #8b949e;
+    font-size: 11px;
+    transition: transform 0.15s;
+  }
+  details[open] .editor-chevron { transform: rotate(90deg); }
+
+  .editor-body {
+    padding: 16px;
+    border-top: 1px solid #30363d;
+  }
+
+  .editor-grid {
+    display: grid;
+    grid-template-columns: auto repeat(3, 1fr);
+    gap: 8px 12px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .editor-col-head {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+    text-align: center;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #30363d;
+  }
+
+  .editor-row-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #8b949e;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .editor-input {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    font-size: 13px;
+    padding: 5px 8px;
+    width: 100%;
+    text-align: right;
+    outline: none;
+  }
+  .editor-input:focus { border-color: #58a6ff; }
+  .editor-input.modified { border-color: #f85149; }
+
+  .editor-cap-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .editor-cap-row .editor-row-label { min-width: 100px; }
+
+  .editor-cap-input {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    font-size: 13px;
+    padding: 5px 8px;
+    width: 100px;
+    text-align: right;
+    outline: none;
+  }
+  .editor-cap-input:focus { border-color: #58a6ff; }
+  .editor-cap-input.modified { border-color: #f85149; }
+
+  .editor-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .btn-reset {
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #c9d1d9;
+    font-size: 13px;
+    padding: 6px 14px;
+    cursor: pointer;
+  }
+  .btn-reset:hover { border-color: #8b949e; color: #e6edf3; }
+
+  .editor-hint {
+    font-size: 12px;
+    color: #8b949e;
   }
 </style>
 </head>
@@ -246,6 +384,42 @@
   <div class="legend-title">Legend</div>
   <div class="legend-grid" id="legend-grid"></div>
 </div>
+
+<details class="editor-wrap" id="editor-details">
+  <summary class="editor-toggle">
+    <span class="editor-toggle-label">
+      Engine Stats Editor
+      <span class="editor-badge" id="editor-badge">modified</span>
+    </span>
+    <span class="editor-chevron">▶</span>
+  </summary>
+  <div class="editor-body">
+    <div class="editor-cap-row">
+      <span class="editor-row-label">Fuel Capacity</span>
+      <input class="editor-cap-input" id="ed-fuelcap" type="number" min="1" step="50">
+    </div>
+    <div class="editor-grid">
+      <div class="editor-col-head"></div>
+      <div class="editor-col-head" style="color:#4da6ff">Eco</div>
+      <div class="editor-col-head" style="color:#ffa94d">Balance</div>
+      <div class="editor-col-head" style="color:#a8ff78">Turbo</div>
+
+      <div class="editor-row-label">Fuel Factor</div>
+      <input class="editor-input" id="ed-eco-ff"   type="number" min="0.01" step="0.1">
+      <input class="editor-input" id="ed-bal-ff"   type="number" min="0.01" step="0.1">
+      <input class="editor-input" id="ed-turbo-ff" type="number" min="0.01" step="0.1">
+
+      <div class="editor-row-label">Speed</div>
+      <input class="editor-input" id="ed-eco-sp"   type="number" min="0.1" step="0.5">
+      <input class="editor-input" id="ed-bal-sp"   type="number" min="0.1" step="0.5">
+      <input class="editor-input" id="ed-turbo-sp" type="number" min="0.1" step="0.5">
+    </div>
+    <div class="editor-footer">
+      <button class="btn-reset" id="btn-reset">Reset to game values</button>
+      <span class="editor-hint">Changes apply immediately to the chart above.</span>
+    </div>
+  </div>
+</details>
 
 <div id="tooltip"></div>
 
@@ -414,6 +588,17 @@ let tierIdx = 0;
 let fromIdx = 0;
 let toIdx   = 2; // default Earth → Mars
 
+// Deep-clone a single engine object so edits don't mutate ENGINES
+function cloneEngine(e) {
+  return {
+    tier:    e.tier,
+    fuelCap: e.fuelCap,
+    modes:   e.modes.map(m => ({ name: m.name, fuelFactor: m.fuelFactor, speed: m.speed })),
+  };
+}
+
+let activeEngine = cloneEngine(ENGINES[tierIdx]);
+
 // ── DOM Setup ─────────────────────────────────────────────────────────────
 
 const selTier = document.getElementById('sel-tier');
@@ -524,7 +709,7 @@ function buildDataSeries(engine, distance, fuelPrice) {
 
 function drawChart() {
   resizeCanvas();
-  const engine    = ENGINES[tierIdx];
+  const engine    = activeEngine;
   const distance  = DISTANCES[fromIdx][toIdx];
   const fuelPrice = FUEL_PRICES[fromIdx];
 
@@ -773,9 +958,83 @@ canvas.addEventListener('mouseleave', () => {
   tooltip.style.display = 'none';
 });
 
+// ── Engine Editor ──────────────────────────────────────────────────────────
+
+const edInputs = {
+  fuelCap:  document.getElementById('ed-fuelcap'),
+  ecoFf:    document.getElementById('ed-eco-ff'),
+  balFf:    document.getElementById('ed-bal-ff'),
+  turboFf:  document.getElementById('ed-turbo-ff'),
+  ecoSp:    document.getElementById('ed-eco-sp'),
+  balSp:    document.getElementById('ed-bal-sp'),
+  turboSp:  document.getElementById('ed-turbo-sp'),
+};
+const badge    = document.getElementById('editor-badge');
+const btnReset = document.getElementById('btn-reset');
+
+function editorValuesFromEngine(engine) {
+  edInputs.fuelCap.value  = engine.fuelCap;
+  edInputs.ecoFf.value    = engine.modes[0].fuelFactor;
+  edInputs.balFf.value    = engine.modes[1].fuelFactor;
+  edInputs.turboFf.value  = engine.modes[2].fuelFactor;
+  edInputs.ecoSp.value    = engine.modes[0].speed;
+  edInputs.balSp.value    = engine.modes[1].speed;
+  edInputs.turboSp.value  = engine.modes[2].speed;
+}
+
+function applyEditorToActiveEngine() {
+  const canonical = ENGINES[tierIdx];
+  activeEngine.fuelCap         = Math.max(1, +edInputs.fuelCap.value  || canonical.fuelCap);
+  activeEngine.modes[0].fuelFactor = Math.max(0.01, +edInputs.ecoFf.value   || canonical.modes[0].fuelFactor);
+  activeEngine.modes[1].fuelFactor = Math.max(0.01, +edInputs.balFf.value   || canonical.modes[1].fuelFactor);
+  activeEngine.modes[2].fuelFactor = Math.max(0.01, +edInputs.turboFf.value || canonical.modes[2].fuelFactor);
+  activeEngine.modes[0].speed      = Math.max(0.1,  +edInputs.ecoSp.value   || canonical.modes[0].speed);
+  activeEngine.modes[1].speed      = Math.max(0.1,  +edInputs.balSp.value   || canonical.modes[1].speed);
+  activeEngine.modes[2].speed      = Math.max(0.1,  +edInputs.turboSp.value || canonical.modes[2].speed);
+}
+
+function updateModifiedHighlights() {
+  const canonical = ENGINES[tierIdx];
+  const fields = [
+    [edInputs.fuelCap,  activeEngine.fuelCap,         canonical.fuelCap],
+    [edInputs.ecoFf,    activeEngine.modes[0].fuelFactor, canonical.modes[0].fuelFactor],
+    [edInputs.balFf,    activeEngine.modes[1].fuelFactor, canonical.modes[1].fuelFactor],
+    [edInputs.turboFf,  activeEngine.modes[2].fuelFactor, canonical.modes[2].fuelFactor],
+    [edInputs.ecoSp,    activeEngine.modes[0].speed,   canonical.modes[0].speed],
+    [edInputs.balSp,    activeEngine.modes[1].speed,   canonical.modes[1].speed],
+    [edInputs.turboSp,  activeEngine.modes[2].speed,   canonical.modes[2].speed],
+  ];
+  let anyModified = false;
+  fields.forEach(([el, current, original]) => {
+    const modified = +current !== +original;
+    el.classList.toggle('modified', modified);
+    if (modified) anyModified = true;
+  });
+  badge.classList.toggle('visible', anyModified);
+}
+
+// Wire all editor inputs to update the chart live
+Object.values(edInputs).forEach(input => {
+  input.addEventListener('input', () => {
+    applyEditorToActiveEngine();
+    updateModifiedHighlights();
+    drawChart();
+  });
+});
+
+btnReset.addEventListener('click', () => {
+  activeEngine = cloneEngine(ENGINES[tierIdx]);
+  editorValuesFromEngine(activeEngine);
+  updateModifiedHighlights();
+  drawChart();
+});
+
 // ── Update & Init ──────────────────────────────────────────────────────────
 
 function update() {
+  activeEngine = cloneEngine(ENGINES[tierIdx]);
+  editorValuesFromEngine(activeEngine);
+  updateModifiedHighlights();
   drawChart();
 }
 
