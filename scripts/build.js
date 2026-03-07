@@ -58,4 +58,10 @@ function copyDir(src, dest) {
 console.log("Copying template files into dist/...");
 copyDir(TEMPLATE_DIR, DIST_DIR);
 
+// Step 5: Copy simulator.html into dist/
+const SIMULATOR_SRC = path.join(ROOT, "simulator.html");
+const SIMULATOR_DEST = path.join(DIST_DIR, "simulator.html");
+fs.copyFileSync(SIMULATOR_SRC, SIMULATOR_DEST);
+console.log("Copied simulator.html");
+
 console.log("Build complete → dist/");
