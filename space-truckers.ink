@@ -1,3 +1,6 @@
+# TITLE: Space Truckers
+# AUTHOR: Scott
+
 INCLUDE port.ink
 INCLUDE ship.ink
 INCLUDE cargo.ink
