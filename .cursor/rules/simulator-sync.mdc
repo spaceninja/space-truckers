@@ -1,0 +1,27 @@
+---
+description: Warns that simulator.html mirrors game constants from the Ink source files, and both must be kept in sync.
+globs: simulator.html,*.ink
+alwaysApply: false
+---
+
+# Simulator / Game Data Sync
+
+`simulator.html` contains a **GAME DATA block** (top of the `<script>` tag) that mirrors
+constants from the Ink source. When either file changes, check the other.
+
+## What maps to what
+
+| simulator.html constant | Ink source |
+|---|---|
+| `PAY_RATE` | `space-truckers.ink` — `VAR PayRate` |
+| `SHIP_MASS` | `space-truckers.ink` — ship hull mass constant |
+| `ENGINES` (fuelCap, fuelFactor, speed per mode) | `engines.ink` — `EngineData` table |
+| `LOCATION_NAMES` / `LOCATION_DISPLAY` | `locations.ink` — `LocationData Name` field |
+| `DISTANCES` matrix | `locations.ink` — `get_distance` function |
+| `FUEL_PRICES` | `locations.ink` — `FuelPrice` field |
+
+## Rules
+
+- When editing any of the Ink files above, check whether the corresponding value in `simulator.html` needs updating.
+- When editing the GAME DATA block in `simulator.html`, verify the value against the Ink source before changing it.
+- Do not add new game constants to `simulator.html` without a corresponding citation comment pointing to the Ink source.

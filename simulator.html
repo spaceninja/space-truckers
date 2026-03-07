@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Truckers — Route Simulator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #e6edf3;
+    margin-bottom: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    margin-bottom: 16px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #8b949e;
+    font-weight: 600;
+  }
+
+  select {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    font-size: 14px;
+    padding: 6px 10px;
+    cursor: pointer;
+    outline: none;
+    min-width: 160px;
+  }
+  select:focus { border-color: #58a6ff; }
+
+  .stat-bar {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #8b949e;
+    font-weight: 600;
+  }
+
+  .stat-value {
+    color: #e6edf3;
+    font-weight: 500;
+  }
+
+  .chart-wrap {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    cursor: crosshair;
+  }
+
+  #tooltip {
+    position: fixed;
+    background: #1c2128;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.7;
+    pointer-events: none;
+    display: none;
+    z-index: 100;
+    min-width: 180px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  }
+
+  #tooltip .tt-mode {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  #tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  #tooltip .tt-key { color: #8b949e; }
+  #tooltip .tt-val { color: #e6edf3; font-weight: 500; }
+  #tooltip .tt-profit-pos { color: #3fb950; }
+  #tooltip .tt-profit-neg { color: #f85149; }
+
+  .legend {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+
+  .legend-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #8b949e;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .legend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px 24px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .legend-swatch {
+    width: 36px;
+    height: 3px;
+    flex-shrink: 0;
+    border-radius: 2px;
+  }
+
+  .legend-swatch.dashed {
+    background: repeating-linear-gradient(
+      90deg,
+      currentColor 0px, currentColor 5px,
+      transparent 5px, transparent 9px
+    );
+    height: 3px;
+  }
+
+  .no-route {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #8b949e;
+    font-size: 15px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Space Truckers — Route Simulator</h1>
+
+<div class="controls">
+  <div class="control-group">
+    <label for="sel-tier">Engine Tier</label>
+    <select id="sel-tier">
+      <option value="0">Tier 1 (Starter)</option>
+      <option value="1">Tier 2</option>
+      <option value="2">Tier 3</option>
+      <option value="3">Tier 4</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label for="sel-from">Departing From</label>
+    <select id="sel-from"></select>
+  </div>
+  <div class="control-group">
+    <label for="sel-to">Destination</label>
+    <select id="sel-to"></select>
+  </div>
+</div>
+
+<div class="stat-bar" id="stat-bar">
+  <div class="stat">
+    <span class="stat-label">Fuel Capacity</span>
+    <span class="stat-value" id="st-fuelcap">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Fuel Price (at departure)</span>
+    <span class="stat-value" id="st-fuelprice">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Distance</span>
+    <span class="stat-value" id="st-distance">—</span>
+  </div>
+</div>
+
+<div class="chart-wrap">
+  <canvas id="chart" height="420"></canvas>
+  <div id="no-route" class="no-route" style="display:none">Select different ports — same origin and destination.</div>
+</div>
+
+<div class="legend">
+  <div class="legend-title">Legend</div>
+  <div class="legend-grid" id="legend-grid"></div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  GAME DATA — keep in sync with the Ink source                           ║
+// ║                                                                          ║
+// ║  These values are copied from the game's Ink files. If any of them      ║
+// ║  change in the game, update the corresponding entry below.              ║
+// ║                                                                          ║
+// ║  PayRate, ShipMass  →  space-truckers.ink  (VAR PayRate, VAR ShipMass)  ║
+// ║  Engine tiers       →  engines.ink         (EngineData function/table)  ║
+// ║  Location names     →  locations.ink       (LocationData Name field)    ║
+// ║  Distance matrix    →  locations.ink       (get_distance function)      ║
+// ║  Fuel prices        →  locations.ink       (FuelPrice field)            ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// space-truckers.ink: VAR PayRate = 3
+const PAY_RATE  = 3;
+// space-truckers.ink: constant ship hull mass added to cargo for fuel calc
+const SHIP_MASS = 5;
+
+// engines.ink: EngineData table — fuelCap, and per-mode [fuelFactor, speed]
+// Modes: Eco = [EcoFuel, EcoSpeed], Balance = [BalFuel, BalSpeed], Turbo = [TurboFuel, TurboSpeed]
+const ENGINES = [
+  { tier: 1, fuelCap: 300, modes: [
+    { name: 'Eco',     fuelFactor: 1.1, speed: 1.0 },
+    { name: 'Balance', fuelFactor: 2.0, speed: 1.5 },
+    { name: 'Turbo',   fuelFactor: 4.0, speed: 2.5 },
+  ]},
+  { tier: 2, fuelCap: 500, modes: [
+    { name: 'Eco',     fuelFactor: 0.8, speed: 1.0 },
+    { name: 'Balance', fuelFactor: 1.5, speed: 2.0 },
+    { name: 'Turbo',   fuelFactor: 3.0, speed: 3.0 },
+  ]},
+  { tier: 3, fuelCap: 650, modes: [
+    { name: 'Eco',     fuelFactor: 0.5, speed: 1.5 },
+    { name: 'Balance', fuelFactor: 0.9, speed: 2.5 },
+    { name: 'Turbo',   fuelFactor: 1.8, speed: 4.0 },
+  ]},
+  { tier: 4, fuelCap: 800, modes: [
+    { name: 'Eco',     fuelFactor: 0.3, speed: 2.0 },
+    { name: 'Balance', fuelFactor: 0.6, speed: 3.5 },
+    { name: 'Turbo',   fuelFactor: 1.2, speed: 5.0 },
+  ]},
+];
+
+// locations.ink: LocationData Name field (display names, in location-index order)
+const LOCATION_NAMES   = ['Earth', 'Luna', 'Mars', 'Ceres', 'Ganymede', 'Titan'];
+const LOCATION_DISPLAY = ['Earth', 'Moon Base', 'Mars', 'Ceres Station', 'Ganymede Outpost', 'Titan Base'];
+
+// locations.ink: get_distance — symmetric matrix indexed [from][to] by location order above
+const DISTANCES = [
+//  Earth  Luna  Mars  Ceres  Ganymede  Titan
+  [  0,     5,   14,   22,    40,       52  ], // Earth
+  [  5,     0,    8,   18,    38,       50  ], // Luna
+  [ 14,     8,    0,   10,    26,       36  ], // Mars
+  [ 22,    18,   10,    0,    18,       28  ], // Ceres
+  [ 40,    38,   26,   18,     0,       16  ], // Ganymede
+  [ 52,    50,   36,   28,    16,        0  ], // Titan
+];
+
+// locations.ink: FuelPrice field — indexed by location order above
+const FUEL_PRICES = [1.2, 1.2, 1.2, 1.0, 0.8, 0.8];
+
+// ── End of game data ───────────────────────────────────────────────────────
+
+// Mass axis constants — MASS_MAX and MASS_STEPS are recomputed per route in drawChart()
+const MASS_STEP = 10;
+const MASS_MIN  = 0;
+let   MASS_MAX  = 100;
+let   MASS_STEPS = [];
+
+// Y axis constants — recomputed per route in drawChart()
+let FUEL_Y_MAX  = 1000;
+const FUEL_Y_TICK = 100;
+
+// Recompute axis bounds for the current engine/route so the chart scales to
+// just beyond the profitable region (rounded up to the next 10t / 100 fuel).
+function computeAxisBounds(engine, distance) {
+  // X max: the highest feasibility crossover across all modes (the rightmost
+  // point where any mode can still make the trip). Break-even is the *minimum*
+  // profitable mass, not the maximum, so we use feasibility as the upper bound.
+  let maxFeasMass = 0;
+  engine.modes.forEach(mode => {
+    const fx = feasibilityCrossover(distance, mode.fuelFactor, engine.fuelCap);
+    if (fx > 0) maxFeasMass = Math.max(maxFeasMass, fx);
+  });
+
+  // Round up to next 10t above that crossover, minimum 10t
+  const xMax = Math.max(10, Math.ceil((maxFeasMass + 1) / MASS_STEP) * MASS_STEP);
+
+  // Y max: fuel capacity rounded up to the next 100, fixed per engine tier
+  const yMax = Math.ceil(engine.fuelCap / FUEL_Y_TICK) * FUEL_Y_TICK;
+
+  return { xMax, yMax };
+}
+
+// ── Crossover Math ─────────────────────────────────────────────────────────
+// Both fuel cost and profit are linear in cargoMass (using the continuous,
+// un-floored versions for crossover precision). Solve for exact crossover mass.
+
+// Exact cargo mass where fuel cost equals fuelCap (feasibility boundary)
+// distance * (m + SHIP_MASS) * fuelFactor = fuelCap
+// m = fuelCap / (distance * fuelFactor) - SHIP_MASS
+function feasibilityCrossover(distance, fuelFactor, fuelCap) {
+  if (distance === 0 || fuelFactor === 0) return Infinity;
+  return fuelCap / (distance * fuelFactor) - SHIP_MASS;
+}
+
+// Exact cargo mass where profit = 0 (break-even boundary)
+// pay = m * distance * PAY_RATE
+// fuelCost = distance * (m + SHIP_MASS) * fuelFactor
+// profit = m*distance*PAY_RATE - distance*(m+SHIP_MASS)*fuelFactor*fuelPrice = 0
+// m*(PAY_RATE - fuelFactor*fuelPrice)*distance = distance*SHIP_MASS*fuelFactor*fuelPrice
+// m = (SHIP_MASS * fuelFactor * fuelPrice) / (PAY_RATE - fuelFactor * fuelPrice)
+function breakEvenCrossover(distance, fuelFactor, fuelPrice) {
+  const marginalRate = PAY_RATE - fuelFactor * fuelPrice;
+  if (marginalRate <= 0) return -Infinity; // never profitable at any mass
+  return (SHIP_MASS * fuelFactor * fuelPrice) / marginalRate;
+}
+
+// Color a segment by the worse of its two endpoints (pessimistic coloring).
+// Infeasible beats feasible; unprofitable beats profitable.
+// This avoids showing a segment as profitable when the crossover is mid-segment
+// and neither endpoint is actually a reachable cargo mass.
+function segmentState(p0, p1) {
+  const feasible   = p0.feasible   && p1.feasible;
+  const profitable = p0.profitable && p1.profitable;
+  return { feasible, profitable };
+}
+
+// Continuous (un-floored) fuel cost for a given cargo mass — used for Y position
+function fuelCostContinuous(distance, cargoMass, fuelFactor) {
+  return distance * (cargoMass + SHIP_MASS) * fuelFactor;
+}
+// Each mode has a full-saturation color and a muted variant
+const MODE_COLORS = [
+  { full: '#4da6ff', muted: '#1e3a5f', label: 'Eco'     },
+  { full: '#ffa94d', muted: '#5f3c1a', label: 'Balance' },
+  { full: '#a8ff78', muted: '#2b4a1f', label: 'Turbo'   },
+];
+const INFEASIBLE_COLOR = '#3a3f47';
+
+// ── Formulas ───────────────────────────────────────────────────────────────
+
+function calcFuelCost(distance, cargoMass, fuelFactor) {
+  return Math.floor(distance * (cargoMass + SHIP_MASS) * fuelFactor);
+}
+
+function calcTripDays(distance, speed) {
+  return Math.max(Math.floor(distance / speed), 1);
+}
+
+function calcPay(cargoMass, distance) {
+  return Math.floor(cargoMass * distance * PAY_RATE);
+}
+
+function calcProfit(pay, fuelUnits, fuelPricePerUnit) {
+  return pay - fuelUnits * fuelPricePerUnit;
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+
+let tierIdx = 0;
+let fromIdx = 0;
+let toIdx   = 2; // default Earth → Mars
+
+// ── DOM Setup ─────────────────────────────────────────────────────────────
+
+const selTier = document.getElementById('sel-tier');
+const selFrom = document.getElementById('sel-from');
+const selTo   = document.getElementById('sel-to');
+const canvas  = document.getElementById('chart');
+const ctx     = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+const noRoute = document.getElementById('no-route');
+
+LOCATION_DISPLAY.forEach((name, i) => {
+  const optFrom = new Option(name, i);
+  const optTo   = new Option(name, i);
+  if (i === 0) optFrom.selected = true;
+  if (i === 2) optTo.selected = true;
+  selFrom.appendChild(optFrom);
+  selTo.appendChild(optTo);
+});
+
+selTier.addEventListener('change', () => { tierIdx = +selTier.value; update(); });
+selFrom.addEventListener('change', () => { fromIdx = +selFrom.value; update(); });
+selTo.addEventListener('change',   () => { toIdx   = +selTo.value;   update(); });
+
+// ── Legend ─────────────────────────────────────────────────────────────────
+
+function buildLegend() {
+  const grid = document.getElementById('legend-grid');
+  grid.innerHTML = '';
+
+  const items = [
+    ...MODE_COLORS.map(mc => ({
+      color: mc.full, dashed: false,
+      label: `${mc.label} — feasible & profitable`
+    })),
+    ...MODE_COLORS.map(mc => ({
+      color: mc.muted, dashed: false,
+      label: `${mc.label} — feasible, unprofitable`
+    })),
+    { color: INFEASIBLE_COLOR, dashed: true, label: 'Any mode — exceeds fuel capacity' },
+    { color: '#58a6ff', dashed: true, label: 'Fuel capacity limit' },
+  ];
+
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'legend-item';
+    const sw = document.createElement('canvas');
+    sw.width = 36; sw.height = 10;
+    sw.style.width = '36px'; sw.style.height = '10px'; sw.style.flexShrink = '0';
+    const sc = sw.getContext('2d');
+    sc.strokeStyle = item.color;
+    sc.lineWidth = 2.5;
+    if (item.dashed) sc.setLineDash([4, 4]);
+    sc.beginPath(); sc.moveTo(0, 5); sc.lineTo(36, 5); sc.stroke();
+    const span = document.createElement('span');
+    span.textContent = item.label;
+    div.appendChild(sw);
+    div.appendChild(span);
+    grid.appendChild(div);
+  });
+}
+buildLegend();
+
+// ── Chart Drawing ──────────────────────────────────────────────────────────
+
+const PAD = { top: 20, right: 80, bottom: 62, left: 56 };
+
+function resizeCanvas() {
+  const wrap = canvas.parentElement;
+  const cssW = wrap.clientWidth - 32; // subtract padding
+  canvas.style.width  = cssW + 'px';
+  canvas.width  = cssW * devicePixelRatio;
+  canvas.height = 420 * devicePixelRatio;
+  canvas.style.height = '420px';
+}
+
+function getChartDims() {
+  const W = canvas.width  / devicePixelRatio;
+  const H = canvas.height / devicePixelRatio;
+  return {
+    W, H,
+    plotW: W - PAD.left - PAD.right,
+    plotH: H - PAD.top  - PAD.bottom,
+  };
+}
+
+function toCanvasX(mass, plotW) {
+  return PAD.left + ((mass - MASS_MIN) / (MASS_MAX - MASS_MIN)) * plotW;
+}
+
+function toCanvasY(fuel, maxFuel, plotH) {
+  return PAD.top + plotH - (fuel / maxFuel) * plotH;
+}
+
+function buildDataSeries(engine, distance, fuelPrice) {
+  return engine.modes.map((mode, mi) => {
+    const points = MASS_STEPS.map(mass => {
+      const fuelUnits  = calcFuelCost(distance, mass, mode.fuelFactor);
+      const days       = calcTripDays(distance, mode.speed);
+      const pay        = calcPay(mass, distance);
+      const profit     = calcProfit(pay, fuelUnits, fuelPrice);
+      const feasible   = fuelUnits <= engine.fuelCap;
+      const profitable = profit >= 0;
+      return { mass, fuelUnits, days, pay, profit, feasible, profitable };
+    });
+    return { mode, modeIdx: mi, points };
+  });
+}
+
+function drawChart() {
+  resizeCanvas();
+  const engine    = ENGINES[tierIdx];
+  const distance  = DISTANCES[fromIdx][toIdx];
+  const fuelPrice = FUEL_PRICES[fromIdx];
+
+  // Update stat bar
+  document.getElementById('st-fuelcap').textContent   = `${engine.fuelCap} units`;
+  document.getElementById('st-fuelprice').textContent = `€${fuelPrice.toFixed(1)} / unit`;
+  document.getElementById('st-distance').textContent  = distance === 0 ? 'Same location' : `${distance} units`;
+
+  if (distance === 0) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    noRoute.style.display = 'flex';
+    canvas.style.display = 'none';
+    return;
+  }
+  noRoute.style.display = 'none';
+  canvas.style.display = 'block';
+
+  const dpr = devicePixelRatio;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.scale(dpr, dpr);
+
+  const { W, H, plotW, plotH } = getChartDims();
+
+  const { xMax, yMax } = computeAxisBounds(engine, distance);
+  MASS_MAX   = xMax;
+  FUEL_Y_MAX = yMax;
+  MASS_STEPS = [];
+  for (let m = MASS_MIN; m <= MASS_MAX; m += MASS_STEP) MASS_STEPS.push(m);
+
+  const series = buildDataSeries(engine, distance, fuelPrice);
+  const maxFuel  = FUEL_Y_MAX;
+  const fuelTick = FUEL_Y_TICK;
+
+  // ── Grid & Axes ──
+
+  ctx.strokeStyle = '#21262d';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([]);
+
+  // Y grid lines
+  for (let f = 0; f <= maxFuel; f += fuelTick) {
+    const y = toCanvasY(f, maxFuel, plotH);
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, y);
+    ctx.lineTo(PAD.left + plotW, y);
+    ctx.stroke();
+  }
+
+  // X grid lines
+  MASS_STEPS.forEach(m => {
+    const x = toCanvasX(m, plotW);
+    ctx.beginPath();
+    ctx.moveTo(x, PAD.top);
+    ctx.lineTo(x, PAD.top + plotH);
+    ctx.stroke();
+  });
+
+  // ── Axis labels ──
+
+  ctx.fillStyle = '#8b949e';
+  ctx.font = `11px 'Segoe UI', system-ui, sans-serif`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+
+  for (let f = 0; f <= maxFuel; f += fuelTick) {
+    const y = toCanvasY(f, maxFuel, plotH);
+    ctx.fillText(f, PAD.left - 8, y);
+  }
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  MASS_STEPS.forEach(m => {
+    const x = toCanvasX(m, plotW);
+    if (m === 0) {
+      ctx.fillText('0', x, PAD.top + plotH + 8);
+      ctx.fillText('(empty)', x, PAD.top + plotH + 20);
+    } else {
+      ctx.fillText(m, x, PAD.top + plotH + 8);
+    }
+  });
+
+  // Axis titles
+  ctx.save();
+  ctx.translate(14, PAD.top + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#8b949e';
+  ctx.font = `12px 'Segoe UI', system-ui, sans-serif`;
+  ctx.fillText('Fuel Needed (units)', 0, 0);
+  ctx.restore();
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillStyle = '#8b949e';
+  ctx.font = `12px 'Segoe UI', system-ui, sans-serif`;
+  ctx.fillText('Cargo Mass (t)', PAD.left + plotW / 2, H - 4);
+
+  // ── Fuel capacity threshold line ──
+  const capY = toCanvasY(engine.fuelCap, maxFuel, plotH);
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth   = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(PAD.left, capY);
+  ctx.lineTo(PAD.left + plotW, capY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Label on the right
+  ctx.fillStyle = '#58a6ff';
+  ctx.font = `11px 'Segoe UI', system-ui, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(`cap: ${engine.fuelCap}`, PAD.left + plotW + 4, capY + 1);
+
+  // ── Axis border ──
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([]);
+  ctx.strokeRect(PAD.left, PAD.top, plotW, plotH);
+
+  // ── Draw lines ──
+
+  series.forEach(({ mode, modeIdx, points }) => {
+    const col = MODE_COLORS[modeIdx];
+
+    // Draw with worst-endpoint coloring (no sub-splitting)
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i];
+      const p1 = points[i + 1];
+      const { feasible, profitable } = segmentState(p0, p1);
+
+      let strokeColor, dashPattern;
+      if (!feasible) {
+        strokeColor = INFEASIBLE_COLOR;
+        dashPattern = [5, 5];
+      } else if (profitable) {
+        strokeColor = col.full;
+        dashPattern = [];
+      } else {
+        strokeColor = col.muted;
+        dashPattern = [];
+      }
+
+      const x0 = toCanvasX(p0.mass, plotW);
+      const y0 = toCanvasY(fuelCostContinuous(distance, p0.mass, mode.fuelFactor), maxFuel, plotH);
+      const x1 = toCanvasX(p1.mass, plotW);
+      const y1 = toCanvasY(fuelCostContinuous(distance, p1.mass, mode.fuelFactor), maxFuel, plotH);
+
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth   = 2.5;
+      ctx.setLineDash(dashPattern);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+    }
+
+    // Draw dots at each discrete data point
+    ctx.setLineDash([]);
+    points.forEach(p => {
+      const dotColor = !p.feasible   ? INFEASIBLE_COLOR
+                     : p.profitable  ? col.full
+                     : col.muted;
+      const x = toCanvasX(p.mass, plotW);
+      const y = toCanvasY(p.fuelUnits, maxFuel, plotH);
+      ctx.fillStyle = dotColor;
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  });
+
+  ctx.restore();
+
+  // Store for hit-testing
+  canvas._series    = series;
+  canvas._maxFuel   = maxFuel;
+  canvas._fuelPrice = fuelPrice;
+  canvas._dims      = getChartDims();
+}
+
+// ── Tooltip / Hover ────────────────────────────────────────────────────────
+
+canvas.addEventListener('mousemove', e => {
+  if (!canvas._series) return;
+
+  const rect   = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  const { plotW, plotH } = canvas._dims;
+  const maxFuel   = canvas._maxFuel;
+  const fuelPrice = canvas._fuelPrice;
+
+  // Snap to nearest discrete data point
+  let best = null;
+  let bestDist = Infinity;
+
+  canvas._series.forEach(({ mode, modeIdx, points }) => {
+    points.forEach(p => {
+      const cx = toCanvasX(p.mass, plotW);
+      const cy = toCanvasY(p.fuelUnits, maxFuel, plotH);
+      const d  = Math.hypot(mouseX - cx, mouseY - cy);
+      if (d < bestDist) {
+        bestDist = d;
+        best = { p, mode, modeIdx };
+      }
+    });
+  });
+
+  if (!best || bestDist > 30) {
+    tooltip.style.display = 'none';
+    return;
+  }
+
+  const { p, mode, modeIdx } = best;
+  const col = MODE_COLORS[modeIdx];
+  const profitAmt = Math.round(p.profit);
+  const fuelEuro  = (p.fuelUnits * fuelPrice).toFixed(0);
+
+  tooltip.innerHTML = `
+    <div class="tt-mode" style="color:${p.feasible ? col.full : INFEASIBLE_COLOR}">${mode.name} Mode</div>
+    <div class="tt-row"><span class="tt-key">Cargo mass</span><span class="tt-val">${p.mass}t</span></div>
+    <div class="tt-row"><span class="tt-key">Trip time</span><span class="tt-val">${p.days} day${p.days !== 1 ? 's' : ''}</span></div>
+    <div class="tt-row"><span class="tt-key">Fuel needed</span><span class="tt-val">${p.fuelUnits} units${!p.feasible ? ' ⚠ over cap' : ''}</span></div>
+    <div class="tt-row"><span class="tt-key">Fuel cost</span><span class="tt-val">€${fuelEuro}</span></div>
+    <div class="tt-row"><span class="tt-key">Base pay</span><span class="tt-val">€${p.pay}</span></div>
+    <div class="tt-row"><span class="tt-key">Profit</span><span class="${profitAmt >= 0 ? 'tt-profit-pos' : 'tt-profit-neg'} tt-val">${profitAmt >= 0 ? '+' : ''}€${profitAmt}</span></div>
+  `;
+
+  const ttW = 200, ttH = 160;
+  let tx = e.clientX + 14;
+  let ty = e.clientY - 10;
+  if (tx + ttW > window.innerWidth  - 8) tx = e.clientX - ttW - 14;
+  if (ty + ttH > window.innerHeight - 8) ty = e.clientY - ttH - 10;
+
+  tooltip.style.left    = tx + 'px';
+  tooltip.style.top     = ty + 'px';
+  tooltip.style.display = 'block';
+});
+
+canvas.addEventListener('mouseleave', () => {
+  tooltip.style.display = 'none';
+});
+
+// ── Update & Init ──────────────────────────────────────────────────────────
+
+function update() {
+  drawChart();
+}
+
+window.addEventListener('resize', () => {
+  drawChart();
+});
+
+update();
+</script>
+</body>
+</html>
