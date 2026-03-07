@@ -56,35 +56,34 @@ VAR here = Earth
 
     Get Fuel Cost
 
-    fuel_factor is passed in ×10 (from EngineData), so divide by 10.
-    Formula: FLOOR(distance × mass × fuel_factor / 10)
+    fuel_factor is a float from EngineData (e.g. 1.1, 0.8).
+    Formula: FLOOR(distance × mass × fuel_factor)
 
 */
 === function get_trip_fuel_cost(from, to, fuel_factor)
 ~ temp mass = total_mass(ShipCargo) + 5
 ~ temp distance = get_distance(from, to)
-~ temp cost = FLOOR(distance * mass * fuel_factor / 10)
+~ temp cost = FLOOR(distance * mass * fuel_factor)
 ~ return cost
 
 /*
 
     Get Trip Duration
 
-    speed is passed in ×10 (from EngineData), so multiply distance by 10 before dividing.
-    Formula: MAX(FLOOR(distance × 10 / speed), 1)
+    speed is a float from EngineData (e.g. 1.0, 1.5, 2.5).
+    Formula: MAX(FLOOR(distance / speed), 1)
 
 */
 === function get_trip_duration(from, to, speed)
 ~ temp distance = get_distance(from, to)
-~ temp time = MAX(FLOOR(distance * 10 / speed), 1)
+~ temp time = MAX(FLOOR(distance / speed), 1)
 ~ return time
 
 /*
 
     Get Fuel Price
 
-    Returns fuel price stored ×10 (so €1.2 = 12, €1.0 = 10, €0.8 = 8).
-    Divide by 10 in port.ink when computing euro costs.
+    Returns actual euro price as a float (1.2, 1.0, or 0.8).
 
     Inner system (Earth, Luna, Mars): €1.2
     Belt (Ceres):                     €1.0
@@ -96,10 +95,10 @@ VAR here = Earth
 - Earth:
 - Luna:
 - Mars:
-    ~ return 12
+    ~ return 1.2
 - Ceres:
-    ~ return 10
+    ~ return 1.0
 - Ganymede:
 - Titan:
-    ~ return 8
+    ~ return 0.8
 }

@@ -112,11 +112,11 @@ current mass = {total_mass(ShipCargo)}t
 ~ temp half_tank = ShipFuelCapacity / 2
 ~ temp quarter_tank = ShipFuelCapacity / 4
 ~ temp price = get_fuel_price(here)
-~ temp full_cost = FLOOR(fuel_needed * price / 10)
-~ temp half_cost = FLOOR(half_tank * price / 10)
-~ temp quarter_cost = FLOOR(quarter_tank * price / 10)
-~ temp min_fuel = PlayerBankBalance * 10 / price
-The current unit cost of fuel is {price / 10} €. Your fuel gauge reads {ShipFuel}/{ShipFuelCapacity}. Your bank account balance is {PlayerBankBalance} €.
+~ temp full_cost = FLOOR(fuel_needed * price)
+~ temp half_cost = FLOOR(half_tank * price)
+~ temp quarter_cost = FLOOR(quarter_tank * price)
+~ temp min_fuel = PlayerBankBalance / price
+The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{ShipFuelCapacity}. Your bank account balance is {PlayerBankBalance} €.
 {ShipFuel < ShipFuelCapacity:
     + {PlayerBankBalance >= full_cost}
         [Fill it up ({full_cost} €)]
@@ -136,7 +136,7 @@ The current unit cost of fuel is {price / 10} €. Your fuel gauge reads {ShipFu
 = buy_fuel(amount_requested)
 ~ temp fuel_needed = ShipFuelCapacity - ShipFuel
 ~ temp amount = MIN(fuel_needed, FLOOR(amount_requested))
-~ temp cost = FLOOR(amount * get_fuel_price(here) / 10)
+~ temp cost = FLOOR(amount * get_fuel_price(here))
 {
 - PlayerBankBalance < cost:
     "Sorry, your credit chip was declined."
