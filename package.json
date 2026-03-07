@@ -1,6 +1,8 @@
 {
   "scripts": {
-    "lint": "inkjs-compiler space-truckers.ink"
+    "lint": "inkjs-compiler space-truckers.ink",
+    "build": "node scripts/build.js",
+    "build:clean": "rm -rf dist && node scripts/build.js"
   },
   "devDependencies": {
     "inkjs": "^2.4.0"
