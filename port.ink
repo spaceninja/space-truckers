@@ -38,6 +38,12 @@ current mass = {total_mass(ShipCargo)}t
 -
 + [Done] -> port_opts
 
+/*
+
+    Load Cargo
+    Presents a single load option for a cargo item at this port.
+
+*/
 = load(cargo)
 ~ temp toName = LocationData(CargoData(cargo, To), Name)
 ~ temp dist = get_distance(here, CargoData(cargo, To))
@@ -76,6 +82,12 @@ current mass = {total_mass(ShipCargo)}t
 -
 + [Done] -> port_opts
 
+/*
+
+    Unload Cargo
+    Presents a single unload option for a cargo item in the hold.
+
+*/
 = unload(cargo)
 ~ temp toName = LocationData(CargoData(cargo, To), Name)
 ~ temp dist = get_distance(CargoData(cargo, From), CargoData(cargo, To))
@@ -147,6 +159,12 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 }
 + [Done] -> port_opts
 
+/*
+
+    Buy Fuel
+    Handles a single fuel purchase transaction.
+
+*/
 = buy_fuel(amount_requested)
 ~ temp fuel_needed = ShipFuelCapacity - ShipFuel
 ~ temp amount = MIN(fuel_needed, FLOOR(amount_requested))
@@ -194,6 +212,12 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 
 // TODO: on engine upgrade, run: ~ ShipFuelCapacity = EngineData(ShipEngineTier, FuelCap)
 
+/*
+
+    Flight Options
+    Shows available flight modes for the chosen destination, filtered by cargo constraints and fuel.
+
+*/
 = flight_options(to)
 ~ temp eco_fuel    = EngineData(ShipEngineTier, EcoFuel)
 ~ temp bal_fuel    = EngineData(ShipEngineTier, BalFuel)

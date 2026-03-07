@@ -87,6 +87,12 @@ LIST AllCargo =
     [ Error: no data associated with {id}. ]
 }
 
+/*
+
+    Cargo Database Row
+    Returns the requested stat for a single cargo entry.
+
+*/
 === function cargo_db(data, fromData, toData, massData, titleData, isExpress, isFragile, isHazardous, isPassengers)
 { data:
 - From:       ~ return fromData
@@ -131,7 +137,11 @@ LIST AllCargo =
 
 */
 
-// Returns true if any cargo in the hold is Express
+/*
+
+    Returns true if any cargo in the hold is Express.
+
+*/
 === function cargo_has_express(items)
 ~ temp item = pop(items)
 { item:
@@ -142,11 +152,20 @@ LIST AllCargo =
 }
 ~ return false
 
-// Returns the single Express destination if all Express cargo shares one destination,
-// or 0 if there is no Express cargo, or if Express cargo exists for multiple destinations.
+/*
+
+    Returns the single Express destination if all Express cargo shares one destination,
+    or 0 if there is no Express cargo, or if Express cargo exists for multiple destinations.
+
+*/
 === function cargo_express_destination(items)
 ~ return _cargo_express_destination_r(items, 0)
 
+/*
+
+    Internal recursive helper for cargo_express_destination.
+
+*/
 === function _cargo_express_destination_r(items, found)
 ~ temp item = pop(items)
 { item:
@@ -163,10 +182,19 @@ LIST AllCargo =
 }
 ~ return found
 
-// Returns true if the hold contains both Hazardous and non-Hazardous cargo
+/*
+
+    Returns true if the hold contains both Hazardous and non-Hazardous cargo.
+
+*/
 === function cargo_is_mixed_hazardous(items)
 ~ return _cargo_is_mixed_hazardous_r(items, false, false)
 
+/*
+
+    Internal recursive helper for cargo_is_mixed_hazardous.
+
+*/
 === function _cargo_is_mixed_hazardous_r(items, has_hazardous, has_clean)
 ~ temp item = pop(items)
 { item:
@@ -178,7 +206,11 @@ LIST AllCargo =
 }
 ~ return has_hazardous and has_clean
 
-// Returns true if any cargo in the hold blocks Turbo (Fragile or Passengers)
+/*
+
+    Returns true if any cargo in the hold blocks Turbo mode (Fragile or Passengers).
+
+*/
 === function cargo_blocks_turbo(items)
 ~ temp item = pop(items)
 { item:
