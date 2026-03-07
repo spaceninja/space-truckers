@@ -1,7 +1,11 @@
-LIST AllLocations = Transit, Earth, Mars, Luna, Ceres, Ganymede, Titan
-LIST LocationStats = Earth, Luna, Mars, Ceres, Ganymede, Titan, Name
+LIST AllLocations = Transit, Earth, Luna, Mars, Ceres, Ganymede, Titan
+LIST LocationStats = Name
 
 VAR here = Earth
+
+CONST FuelCostInner = 1.2
+CONST FuelCostBelt  = 1.0
+CONST FuelCostOuter = 0.8
 
 /*
 
@@ -61,7 +65,7 @@ VAR here = Earth
 
 */
 === function get_trip_fuel_cost(from, to, fuel_factor)
-~ temp mass = total_mass(ShipCargo) + 5
+~ temp mass = total_mass(ShipCargo) + 5 // add 5 for the ship itself
 ~ temp distance = get_distance(from, to)
 ~ temp cost = FLOOR(distance * mass * fuel_factor)
 ~ return cost
@@ -93,12 +97,15 @@ VAR here = Earth
 === function get_fuel_price(location)
 { location:
 - Earth:
+    ~ return FuelCostInner
 - Luna:
+    ~ return FuelCostInner
 - Mars:
-    ~ return 1.2
+    ~ return FuelCostInner
 - Ceres:
-    ~ return 1.0
+    ~ return FuelCostBelt
 - Ganymede:
+    ~ return FuelCostOuter
 - Titan:
-    ~ return 0.8
+    ~ return FuelCostOuter
 }
