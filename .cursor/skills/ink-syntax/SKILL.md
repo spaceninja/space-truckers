@@ -157,6 +157,30 @@ RANDOM(1, 6)               // random integer, inclusive
 SEED_RANDOM(42)            // seed for deterministic testing
 ```
 
+## Validating Ink Code
+
+After editing any `.ink` file, always run the compiler to catch errors before committing:
+
+```bash
+npm run lint
+```
+
+This runs `inkjs-compiler space-truckers.ink` (the project entry point), which compiles all included files and reports errors. `TODO:` lines are informational and can be ignored. Any `ERROR:` lines must be fixed.
+
+**Common errors to watch for:**
+- `~` must be on its own line — never inline inside `{ }`. Use a multi-line block instead:
+  ```ink
+  // Wrong:
+  { condition: ~ return true }
+  
+  // Correct:
+  { condition:
+      ~ return true
+  }
+  ```
+- Functions cannot contain diverts (`->`) — use recursion instead of gather+loop patterns.
+- Every flow path in a function must end with `~ return` or fall through to one.
+
 ## Include Files
 
 ```ink

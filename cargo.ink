@@ -135,7 +135,9 @@ LIST AllCargo =
 === function cargo_has_express(items)
 ~ temp item = pop(items)
 { item:
-    { CargoData(item, Express): ~ return true }
+    { CargoData(item, Express):
+        ~ return true
+    }
     ~ return cargo_has_express(items)
 }
 ~ return false
@@ -143,38 +145,36 @@ LIST AllCargo =
 // Returns the single Express destination if all Express cargo shares one destination,
 // or 0 if there is no Express cargo, or if Express cargo exists for multiple destinations.
 === function cargo_express_destination(items)
-~ temp found = 0
-~ temp _items = items
-- (top)
-~ temp item = pop(_items)
+~ return _cargo_express_destination_r(items, 0)
+
+=== function _cargo_express_destination_r(items, found)
+~ temp item = pop(items)
 { item:
     { CargoData(item, Express):
         { found == 0:
-            ~ found = CargoData(item, To)
+            ~ return _cargo_express_destination_r(items, CargoData(item, To))
         - else:
             { found != CargoData(item, To):
                 ~ return 0
             }
         }
     }
-    -> top
+    ~ return _cargo_express_destination_r(items, found)
 }
 ~ return found
 
 // Returns true if the hold contains both Hazardous and non-Hazardous cargo
 === function cargo_is_mixed_hazardous(items)
-~ temp has_hazardous = false
-~ temp has_clean = false
-~ temp _items = items
-- (top)
-~ temp item = pop(_items)
+~ return _cargo_is_mixed_hazardous_r(items, false, false)
+
+=== function _cargo_is_mixed_hazardous_r(items, has_hazardous, has_clean)
+~ temp item = pop(items)
 { item:
     { CargoData(item, Hazardous):
-        ~ has_hazardous = true
+        ~ return _cargo_is_mixed_hazardous_r(items, true, has_clean)
     - else:
-        ~ has_clean = true
+        ~ return _cargo_is_mixed_hazardous_r(items, has_hazardous, true)
     }
-    -> top
 }
 ~ return has_hazardous and has_clean
 
@@ -182,7 +182,9 @@ LIST AllCargo =
 === function cargo_blocks_turbo(items)
 ~ temp item = pop(items)
 { item:
-    { CargoData(item, Fragile) or CargoData(item, Passengers): ~ return true }
+    { CargoData(item, Fragile) or CargoData(item, Passengers):
+        ~ return true
+    }
     ~ return cargo_blocks_turbo(items)
 }
 ~ return false
@@ -207,7 +209,9 @@ LIST AllCargo =
 */
 === function cargo_is_available(cargo, port)
 ~ temp from = CargoData(cargo, From)
-{ from != port: ~ return false }
+{ from != port:
+    ~ return false
+}
 { CargoData(cargo, Express):
     ~ temp to = CargoData(cargo, To)
     ~ temp turbo_fuel = EngineData(ShipEngineTier, TurboFuel)

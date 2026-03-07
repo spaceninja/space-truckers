@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "lint": "inkjs-compiler space-truckers.ink"
+  },
+  "devDependencies": {
+    "inkjs": "^2.4.0"
+  }
+}
