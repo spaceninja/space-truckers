@@ -192,12 +192,12 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 }
 // Check 2: Express cargo for multiple destinations
 ~ temp express_dest = cargo_express_destination(ShipCargo)
-{ cargo_has_express(ShipCargo) and express_dest == 0:
+{ cargo_has_express(ShipCargo) and express_dest == Transit:
     You have Express cargo bound for multiple destinations. Express contracts require a direct run — unload one before departing.
     -> port_opts
 }
 // Check 3: Express destination lock — only show the Express destination
-{ express_dest > 0:
+{ express_dest != Transit:
     Your Express manifest locks your destination to {LocationData(express_dest, Name)}.
     -> flight_options(express_dest)
 }

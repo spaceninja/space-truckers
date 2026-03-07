@@ -155,11 +155,11 @@ LIST AllCargo =
 /*
 
     Returns the single Express destination if all Express cargo shares one destination,
-    or 0 if there is no Express cargo, or if Express cargo exists for multiple destinations.
+    or Transit if there is no Express cargo, or if Express cargo exists for multiple destinations.
 
 */
 === function cargo_express_destination(items)
-~ return _cargo_express_destination_r(items, 0)
+~ return _cargo_express_destination_r(items, Transit)
 
 /*
 
@@ -170,11 +170,11 @@ LIST AllCargo =
 ~ temp item = pop(items)
 { item:
     { CargoData(item, Express):
-        { found == 0:
+        { found == Transit:
             ~ return _cargo_express_destination_r(items, CargoData(item, To))
         - else:
             { found != CargoData(item, To):
-                ~ return 0
+                ~ return Transit
             }
         }
     }
