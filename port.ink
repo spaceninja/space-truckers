@@ -1,4 +1,3 @@
-VAR PortFuelCost = 1.5
 VAR PortCargo = ()
 
 /*
@@ -29,7 +28,7 @@ Welcome to {LocationData(port, Name)}!
 */
 = choose_cargo
 ~ temp _choices = PortCargo
-current mass = {total_mass(ShipCargo)} / {ShipCargoCapacity}t
+current mass = {total_mass(ShipCargo)}t
 - (top)
     ~ temp cargo = pop(_choices)
     { cargo:
@@ -54,7 +53,7 @@ current mass = {total_mass(ShipCargo)} / {ShipCargoCapacity}t
 */
 = manage_cargo
 ~ temp _choices = ShipCargo
-current mass = {total_mass(ShipCargo)} / {ShipCargoCapacity}t
+current mass = {total_mass(ShipCargo)}t
 { LIST_COUNT(ShipCargo) == 0:
     You have no cargo loaded.
 }
@@ -112,11 +111,12 @@ current mass = {total_mass(ShipCargo)} / {ShipCargoCapacity}t
 ~ temp fuel_needed = ShipFuelCapacity - ShipFuel
 ~ temp half_tank = ShipFuelCapacity / 2
 ~ temp quarter_tank = ShipFuelCapacity / 4
-~ temp full_cost = INT(fuel_needed * PortFuelCost)
-~ temp half_cost = INT(half_tank * PortFuelCost)
-~ temp quarter_cost = INT(quarter_tank * PortFuelCost)
-~ temp min_fuel = PlayerBankBalance / PortFuelCost
-The current unit cost of fuel is {PortFuelCost} €. Your fuel gauge reads {ShipFuel}/{ShipFuelCapacity}. Your bank account balance is {PlayerBankBalance} €.
+~ temp price = get_fuel_price(here)
+~ temp full_cost = FLOOR(fuel_needed * price)
+~ temp half_cost = FLOOR(half_tank * price)
+~ temp quarter_cost = FLOOR(quarter_tank * price)
+~ temp min_fuel = PlayerBankBalance / price
+The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{ShipFuelCapacity}. Your bank account balance is {PlayerBankBalance} €.
 {ShipFuel < ShipFuelCapacity:
     + {PlayerBankBalance >= full_cost}
         [Fill it up ({full_cost} €)]
@@ -134,18 +134,16 @@ The current unit cost of fuel is {PortFuelCost} €. Your fuel gauge reads {Ship
 + [Done] -> port_opts
 
 = buy_fuel(amount_requested)
-// safety check that they don't ask for more fuel than capacity
 ~ temp fuel_needed = ShipFuelCapacity - ShipFuel
 ~ temp amount = MIN(fuel_needed, FLOOR(amount_requested))
-// calculate the cost for the real amount of fuel
-~ temp cost = INT(amount * PortFuelCost)
+~ temp cost = FLOOR(amount * get_fuel_price(here))
 {
 - PlayerBankBalance < cost:
-    “Sorry, your credit chip was declined.”
+    "Sorry, your credit chip was declined."
 - PlayerBankBalance >= cost:
-    ~ ShipFuel = MIN(ShipFuel + amount, 100)
+    ~ ShipFuel = MIN(ShipFuel + amount, ShipFuelCapacity)
     ~ PlayerBankBalance -= MAX(cost, 0)
-    “Thank you, come again!”
+    "Thank you, come again!"
 }
 - -> fuel_station
 
@@ -155,22 +153,29 @@ The current unit cost of fuel is {PortFuelCost} €. Your fuel gauge reads {Ship
 
 */
 = ship_out
-{ total_mass(ShipCargo) > ShipCargoCapacity:
-    Oops! You've added more mass than your ship can haul to your destination. You'll need to put something back before you can ship out.
-    -> port_opts
-}
-+ {here != Earth} [Go to {LocationData(Earth, Name)}] -> flight_options(Earth)
-+ {here != Luna} [Go to {LocationData(Luna, Name)}] -> flight_options(Luna)
-+ {here != Mars} [Go to {LocationData(Mars, Name)}] -> flight_options(Mars)
++ {here != Earth}    [Go to {LocationData(Earth, Name)}]    -> flight_options(Earth)
++ {here != Luna}     [Go to {LocationData(Luna, Name)}]     -> flight_options(Luna)
++ {here != Mars}     [Go to {LocationData(Mars, Name)}]     -> flight_options(Mars)
++ {here != Ceres}    [Go to {LocationData(Ceres, Name)}]    -> flight_options(Ceres)
++ {here != Ganymede} [Go to {LocationData(Ganymede, Name)}] -> flight_options(Ganymede)
++ {here != Titan}    [Go to {LocationData(Titan, Name)}]    -> flight_options(Titan)
 + [Cancel] -> port_opts
 
+// TODO: on engine upgrade, run: ~ ShipFuelCapacity = EngineData(ShipEngineTier, FuelCap)
+
 = flight_options(to)
-~ temp slow_cost = get_trip_fuel_cost(here, to, ShipEconomyMode)
-~ temp norm_cost = get_trip_fuel_cost(here, to, ShipBalanceMode)
-~ temp fast_cost = get_trip_fuel_cost(here, to, ShipTurboMode)
-~ temp slow_time = get_trip_duration(here, to, ShipEconomyMode)
-~ temp norm_time = get_trip_duration(here, to, ShipBalanceMode)
-~ temp fast_time = get_trip_duration(here, to, ShipTurboMode)
+~ temp eco_fuel    = EngineData(ShipEngineTier, EcoFuel)
+~ temp bal_fuel    = EngineData(ShipEngineTier, BalFuel)
+~ temp turbo_fuel  = EngineData(ShipEngineTier, TurboFuel)
+~ temp eco_speed   = EngineData(ShipEngineTier, EcoSpeed)
+~ temp bal_speed   = EngineData(ShipEngineTier, BalSpeed)
+~ temp turbo_speed = EngineData(ShipEngineTier, TurboSpeed)
+~ temp slow_cost   = get_trip_fuel_cost(here, to, eco_fuel)
+~ temp norm_cost   = get_trip_fuel_cost(here, to, bal_fuel)
+~ temp fast_cost   = get_trip_fuel_cost(here, to, turbo_fuel)
+~ temp slow_time   = get_trip_duration(here, to, eco_speed)
+~ temp norm_time   = get_trip_duration(here, to, bal_speed)
+~ temp fast_time   = get_trip_duration(here, to, turbo_speed)
 You have {ShipFuel} fuel, and a total mass of {total_mass(ShipCargo)}t.
 + {ShipFuel >= slow_cost}
     [Economy Mode ({slow_cost} fuel, {slow_time} days)]

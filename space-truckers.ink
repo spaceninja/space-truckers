@@ -21,13 +21,13 @@ LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, Tur
 === function EngineData(tier, stat)
 { tier:
 - 1:
-    ~ return engine_db(stat, 300, 11, 10, 20, 15, 40, 25)
+    ~ return engine_db(stat, 300, 1.1, 1.0, 2.0, 1.5, 4.0, 2.5)
 - 2:
-    ~ return engine_db(stat, 500,  8, 10, 15, 20, 30, 30)
+    ~ return engine_db(stat, 500, 0.8, 1.0, 1.5, 2.0, 3.0, 3.0)
 - 3:
-    ~ return engine_db(stat, 650,  5, 15,  9, 25, 18, 40)
+    ~ return engine_db(stat, 650, 0.5, 1.5, 0.9, 2.5, 1.8, 4.0)
 - 4:
-    ~ return engine_db(stat, 800,  3, 20,  6, 35, 12, 50)
+    ~ return engine_db(stat, 800, 0.3, 2.0, 0.6, 3.5, 1.2, 5.0)
 }
 
 === function engine_db(stat, fuelCap, ecoFuel, ecoSpeed, balFuel, balSpeed, turboFuel, turboSpeed)
