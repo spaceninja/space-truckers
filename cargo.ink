@@ -157,9 +157,13 @@ LIST AllCargo =
     Returns the single Express destination if all Express cargo shares one destination,
     or Transit if there is no Express cargo, or if Express cargo exists for multiple destinations.
 
+    Transit is used as a sentinel because no cargo is ever bound for Transit,
+    and it keeps the return type consistent as an AllLocations list value throughout
+    (returning 0 would cause a type error when comparing against real destinations).
+
 */
 === function cargo_express_destination(items)
-~ return _cargo_express_destination_r(items, Transit)
+~ return _cargo_express_destination_r(items, Transit) // Transit = "not yet found"
 
 /*
 
@@ -170,11 +174,11 @@ LIST AllCargo =
 ~ temp item = pop(items)
 { item:
     { CargoData(item, Express):
-        { found == Transit:
+        { found == Transit: // no Express destination recorded yet
             ~ return _cargo_express_destination_r(items, CargoData(item, To))
         - else:
             { found != CargoData(item, To):
-                ~ return Transit
+                ~ return Transit // conflict: Express cargo bound for multiple destinations
             }
         }
     }

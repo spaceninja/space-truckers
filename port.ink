@@ -191,6 +191,7 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
     -> port_opts
 }
 // Check 2: Express cargo for multiple destinations
+// Transit is the sentinel meaning "no single Express destination" (see cargo_express_destination)
 ~ temp express_dest = cargo_express_destination(ShipCargo)
 { cargo_has_express(ShipCargo) and express_dest == Transit:
     You have Express cargo bound for multiple destinations. Express contracts require a direct run — unload one before departing.
