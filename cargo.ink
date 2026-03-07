@@ -87,16 +87,16 @@ LIST AllCargo =
     [ Error: no data associated with {id}. ]
 }
 
-=== function cargo_db(data, fromData, toData, massData, titleData, expressData, fragileData, hazardousData, passengersData)
+=== function cargo_db(data, fromData, toData, massData, titleData, isExpress, isFragile, isHazardous, isPassengers)
 { data:
 - From:       ~ return fromData
 - To:         ~ return toData
 - Mass:       ~ return massData
 - Title:      ~ return titleData
-- Express:    ~ return expressData
-- Fragile:    ~ return fragileData
-- Hazardous:  ~ return hazardousData
-- Passengers: ~ return passengersData
+- Express:    ~ return isExpress
+- Fragile:    ~ return isFragile
+- Hazardous:  ~ return isHazardous
+- Passengers: ~ return isPassengers
 }
 
 /*
