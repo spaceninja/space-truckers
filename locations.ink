@@ -1,4 +1,4 @@
-LIST AllLocations = Transit, Earth, Luna, Mars, Ceres, Ganymede, Titan
+LIST AllLocations = None, Transit, Earth, Luna, Mars, Ceres, Ganymede, Titan
 LIST LocationStats = Name
 
 VAR here = Earth
@@ -10,6 +10,7 @@ CONST FuelCostOuter = 0.8
 /*
 
     Location Database
+    Returns the requested stat for a single location entry.
 
     Distances (internal units — never shown to player):
     Earth↔Luna=5, Earth↔Mars=14, Earth↔Ceres=22, Earth↔Ganymede=40, Earth↔Titan=52
@@ -37,6 +38,12 @@ CONST FuelCostOuter = 0.8
     [ Error: no location data associated with {id}. ]
 }
 
+/*
+
+    Location Database Row
+    Returns the requested stat for a single location entry.
+
+*/
 === function location_db(id, toEarthData, toLunaData, toMarsData, toCeresData, toGanymedeData, toTitanData, nameData)
 { id:
 - Earth:    ~ return toEarthData

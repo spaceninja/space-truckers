@@ -18,6 +18,12 @@ LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, Tur
 -> arrive_in_port(here)
 //-> transit(Mars, 300, 7)
 
+/*
+
+    Engine Database
+    Returns the requested stat for a given engine tier.
+
+*/
 === function EngineData(tier, stat)
 { tier:
 - 1:
@@ -30,6 +36,12 @@ LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, Tur
     ~ return engine_db(stat, 800, 0.3, 2.0, 0.6, 3.5, 1.2, 5.0)
 }
 
+/*
+
+    Engine Database Row
+    Returns the requested stat for a single engine tier entry.
+
+*/
 === function engine_db(stat, fuelCap, ecoFuel, ecoSpeed, balFuel, balSpeed, turboFuel, turboSpeed)
 { stat:
 - FuelCap:    ~ return fuelCap
