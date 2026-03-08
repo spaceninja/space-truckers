@@ -245,12 +245,19 @@ LIST AllCargo =
     ~ return false
 }
 { CargoData(cargo, Express):
-    ~ temp to = CargoData(cargo, To)
-    ~ temp turbo_fuel = EngineData(ShipEngineTier, TurboFuel)
-    ~ temp turbo_cost = get_trip_fuel_cost(port, to, turbo_fuel)
-    ~ return turbo_cost <= ShipFuelCapacity
+    ~ return can_turbo_to(CargoData(cargo, To))
 }
 ~ return true
+
+/*
+
+    Returns true if the player's ship can reach the given destination at Turbo speed
+    within its current fuel capacity.
+
+*/
+=== function can_turbo_to(destination)
+~ temp turbo_fuel = EngineData(ShipEngineTier, TurboFuel)
+~ return get_trip_fuel_cost(here, destination, turbo_fuel) <= ShipFuelCapacity
 
 /*
 
@@ -260,8 +267,6 @@ LIST AllCargo =
 === function total_mass(items)
 ~ temp item = pop(items)
 { item:
-    ~ temp mass = CargoData(item, Mass)
-    ~ items -= item
-    ~ return mass + total_mass(items)
+    ~ return CargoData(item, Mass) + total_mass(items)
 }
 ~ return 0
