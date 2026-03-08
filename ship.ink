@@ -33,7 +33,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 */
 = ship_options
-{AwakeDuration > ActionPointsMax: If you don't get some sleep soon, you'll start making mistakes.}
+{is_overtired(): If you don't get some sleep soon, you'll start making mistakes.}
 <center><em><small>{ShipClock} days to {LocationData(ShipDestination, Name)} / {AP} AP remaining</small></em></center>
 - (ship_opts)
 + [Short Task (1 AP)]
@@ -44,7 +44,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
     -> sleep(1)
 + {can_sleep()} [Sleep (2 AP)]
     -> sleep(2)
--> END
+- -> END
 
 /*
 
@@ -100,3 +100,13 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 */
 === function can_sleep()
 ~ return AwakeDuration >= ActionPointsMax - 2
+
+/*
+
+    Is The Player Overtired?
+    Returns true when the player has been awake longer than their action point maximum,
+    triggering a fatigue warning in ship_options.
+
+*/
+=== function is_overtired()
+~ return AwakeDuration > ActionPointsMax

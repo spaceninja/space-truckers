@@ -19,7 +19,6 @@ VAR ShipCargo = ()
 LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, TurboSpeed
 
 -> arrive_in_port(here)
-//-> transit(Mars, 300, 7)
 
 /*
 

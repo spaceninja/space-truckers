@@ -250,3 +250,36 @@ describe("cargo_express_destination", () => {
     expect(result.Equals(L(story, "AllLocations.None"))).toBe(true);
   });
 });
+
+describe("can_turbo_to", () => {
+  // Tier 1: TurboFuel=4.0, FuelCap=300, ship mass=5 (no cargo)
+  // Cost formula: FLOOR(distance × mass × fuel_factor)
+  // Earth→Luna:  dist=5,  cost=FLOOR(5×5×4)=100  → within 300 ✓
+  // Earth→Mars:  dist=14, cost=FLOOR(14×5×4)=280 → within 300 ✓
+  // Earth→Ceres: dist=22, cost=FLOOR(22×5×4)=440 → exceeds 300 ✗
+
+  it("returns true for a nearby destination (Luna) at default engine tier and capacity", () => {
+    const result = story.EvaluateFunction("can_turbo_to", [L(story, "AllLocations.Luna")]);
+    expect(result).toBe(true);
+  });
+
+  it("returns true for a mid-range destination (Mars) at default engine tier and capacity", () => {
+    // 14×5×4 = 280 ≤ 300
+    const result = story.EvaluateFunction("can_turbo_to", [L(story, "AllLocations.Mars")]);
+    expect(result).toBe(true);
+  });
+
+  it("returns false for a distant destination (Ceres) that exceeds fuel capacity", () => {
+    // 22×5×4 = 440 > 300
+    const result = story.EvaluateFunction("can_turbo_to", [L(story, "AllLocations.Ceres")]);
+    expect(result).toBe(false);
+  });
+
+  it("returns false when fuel capacity is reduced below the cost to Luna", () => {
+    // Luna requires 100; set cap to 50
+    story.variablesState["ShipFuelCapacity"] = 50;
+    const result = story.EvaluateFunction("can_turbo_to", [L(story, "AllLocations.Luna")]);
+    story.variablesState["ShipFuelCapacity"] = 300; // restore
+    expect(result).toBe(false);
+  });
+});
