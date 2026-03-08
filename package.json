@@ -1,10 +1,13 @@
 {
+  "type": "module",
   "scripts": {
     "lint": "inkjs-compiler space-truckers.ink",
     "build": "node scripts/build.js",
-    "build:clean": "rm -rf dist && node scripts/build.js"
+    "build:clean": "rm -rf dist && node scripts/build.js",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "inkjs": "^2.4.0"
+    "inkjs": "^2.4.0",
+    "vitest": "^4.0.18"
   }
 }
