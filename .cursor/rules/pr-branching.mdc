@@ -1,0 +1,25 @@
+---
+description: Always branch feature work off the latest main and open PRs against main
+alwaysApply: true
+---
+
+# PR Branching Convention
+
+Always create feature branches from the latest `main`, never from another feature branch.
+
+```bash
+# ✅ CORRECT
+git fetch origin
+git checkout -b my-feature origin/main
+
+# ❌ WRONG — accidentally includes unmerged work from another branch
+git checkout -b my-feature some-other-feature-branch
+```
+
+Before creating a PR, verify the branch contains only the intended commits:
+
+```bash
+git log --oneline origin/main..HEAD
+```
+
+If extra commits from another branch are present, create a fresh branch off `origin/main` and cherry-pick only the intended commits.
