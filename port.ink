@@ -138,9 +138,9 @@ current mass = {total_mass(ShipCargo)}t
 ~ temp half_tank = ShipFuelCapacity / 2
 ~ temp quarter_tank = ShipFuelCapacity / 4
 ~ temp price = get_fuel_price(here)
-~ temp full_cost = FLOOR(fuel_needed * price)
-~ temp half_cost = FLOOR(half_tank * price)
-~ temp quarter_cost = FLOOR(quarter_tank * price)
+~ temp full_cost = get_fuel_purchase_cost(fuel_needed)
+~ temp half_cost = get_fuel_purchase_cost(half_tank)
+~ temp quarter_cost = get_fuel_purchase_cost(quarter_tank)
 ~ temp min_fuel = PlayerBankBalance / price
 The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{ShipFuelCapacity}. Your bank account balance is {PlayerBankBalance} €.
 {ShipFuel < ShipFuelCapacity:
@@ -168,7 +168,7 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 = buy_fuel(amount_requested)
 ~ temp fuel_needed = ShipFuelCapacity - ShipFuel
 ~ temp amount = MIN(fuel_needed, FLOOR(amount_requested))
-~ temp cost = FLOOR(amount * get_fuel_price(here))
+~ temp cost = get_fuel_purchase_cost(amount)
 {
 - PlayerBankBalance < cost:
     "Sorry, your credit chip was declined."
@@ -235,25 +235,46 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 ~ temp has_express    = cargo_has_express(ShipCargo)
 ~ temp blocks_turbo   = cargo_blocks_turbo(ShipCargo)
 You have {ShipFuel} fuel, and a total mass of {total_mass(ShipCargo)}t.
-+ {not has_express and ShipFuel >= slow_cost}
++ {can_use_flight_mode(has_express, ShipFuel, slow_cost)}
     [Economy Mode ({slow_cost} fuel, {slow_time} days)]
     -> transit(to, slow_cost, slow_time)
-+ {has_express or ShipFuel < slow_cost}
++ {not can_use_flight_mode(has_express, ShipFuel, slow_cost)}
     [Economy Mode ({slow_cost} fuel, {slow_time} days) #UNCLICKABLE]
     { has_express: Express cargo requires Turbo mode. - else: You do not have enough fuel to use economy mode. }
     -> port_opts
-+ {not has_express and ShipFuel >= norm_cost}
++ {can_use_flight_mode(has_express, ShipFuel, norm_cost)}
     [Balance Mode ({norm_cost} fuel, {norm_time} days)]
     -> transit(to, norm_cost, norm_time)
-+ {has_express or ShipFuel < norm_cost}
++ {not can_use_flight_mode(has_express, ShipFuel, norm_cost)}
     [Balance Mode ({norm_cost} fuel, {norm_time} days) #UNCLICKABLE]
     { has_express: Express cargo requires Turbo mode. - else: You do not have enough fuel to use balance mode. }
     -> port_opts
-+ {not blocks_turbo and ShipFuel >= fast_cost}
++ {can_use_flight_mode(blocks_turbo, ShipFuel, fast_cost)}
     [Turbo Mode ({fast_cost} fuel, {fast_time} days)]
     -> transit(to, fast_cost, fast_time)
-+ {blocks_turbo or ShipFuel < fast_cost}
++ {not can_use_flight_mode(blocks_turbo, ShipFuel, fast_cost)}
     [Turbo Mode ({fast_cost} fuel, {fast_time} days) #UNCLICKABLE]
     { blocks_turbo: Fragile or passenger cargo cannot use Turbo mode. - else: You do not have enough fuel to use turbo mode. }
     -> port_opts
 + [Cancel] -> port_opts
+
+/*
+
+    Can Use Flight Mode
+    Returns true if the mode is available: cargo doesn't block it and there is enough fuel.
+    For Eco/Balance, pass has_express as is_blocked.
+    For Turbo, pass blocks_turbo as is_blocked.
+
+*/
+=== function can_use_flight_mode(is_blocked, fuel, cost)
+~ return not is_blocked and fuel >= cost
+
+/*
+
+    Get Fuel Purchase Cost
+    Returns the euro cost of purchasing a given amount of fuel at the current port.
+    Formula: FLOOR(amount × fuel_price)
+
+*/
+=== function get_fuel_purchase_cost(amount)
+~ return FLOOR(amount * get_fuel_price(here))
