@@ -5,6 +5,27 @@ alwaysApply: true
 
 # Testing Conventions
 
+## Write testable Ink code
+
+Prefer extracting logic into named `=== function` blocks over embedding it inline in knot bodies. Inline logic (choice conditions, inline arithmetic, inline conditionals) can only be exercised through integration tests; extracted functions can be unit-tested directly and cheaply.
+
+**Prefer this:**
+```ink
+=== function can_afford_fuel(fuel_amount)
+~ return PlayerBankBalance >= FLOOR(fuel_amount * get_fuel_price(here))
+
+= fuel_station
++ {can_afford_fuel(ShipFuelCapacity - ShipFuel)} [Fill it up] -> buy_fuel(...)
+```
+
+**Over this:**
+```ink
+= fuel_station
++ {PlayerBankBalance >= FLOOR((ShipFuelCapacity - ShipFuel) * get_fuel_price(here))} [Fill it up] -> buy_fuel(...)
+```
+
+When encountering existing inline logic that is complex enough to warrant testing, refactor it into a function. This applies to new code and to existing code as you work in the area.
+
 ## Running tests before a PR
 
 Always run `npm test` before opening a pull request. The CI workflow (`ci.yml`) runs `npm run lint` then `npm test` — both must pass.
