@@ -1,13 +1,13 @@
 ---
-description: Testing conventions for Space Truckers — when and how to write tests
-alwaysApply: true
+name: testing
+description: Testing conventions for Space Truckers — how to write testable Ink code, when and how to write unit and integration tests, and what test helpers are available. Use when writing or modifying Ink functions, working in test files, or when a gameplay interaction warrants a new test.
 ---
 
 # Testing Conventions
 
 ## Write testable Ink code
 
-Prefer extracting logic into named `=== function` blocks over embedding it inline in knot bodies. Inline logic (choice conditions, inline arithmetic, inline conditionals) can only be exercised through integration tests; extracted functions can be unit-tested directly and cheaply.
+Prefer extracting logic into named `=== function` blocks over embedding it inline in knot bodies. Inline logic can only be exercised through integration tests; extracted functions can be unit-tested directly and cheaply.
 
 **Prefer this:**
 ```ink
@@ -24,11 +24,7 @@ Prefer extracting logic into named `=== function` blocks over embedding it inlin
 + {PlayerBankBalance >= FLOOR((ShipFuelCapacity - ShipFuel) * get_fuel_price(here))} [Fill it up] -> buy_fuel(...)
 ```
 
-When encountering existing inline logic that is complex enough to warrant testing, refactor it into a function. This applies to new code and to existing code as you work in the area.
-
-## Running tests before a PR
-
-Always run `npm test` before opening a pull request. The CI workflow (`ci.yml`) runs `npm run lint` then `npm test` — both must pass.
+When encountering existing inline logic that is complex enough to warrant testing, refactor it into a function.
 
 ## Writing unit tests for Ink functions
 

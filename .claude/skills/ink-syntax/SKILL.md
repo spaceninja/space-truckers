@@ -172,7 +172,7 @@ This runs `inkjs-compiler space-truckers.ink` (the project entry point), which c
   ```ink
   // Wrong:
   { condition: ~ return true }
-  
+
   // Correct:
   { condition:
       ~ return true
