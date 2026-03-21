@@ -7,7 +7,7 @@ VAR PortCargo = ()
 */
 === arrive_in_port(port)
 ~ here = port
-~ PortCargo = get_available_cargo(port, 3)
+~ PortCargo = get_available_cargo(port, 5)
 
 Welcome to {LocationData(port, Name)}!
 
