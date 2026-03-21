@@ -227,11 +227,11 @@ LIST AllCargo =
 - 025_OliveOil:
     ~ return cargo_db(data, Earth, Luna,      15, "olive oil",                0, 1, 0, 0)
 - 026_Butter:
-    ~ return cargo_db(data, Earth, Luna,      10, "cultured butter",          1, 1, 0, 0)
+    ~ return cargo_db(data, Earth, Luna,      10, "cultured butter",          0, 1, 0, 0)
 - 027_Cheese:
     ~ return cargo_db(data, Earth, Luna,      15, "aged Gruyere",             0, 0, 0, 0)
 - 028_Yogurt:
-    ~ return cargo_db(data, Earth, Luna,      10, "Greek yogurt",             1, 1, 0, 0)
+    ~ return cargo_db(data, Earth, Luna,      10, "Greek yogurt",             0, 1, 0, 0)
 - 029_Cream:
     ~ return cargo_db(data, Earth, Luna,      15, "heavy cream",              0, 1, 0, 0)
 - 030_Eggs:
@@ -255,7 +255,7 @@ LIST AllCargo =
 - 039_Oysters:
     ~ return cargo_db(data, Earth, Mars,      10, "Chesapeake oysters",       0, 1, 0, 0)
 - 040_Lobster:
-    ~ return cargo_db(data, Earth, Mars,      10, "live Maine lobster",       1, 1, 0, 0)
+    ~ return cargo_db(data, Earth, Mars,      10, "live Maine lobster",       1, 0, 0, 0)
 - 041_Shrimp:
     ~ return cargo_db(data, Earth, Mars,      10, "gulf shrimp",              1, 0, 0, 0)
 - 042_Caviar:
@@ -429,7 +429,7 @@ LIST AllCargo =
 - 126_RareEarths:
     ~ return cargo_db(data, Luna,  Earth,     15, "rare earth oxides",        1, 0, 0, 0)
 - 127_GrapheneSheets:
-    ~ return cargo_db(data, Luna,  Earth,      5, "graphene sheets",          1, 1, 0, 0)
+    ~ return cargo_db(data, Luna,  Earth,      5, "graphene sheets",          0, 1, 0, 0)
 - 128_MedKits:
     ~ return cargo_db(data, Luna,  Earth,     10, "medical kits",             1, 0, 0, 0)
 - 129_LabGear:
@@ -439,7 +439,7 @@ LIST AllCargo =
 - 131_CeramicPlates:
     ~ return cargo_db(data, Luna,  Mars,      15, "ceramic plates",           0, 0, 0, 0)
 - 132_QuantumChips:
-    ~ return cargo_db(data, Luna,  Mars,       5, "quantum chips",            1, 1, 0, 0)
+    ~ return cargo_db(data, Luna,  Mars,       5, "quantum chips",            0, 1, 0, 0)
 - 133_MagnesiumBars:
     ~ return cargo_db(data, Luna,  Mars,      30, "magnesium bars",           0, 0, 0, 0)
 - 134_AnorthiteSlabs:
@@ -673,7 +673,7 @@ LIST AllCargo =
 - 248_PhenolicResin:
     ~ return cargo_db(data, Mars,  Ceres,     15, "phenolic resin",           0, 0, 0, 0)
 - 249_Pharmaceuticals:
-    ~ return cargo_db(data, Mars,  Ceres,     10, "pharmaceuticals",          1, 1, 0, 0)
+    ~ return cargo_db(data, Mars,  Ceres,     10, "pharmaceuticals",          1, 0, 0, 0)
 - 250_MedicalKits:
     ~ return cargo_db(data, Mars,  Ceres,     15, "medical kits",             1, 0, 0, 0)
 - 251_VaccineVials:
@@ -717,7 +717,7 @@ LIST AllCargo =
 - 270_CeramicTiles:
     ~ return cargo_db(data, Mars,  Earth,     20, "ceramic tiles",            0, 0, 0, 0)
 - 271_FiberOptics:
-    ~ return cargo_db(data, Mars,  Earth,      5, "fiber optics",             1, 1, 0, 0)
+    ~ return cargo_db(data, Mars,  Earth,      5, "fiber optics",             0, 1, 0, 0)
 - 272_RadioIsotopes:
     ~ return cargo_db(data, Mars,  Earth,     10, "radioisotopes",            1, 0, 1, 0)
 - 273_DustFilters:
@@ -913,7 +913,7 @@ LIST AllCargo =
 - 368_Flour:
     ~ return cargo_db(data, Ceres, Luna,      20, "cricket flour",            0, 0, 0, 0)
 - 369_Yeast:
-    ~ return cargo_db(data, Ceres, Luna,       5, "brewer's yeast",           1, 1, 0, 0)
+    ~ return cargo_db(data, Ceres, Luna,       5, "brewer's yeast",           1, 0, 0, 0)
 - 370_Algae:
     ~ return cargo_db(data, Ceres, Luna,      10, "dried algae",              0, 0, 0, 0)
 - 371_Vitamins:
@@ -955,7 +955,7 @@ LIST AllCargo =
 - 389_Antiques:
     ~ return cargo_db(data, Ceres, Earth,     20, "mining antiques",          0, 0, 0, 0)
 - 390_Specimens:
-    ~ return cargo_db(data, Ceres, Earth,     10, "pressed specimens",        1, 1, 0, 0)
+    ~ return cargo_db(data, Ceres, Earth,     10, "pressed specimens",        0, 1, 0, 0)
 - 391_Workers:
     ~ return cargo_db(data, Ceres, Titan,     10, "contract workers",         0, 0, 0, 1)
 - 392_Engineers:
@@ -1041,7 +1041,7 @@ LIST AllCargo =
 - 431_Drones:
     ~ return cargo_db(data, Ganymede, Titan,  30, "survey drones",            0, 0, 0, 0)
 - 432_Spectrometer:
-    ~ return cargo_db(data, Ganymede, Titan,  20, "spectrometer array",       1, 1, 0, 0)
+    ~ return cargo_db(data, Ganymede, Titan,  20, "spectrometer array",       0, 1, 0, 0)
 - 433_Plankton:
     ~ return cargo_db(data, Ganymede, Titan,  30, "bioluminescent plankton",  1, 0, 0, 0)
 - 434_Pipettes:
@@ -1051,7 +1051,7 @@ LIST AllCargo =
 - 436_Bacteria:
     ~ return cargo_db(data, Ganymede, Ceres,  10, "engineered bacteria",      0, 0, 1, 0)
 - 437_Lenses:
-    ~ return cargo_db(data, Ganymede, Ceres,  10, "spectrometer lenses",      1, 1, 0, 0)
+    ~ return cargo_db(data, Ganymede, Ceres,  10, "spectrometer lenses",      0, 1, 0, 0)
 - 438_Fiber:
     ~ return cargo_db(data, Ganymede, Ceres,  15, "optical fiber",            0, 0, 0, 0)
 - 439_Helium:
@@ -1117,7 +1117,7 @@ LIST AllCargo =
 - 469_Yeasts:
     ~ return cargo_db(data, Ganymede, Mars,   10, "engineered yeasts",        0, 0, 0, 0)
 - 470_Stem:
-    ~ return cargo_db(data, Ganymede, Mars,   10, "stem cell vials",          1, 1, 0, 0)
+    ~ return cargo_db(data, Ganymede, Mars,   10, "stem cell vials",          1, 0, 0, 0)
 - 471_Vaccines:
     ~ return cargo_db(data, Ganymede, Mars,   15, "lyophilized vaccines",     1, 0, 0, 0)
 - 472_Antivenom:
@@ -1257,7 +1257,7 @@ LIST AllCargo =
 - 539_Medics:
     ~ return cargo_db(data, Titan, Ceres,     10, "field medics",             0, 0, 0, 1)
 - 540_Geologists:
-    ~ return cargo_db(data, Titan, Ceres,     20, "geologists with samples",  0, 0, 1, 1)
+    ~ return cargo_db(data, Titan, Ceres,     20, "geologists with samples",  0, 0, 0, 1)
 - 541_Welders:
     ~ return cargo_db(data, Titan, Ceres,     15, "orbital welders",          0, 0, 0, 1)
 - 542_Techs:
@@ -1313,9 +1313,9 @@ LIST AllCargo =
 - 567_Magnets:
     ~ return cargo_db(data, Titan, Mars,      30, "shielding magnets",        0, 0, 0, 0)
 - 568_Mirrors:
-    ~ return cargo_db(data, Titan, Mars,      10, "telescope mirrors",        1, 1, 0, 0)
+    ~ return cargo_db(data, Titan, Mars,      10, "telescope mirrors",        0, 1, 0, 0)
 - 569_Lenses:
-    ~ return cargo_db(data, Titan, Mars,       5, "optical lenses",           1, 1, 0, 0)
+    ~ return cargo_db(data, Titan, Mars,       5, "optical lenses",           0, 1, 0, 0)
 - 570_Optics:
     ~ return cargo_db(data, Titan, Mars,      10, "fiber optics",             1, 0, 0, 0)
 - 571_Chips:
@@ -1369,7 +1369,7 @@ LIST AllCargo =
 - 595_Reagents:
     ~ return cargo_db(data, Titan, Earth,     40, "chemical reagents",        0, 0, 1, 0)
 - 596_Isotopes:
-    ~ return cargo_db(data, Titan, Earth,     50, "radioactive isotopes",     0, 0, 1, 1)
+    ~ return cargo_db(data, Titan, Earth,     50, "radioactive isotopes",     0, 0, 1, 0)
 - 597_Deuterium:
     ~ return cargo_db(data, Titan, Earth,     40, "heavy water",              0, 0, 0, 0)
 - 598_Graphene:
