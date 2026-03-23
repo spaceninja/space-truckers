@@ -1542,7 +1542,7 @@ LIST AllCargo =
 }
 // Filter out cargo the player can't physically carry to its destination
 ~ temp trip_mass = CargoData(cargo, Mass) + 5
-~ temp eco_fuel = EngineData(ShipEngineTier, EcoFuel)
+~ temp eco_fuel = EngineData(ShipManufacturer, ShipEngineTier, EcoFuel)
 ~ temp trip_cost = FLOOR(get_distance(here, CargoData(cargo, To)) * trip_mass * eco_fuel)
 { trip_cost > ShipFuelCapacity:
     ~ return false
@@ -1559,7 +1559,7 @@ LIST AllCargo =
 
 */
 === function can_turbo_to(destination)
-~ temp turbo_fuel = EngineData(ShipEngineTier, TurboFuel)
+~ temp turbo_fuel = EngineData(ShipManufacturer, ShipEngineTier, TurboFuel)
 ~ return get_trip_fuel_cost(here, destination, turbo_fuel) <= ShipFuelCapacity
 
 /*

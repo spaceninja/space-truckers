@@ -210,7 +210,7 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 + {here != Titan}    [Go to {LocationData(Titan, Name)}]    -> flight_options(Titan)
 + [Cancel] -> port_opts
 
-// TODO: on engine upgrade, run: ~ ShipFuelCapacity = EngineData(ShipEngineTier, FuelCap)
+// TODO: on engine upgrade, run: ~ ShipFuelCapacity = EngineData(ShipManufacturer, ShipEngineTier, FuelCap)
 
 /*
 
@@ -219,12 +219,12 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 
 */
 = flight_options(to)
-~ temp eco_fuel    = EngineData(ShipEngineTier, EcoFuel)
-~ temp bal_fuel    = EngineData(ShipEngineTier, BalFuel)
-~ temp turbo_fuel  = EngineData(ShipEngineTier, TurboFuel)
-~ temp eco_speed   = EngineData(ShipEngineTier, EcoSpeed)
-~ temp bal_speed   = EngineData(ShipEngineTier, BalSpeed)
-~ temp turbo_speed = EngineData(ShipEngineTier, TurboSpeed)
+~ temp eco_fuel    = EngineData(ShipManufacturer, ShipEngineTier, EcoFuel)
+~ temp bal_fuel    = EngineData(ShipManufacturer, ShipEngineTier, BalFuel)
+~ temp turbo_fuel  = EngineData(ShipManufacturer, ShipEngineTier, TurboFuel)
+~ temp eco_speed   = EngineData(ShipManufacturer, ShipEngineTier, EcoSpeed)
+~ temp bal_speed   = EngineData(ShipManufacturer, ShipEngineTier, BalSpeed)
+~ temp turbo_speed = EngineData(ShipManufacturer, ShipEngineTier, TurboSpeed)
 ~ temp slow_cost   = get_trip_fuel_cost(here, to, eco_fuel)
 ~ temp norm_cost   = get_trip_fuel_cost(here, to, bal_fuel)
 ~ temp fast_cost   = get_trip_fuel_cost(here, to, turbo_fuel)
