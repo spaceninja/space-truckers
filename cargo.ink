@@ -1573,3 +1573,25 @@ LIST AllCargo =
     ~ return CargoData(item, Mass) + total_mass(items)
 }
 ~ return 0
+
+/*
+
+    Count Paperwork Chunks
+    Hybrid model: 1 base flight log chunk + 1 extra per cargo item
+    that has any special flag (Express, Hazardous, or Passengers).
+    A cargo item with multiple flags still only adds 1 chunk.
+
+*/
+=== function count_paperwork_chunks(items)
+~ return 1 + _count_flagged_cargo(items)
+
+=== function _count_flagged_cargo(items)
+~ temp item = pop(items)
+{ item:
+    { CargoData(item, Express) or CargoData(item, Hazardous) or CargoData(item, Passengers):
+        ~ return 1 + _count_flagged_cargo(items)
+    - else:
+        ~ return _count_flagged_cargo(items)
+    }
+}
+~ return 0

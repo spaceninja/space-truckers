@@ -1,11 +1,11 @@
 /**
- * Unit tests for extracted ship functions.
+ * Unit tests for ship functions.
  *
  *   can_sleep()
- *     → true when AwakeDuration >= ActionPointsMax - 2 (i.e., >= 4 with default max of 6)
+ *     → true when Fatigue >= 30
  *
  *   is_overtired()
- *     → true when AwakeDuration > ActionPointsMax (i.e., > 6 with default max of 6)
+ *     → true when Fatigue >= 70
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -15,49 +15,48 @@ let story;
 
 beforeEach(() => {
   story = createStory();
-  // ActionPointsMax defaults to 6
 });
 
 describe("can_sleep", () => {
-  it("returns false when AwakeDuration is 0 (just woke up)", () => {
-    story.variablesState["AwakeDuration"] = 0;
+  it("returns false when Fatigue is 0 (fully rested)", () => {
+    story.variablesState["Fatigue"] = 0;
     expect(story.EvaluateFunction("can_sleep", [])).toBe(false);
   });
 
-  it("returns false when AwakeDuration is 3 (below threshold)", () => {
-    story.variablesState["AwakeDuration"] = 3;
+  it("returns false when Fatigue is 20 (below threshold)", () => {
+    story.variablesState["Fatigue"] = 20;
     expect(story.EvaluateFunction("can_sleep", [])).toBe(false);
   });
 
-  it("returns true at threshold (AwakeDuration = ActionPointsMax - 2 = 4)", () => {
-    story.variablesState["AwakeDuration"] = 4;
+  it("returns true at threshold (Fatigue = 30)", () => {
+    story.variablesState["Fatigue"] = 30;
     expect(story.EvaluateFunction("can_sleep", [])).toBe(true);
   });
 
-  it("returns true when AwakeDuration exceeds threshold", () => {
-    story.variablesState["AwakeDuration"] = 8;
+  it("returns true when Fatigue exceeds threshold", () => {
+    story.variablesState["Fatigue"] = 80;
     expect(story.EvaluateFunction("can_sleep", [])).toBe(true);
   });
 });
 
 describe("is_overtired", () => {
-  it("returns false when AwakeDuration is 0", () => {
-    story.variablesState["AwakeDuration"] = 0;
+  it("returns false when Fatigue is 0", () => {
+    story.variablesState["Fatigue"] = 0;
     expect(story.EvaluateFunction("is_overtired", [])).toBe(false);
   });
 
-  it("returns false when AwakeDuration equals ActionPointsMax (6)", () => {
-    story.variablesState["AwakeDuration"] = 6;
+  it("returns false when Fatigue is 60 (below threshold)", () => {
+    story.variablesState["Fatigue"] = 60;
     expect(story.EvaluateFunction("is_overtired", [])).toBe(false);
   });
 
-  it("returns true when AwakeDuration exceeds ActionPointsMax (7)", () => {
-    story.variablesState["AwakeDuration"] = 7;
+  it("returns true at threshold (Fatigue = 70)", () => {
+    story.variablesState["Fatigue"] = 70;
     expect(story.EvaluateFunction("is_overtired", [])).toBe(true);
   });
 
   it("returns true when severely overtired", () => {
-    story.variablesState["AwakeDuration"] = 12;
+    story.variablesState["Fatigue"] = 100;
     expect(story.EvaluateFunction("is_overtired", [])).toBe(true);
   });
 });

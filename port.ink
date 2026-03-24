@@ -8,8 +8,16 @@ VAR PortCargo = ()
 === arrive_in_port(port)
 ~ here = port
 ~ PortCargo = get_available_cargo(port, 5)
+~ ShipCondition = 100
 
 Welcome to {LocationData(port, Name)}!
+
+// Paperwork settlement
+{ PaperworkDone < PaperworkTotal:
+    ~ temp missing = PaperworkTotal - PaperworkDone
+    You didn't complete all your paperwork. The port authority hits you with a customs fine for {missing} missing document{missing > 1:s}.
+    // TODO: calculate and apply actual fine amount
+}
 
 - (port_opts)
 + [Load cargo]
@@ -237,21 +245,21 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 You have {ShipFuel} fuel, and a total mass of {total_mass(ShipCargo)}t.
 + {can_use_flight_mode(has_express, ShipFuel, slow_cost)}
     [Economy Mode ({slow_cost} fuel, {slow_time} days)]
-    -> transit(to, slow_cost, slow_time)
+    -> transit(to, slow_cost, slow_time, Eco)
 + {not can_use_flight_mode(has_express, ShipFuel, slow_cost)}
     [Economy Mode ({slow_cost} fuel, {slow_time} days) #UNCLICKABLE]
     { has_express: Express cargo requires Turbo mode. - else: You do not have enough fuel to use economy mode. }
     -> port_opts
 + {can_use_flight_mode(has_express, ShipFuel, norm_cost)}
     [Balance Mode ({norm_cost} fuel, {norm_time} days)]
-    -> transit(to, norm_cost, norm_time)
+    -> transit(to, norm_cost, norm_time, Bal)
 + {not can_use_flight_mode(has_express, ShipFuel, norm_cost)}
     [Balance Mode ({norm_cost} fuel, {norm_time} days) #UNCLICKABLE]
     { has_express: Express cargo requires Turbo mode. - else: You do not have enough fuel to use balance mode. }
     -> port_opts
 + {can_use_flight_mode(blocks_turbo, ShipFuel, fast_cost)}
     [Turbo Mode ({fast_cost} fuel, {fast_time} days)]
-    -> transit(to, fast_cost, fast_time)
+    -> transit(to, fast_cost, fast_time, Turbo)
 + {not can_use_flight_mode(blocks_turbo, ShipFuel, fast_cost)}
     [Turbo Mode ({fast_cost} fuel, {fast_time} days) #UNCLICKABLE]
     { blocks_turbo: Fragile or passenger cargo cannot use Turbo mode. - else: You do not have enough fuel to use turbo mode. }

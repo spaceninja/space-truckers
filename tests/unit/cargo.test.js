@@ -251,6 +251,41 @@ describe("cargo_express_destination", () => {
   });
 });
 
+describe("count_paperwork_chunks", () => {
+  it("returns 1 (base chunk) for empty cargo", () => {
+    const result = story.EvaluateFunction("count_paperwork_chunks", [new InkList()]);
+    expect(result).toBe(1);
+  });
+
+  it("returns 1 (base chunk) for unflagged cargo only", () => {
+    const items = cargo(story, "AllCargo.003_Water", "AllCargo.101_Helium");
+    const result = story.EvaluateFunction("count_paperwork_chunks", [items]);
+    expect(result).toBe(1);
+  });
+
+  it("returns 2 for one hazardous item (base + 1 flagged)", () => {
+    const result = story.EvaluateFunction("count_paperwork_chunks", [L(story, "AllCargo.501_Methane")]);
+    expect(result).toBe(2);
+  });
+
+  it("returns 2 for one passenger item (base + 1 flagged)", () => {
+    const result = story.EvaluateFunction("count_paperwork_chunks", [L(story, "AllCargo.304_Colonists")]);
+    expect(result).toBe(2);
+  });
+
+  it("returns 2 for one express item (base + 1 flagged)", () => {
+    const result = story.EvaluateFunction("count_paperwork_chunks", [L(story, "AllCargo.001_Plums")]);
+    expect(result).toBe(2);
+  });
+
+  it("returns 3 for two flagged items among unflagged cargo", () => {
+    // 003_Water (plain) + 501_Methane (hazardous) + 304_Colonists (passengers)
+    const items = cargo(story, "AllCargo.003_Water", "AllCargo.501_Methane", "AllCargo.304_Colonists");
+    const result = story.EvaluateFunction("count_paperwork_chunks", [items]);
+    expect(result).toBe(3);
+  });
+});
+
 describe("can_turbo_to", () => {
   // Tier 1: TurboFuel=4.0, FuelCap=300, ship mass=5 (no cargo)
   // Cost formula: FLOOR(distance × mass × fuel_factor)

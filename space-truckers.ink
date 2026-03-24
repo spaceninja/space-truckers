@@ -12,12 +12,25 @@ VAR PlayerBankBalance = 200
 VAR PayRate = 3
 
 LIST Manufacturers = Kepler, Olympus, Huygens
+LIST FlightModes = Eco, Bal, Turbo
 
 VAR ShipManufacturer = Kepler
 VAR ShipEngineTier = 1
 VAR ShipFuelCapacity = 300
 VAR ShipFuel = 225
 VAR ShipCargo = ()
+VAR FlightMode = Bal
+
+VAR Fatigue = 0           // 0–100 scale. Gravity-modified accumulation.
+VAR Morale = 80           // 0–100 scale. Decays daily, boosted by recreation.
+VAR ShipCondition = 100   // 0–100%. Degrades 1%/day. Affects morale.
+VAR EngineCondition = 100 // 0–100%. Degrades 1%/day. Affects fuel cost.
+
+VAR TripDay = 0           // Current day of trip (incremented in next_day)
+VAR TripDuration = 0      // Total trip length in days
+VAR FlipDone = false      // Has the ship flip been executed this trip?
+VAR PaperworkDone = 0     // Chunks completed
+VAR PaperworkTotal = 0    // Chunks required (calculated at departure)
 
 LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, TurboSpeed
 
