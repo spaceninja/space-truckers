@@ -1595,3 +1595,17 @@ LIST AllCargo =
     }
 }
 ~ return 0
+
+/*
+
+    Get Paperwork Penalty Percentage
+    Returns the delivery pay reduction for incomplete paperwork.
+    Each missing chunk costs 10% of pay, capped at 50%.
+
+*/
+=== function get_paperwork_penalty_pct(done, total)
+~ temp missing = total - done
+{ missing <= 0:
+    ~ return 0
+}
+~ return MIN(missing * 10, 50)  // 10% per missing chunk, capped at 50%

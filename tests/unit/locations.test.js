@@ -158,6 +158,46 @@ describe("get_trip_fuel_cost", () => {
   });
 });
 
+describe("get_engine_fuel_penalty", () => {
+  // Formula: FLOOR(base_cost × (100 - EngineCondition) / 2 / 100)
+  // +5% fuel cost per 10% degradation below 100%
+  // Uses fresh story per test to avoid shared state issues with EngineCondition.
+
+  function penalty(baseCost, condition) {
+    const s = createStory();
+    s.variablesState["ShipCargo"] = new InkList();
+    s.variablesState["EngineCondition"] = condition;
+    return s.EvaluateFunction("get_engine_fuel_penalty", [baseCost]);
+  }
+
+  it("returns 0 at 100% condition", () => {
+    expect(penalty(280, 100)).toBe(0);
+  });
+
+  it("returns 5% at 90% condition: FLOOR(280 × 5 / 100) = 14", () => {
+    expect(penalty(280, 90)).toBe(14);
+  });
+
+  it("returns 10% at 80% condition: FLOOR(280 × 10 / 100) = 28", () => {
+    expect(penalty(280, 80)).toBe(28);
+  });
+
+  it("returns 25% at 50% condition: FLOOR(280 × 25 / 100) = 70", () => {
+    expect(penalty(280, 50)).toBe(70);
+  });
+
+  it("returns 0 at 100% condition even with large base cost", () => {
+    expect(penalty(10000, 100)).toBe(0);
+  });
+
+  it("floors fractional results", () => {
+    // At 90%: FLOOR(100 × 5 / 100) = FLOOR(5) = 5
+    expect(penalty(100, 90)).toBe(5);
+    // At 90%: FLOOR(50 × 5 / 100) = FLOOR(2.5) = 2
+    expect(penalty(50, 90)).toBe(2);
+  });
+});
+
 describe("get_fuel_price", () => {
   it("Earth is inner system: 1.2", () => {
     expect(story.EvaluateFunction("get_fuel_price", [loc("Earth")])).toBeCloseTo(1.2);

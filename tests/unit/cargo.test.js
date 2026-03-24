@@ -286,6 +286,43 @@ describe("count_paperwork_chunks", () => {
   });
 });
 
+describe("get_paperwork_penalty_pct", () => {
+  // Formula: MIN(missing × 10, 50) where missing = total - done
+  // 10% per missing chunk, capped at 50%
+
+  function penaltyPct(done, total) {
+    return story.EvaluateFunction("get_paperwork_penalty_pct", [done, total]);
+  }
+
+  it("returns 0 when all paperwork is done", () => {
+    expect(penaltyPct(3, 3)).toBe(0);
+  });
+
+  it("returns 0 when done exceeds total", () => {
+    expect(penaltyPct(5, 3)).toBe(0);
+  });
+
+  it("returns 10 for 1 missing chunk", () => {
+    expect(penaltyPct(2, 3)).toBe(10);
+  });
+
+  it("returns 20 for 2 missing chunks", () => {
+    expect(penaltyPct(1, 3)).toBe(20);
+  });
+
+  it("returns 30 for 3 missing chunks", () => {
+    expect(penaltyPct(0, 3)).toBe(30);
+  });
+
+  it("caps at 50 for 5+ missing chunks", () => {
+    expect(penaltyPct(0, 6)).toBe(50);
+  });
+
+  it("returns 0 when total is 0 (no paperwork)", () => {
+    expect(penaltyPct(0, 0)).toBe(0);
+  });
+});
+
 describe("can_turbo_to", () => {
   // Tier 1: TurboFuel=4.0, FuelCap=300, ship mass=5 (no cargo)
   // Cost formula: FLOOR(distance × mass × fuel_factor)

@@ -7,17 +7,11 @@ VAR PortCargo = ()
 */
 === arrive_in_port(port)
 ~ here = port
-~ PortCargo = get_available_cargo(port, 5)
 ~ ShipCondition = 100
+-> settle_trip_penalties ->
+~ PortCargo = get_available_cargo(port, 5)
 
 Welcome to {LocationData(port, Name)}!
-
-// Paperwork settlement
-{ PaperworkDone < PaperworkTotal:
-    ~ temp missing = PaperworkTotal - PaperworkDone
-    You didn't complete all your paperwork. The port authority hits you with a customs fine for {missing} missing document{missing > 1:s}.
-    // TODO: calculate and apply actual fine amount
-}
 
 - (port_opts)
 + [Load cargo]
@@ -108,12 +102,46 @@ current mass = {total_mass(ShipCargo)}t
 
 /*
 
+    Settle Trip Penalties
+    Called on arrival. Calculates missed nav check fuel penalties,
+    applies accumulated fuel penalties, and handles the towing scenario.
+    Paperwork penalties are applied separately during delivery.
+
+*/
+= settle_trip_penalties
+// Nav check penalty: 10% of trip fuel per missed check
+// Checks appear every 3 days (TripDay mod 3 == 0, TripDay > 0)
+~ temp expected_checks = (TripDuration - 1) / 3
+~ temp missed_checks = expected_checks - NavChecksCompleted
+{ missed_checks > 0:
+    ~ TripFuelPenalty = TripFuelPenalty + missed_checks * (TripFuelCost / 10)  // +10% trip fuel per missed check
+}
+// Apply accumulated fuel penalty
+{ TripFuelPenalty > 0:
+    ~ ShipFuel = ShipFuel - TripFuelPenalty
+    { ShipFuel > 0:
+        Course corrections and compensations burned {TripFuelPenalty} extra fuel this trip.
+    - else:
+        ~ ShipFuel = 0
+        You ran out of fuel before reaching port. After drifting for days, a salvage tug picks up your distress beacon and tows you in. The tow fee is steep.
+        ~ temp tow_fee = TripFuelCost * 2  // tow fee = 200% of trip fuel cost
+        ~ PlayerBankBalance = PlayerBankBalance - tow_fee
+        Tow fee: {tow_fee} €. Your balance is now {PlayerBankBalance} €.
+    }
+}
+->->
+
+/*
+
     Deliver Cargo
+    Delivers all cargo destined for the current port.
+    Incomplete paperwork reduces pay by 10% per missing chunk (capped at 50%).
 
 */
 = deliver_cargo
 ~ temp _items = ShipCargo
 ~ temp delivery_count = 0
+~ temp paperwork_penalty_pct = get_paperwork_penalty_pct(PaperworkDone, PaperworkTotal)
 - (top)
 ~ temp cargo = pop(_items)
 { cargo:
@@ -123,13 +151,23 @@ current mass = {total_mass(ShipCargo)}t
         ~ ShipCargo -= cargo
         ~ temp dist = get_distance(CargoData(cargo, From), here)
         ~ temp pay = get_cargo_pay(cargo, dist)
+        ~ temp penalty_amount = pay * paperwork_penalty_pct
+        ~ temp penalty = penalty_amount / 100
+        ~ pay = pay - penalty
         ~ PlayerBankBalance += pay
         ~ temp fromName = LocationData(CargoData(cargo, From), Name)
-        Delivered {CargoData(cargo, Title)} from {fromName} for {pay} €.
+        { penalty > 0:
+            Delivered {CargoData(cargo, Title)} from {fromName} for {pay} € ({penalty} € customs fine).
+        - else:
+            Delivered {CargoData(cargo, Title)} from {fromName} for {pay} €.
+        }
     }
     -> top
 }
 { delivery_count > 0:
+    { paperwork_penalty_pct > 0:
+        Incomplete paperwork cost you {paperwork_penalty_pct}% of your delivery pay.
+    }
     All cargo for {LocationData(here, Name)} delivered! Your bank account balance is {PlayerBankBalance} €.
 - else:
     You have no cargo to deliver to {LocationData(here, Name)}.
@@ -236,6 +274,10 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 ~ temp slow_cost   = get_trip_fuel_cost(here, to, eco_fuel)
 ~ temp norm_cost   = get_trip_fuel_cost(here, to, bal_fuel)
 ~ temp fast_cost   = get_trip_fuel_cost(here, to, turbo_fuel)
+// Apply engine degradation fuel penalty to displayed costs
+~ slow_cost = slow_cost + get_engine_fuel_penalty(slow_cost)
+~ norm_cost = norm_cost + get_engine_fuel_penalty(norm_cost)
+~ fast_cost = fast_cost + get_engine_fuel_penalty(fast_cost)
 ~ temp slow_time   = get_trip_duration(here, to, eco_speed)
 ~ temp norm_time   = get_trip_duration(here, to, bal_speed)
 ~ temp fast_time   = get_trip_duration(here, to, turbo_speed)
@@ -243,6 +285,9 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 ~ temp has_express    = cargo_has_express(ShipCargo)
 ~ temp blocks_turbo   = cargo_blocks_turbo(ShipCargo)
 You have {ShipFuel} fuel, and a total mass of {total_mass(ShipCargo)}t.
+{EngineCondition < 100:
+    Engine condition: {EngineCondition}% — fuel costs increased.
+}
 + {can_use_flight_mode(has_express, ShipFuel, slow_cost)}
     [Economy Mode ({slow_cost} fuel, {slow_time} days)]
     -> transit(to, slow_cost, slow_time, Eco)

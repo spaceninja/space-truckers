@@ -186,6 +186,69 @@ The goal is that no flag is a pure upside. Each one closes off an option while o
 
 ---
 
+## Economic Penalties
+
+The transit system applies economic penalties when the player neglects tasks. The design principle is "failure = complication, not disaster" — a single missed task is noticeable but not devastating, while neglecting everything can make a trip unprofitable.
+
+### Penalty Currencies
+
+Penalties come in two forms:
+
+- **Fuel penalties** accumulate mid-trip in `TripFuelPenalty` and are settled on arrival by deducting from `ShipFuel`. If fuel goes to zero, a towing narrative fires with a large money penalty.
+- **Money penalties** (paperwork fines) reduce delivery pay at port.
+
+### Engine Degradation
+
+Engine condition degrades 1% per day during transit. Degraded engines burn more fuel, applied at departure:
+
+```
+penalty_pct = (100 - EngineCondition) / 2
+extra_fuel = FLOOR(base_cost × penalty_pct / 100)
+```
+
+At 80% condition, fuel costs are 10% higher. At 50%, they're 25% higher. This is calculated in `get_engine_fuel_penalty()` (locations.ink) and added to displayed fuel costs in `flight_options` (port.ink). The base `get_trip_fuel_cost` function is unchanged — it's also used for cargo filtering at port, where degradation shouldn't apply.
+
+### Mid-Trip Fuel Penalties
+
+These accumulate in `TripFuelPenalty` during transit and are settled in `settle_trip_penalties` on arrival:
+
+| Penalty | Trigger | Amount |
+|---|---|---|
+| Flip delay | Each day past midpoint without flipping | +5% of trip fuel cost per day |
+| Sloppy flip | Executing flip while overtired | +10% of trip fuel cost (one-time) |
+| Missed nav check | Not doing a nav check when offered | +10% of trip fuel cost per missed check |
+
+Nav checks appear every 3 days (`TripDay mod 3 == 0, TripDay > 0`). Expected check count: `(TripDuration - 1) / 3`.
+
+### Paperwork Fines
+
+Incomplete paperwork reduces delivery pay. The penalty is calculated by `get_paperwork_penalty_pct()` (cargo.ink):
+
+```
+penalty = MIN(missing_chunks × 10, 50)%
+```
+
+Each missing chunk costs 10% of delivery pay, capped at 50%. This is applied per-item during `deliver_cargo` (port.ink).
+
+### Towing Scenario
+
+If `TripFuelPenalty` exceeds remaining `ShipFuel` on arrival, fuel is set to 0 and the player pays a tow fee of 200% of the trip's base fuel cost. This can push `PlayerBankBalance` negative.
+
+### Ink Integer Math Pitfall
+
+Ink evaluates `a * b / c` as `a * (b / c)`, not `(a * b) / c`. With integer math, this causes silent truncation to zero when `b < c`. Always store the multiplication result in a temp variable before dividing:
+
+```ink
+// WRONG — penalty_pct / 100 truncates to 0 in integer math
+~ return FLOOR(base_cost * penalty_pct / 100)
+
+// CORRECT — multiply first, then divide
+~ temp product = base_cost * penalty_pct
+~ return FLOOR(product / 100)
+```
+
+---
+
 ## Adding New Content
 
 ### New Cargo Entry

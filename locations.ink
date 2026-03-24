@@ -101,6 +101,30 @@ CONST FuelCostOuter = 0.8
     Outer system (Ganymede, Titan):   €0.8
 
 */
+/*
+
+    Get Engine Fuel Penalty
+    Returns additional fuel cost from engine degradation.
+    Formula: +5% fuel cost per 10% degradation below 100%.
+
+*/
+=== function get_engine_fuel_penalty(base_cost)
+~ temp degradation = 100 - EngineCondition
+~ temp penalty_pct = degradation / 2  // +5% fuel cost per 10% degradation
+~ temp extra_fuel = base_cost * penalty_pct
+~ return FLOOR(extra_fuel / 100)
+
+/*
+
+    Get Fuel Price
+
+    Returns actual euro price as a float (1.2, 1.0, or 0.8).
+
+    Inner system (Earth, Luna, Mars): €1.2
+    Belt (Ceres):                     €1.0
+    Outer system (Ganymede, Titan):   €0.8
+
+*/
 === function get_fuel_price(location)
 { location:
 - Earth:

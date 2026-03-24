@@ -26,6 +26,10 @@ Before opening a PR, verify it contains only the intended commits: `git log --on
 
 New constants added to `simulator.html` must include a citation comment pointing to the Ink source.
 
+## Documentation
+
+Before opening a PR, review `docs/developer-guide.md` and `docs/player-guide.md` to check if changes in the PR require documentation updates. Update them as part of the PR.
+
 ## Testing
 
 Always run `npm test` before opening a PR. CI runs `npm run lint` then `npm test` — both must pass.
