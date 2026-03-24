@@ -81,6 +81,41 @@ This might seem backwards, but it makes sense: the outer planets are rich in raw
 
 ---
 
+## Life in Transit
+
+Flying between ports isn't just sitting around. You've got a ship to maintain and paperwork to file. Each day in transit, you'll spend **action points (AP)** on various tasks. You start each day with 6 AP, and everything costs 1 or 2 AP.
+
+### The Ship Flip
+
+At the midpoint of every trip, your ship needs to rotate 180 degrees to begin decelerating. This is a required maneuver — if you delay it, course corrections burn extra fuel. Do it promptly, and do it rested. Executing the flip while exhausted results in a sloppy maneuver that wastes fuel.
+
+### Navigation Checks
+
+Every few days, a navigation check will appear in your task list. These are quick (1 AP) and keep your course efficient. Skip them and you'll burn extra fuel compensating on arrival.
+
+### Paperwork
+
+Every trip requires customs documentation — one base chunk of flight log paperwork, plus extra forms for any special cargo (Express, Hazardous, Passengers). You can file paperwork at any point during the trip, but any missing chunks when you dock result in customs fines that reduce your delivery pay.
+
+### Engine Condition
+
+Your engine degrades 1% per day during transit. A degraded engine burns more fuel — at 80% condition, fuel costs are 10% higher. You can spend AP on engine maintenance during transit to keep it in shape, and ship condition resets when you reach port.
+
+### Ship Condition
+
+The general state of your ship (cleanliness, air filters, tidiness) also degrades daily. A dirty ship affects your morale, which can reduce your daily AP. Spending time cleaning keeps things livable.
+
+### Fatigue and Morale
+
+You have two personal stats to manage:
+
+- **Fatigue** builds up as you work. Sleep (2 AP) resets it fully; naps (1 AP) take the edge off. If you push too hard, you'll start making mistakes — like that sloppy ship flip.
+- **Morale** decays slowly each day, faster if your ship is a mess. Recreation activities (cooking a meal, watching a movie, exercising) restore it. If morale drops too low, you'll lose AP each day.
+
+The early game is a balancing act: there's a lot of work to do and not enough hours. As you upgrade your ship, automation handles more of the busywork, leaving more time for you.
+
+---
+
 ## Engine Upgrades
 
 The biggest improvement you can make to your ship is upgrading the engine. Each generation of engine is more efficient and faster in every mode.
@@ -105,10 +140,16 @@ The late-game feeling is qualitatively different from the early game. Your first
 
 **Start local.** Earth↔Moon and Earth↔Mars runs might feel small, but they're reliable. Learn the economics before venturing further out.
 
-**Watch your fuel before you commit.** The departure screen shows fuel costs for every available mode. Check them before you choose. Running out of fuel mid-transit isn't an option — you need enough to complete the trip.
+**Watch your fuel before you commit.** The departure screen shows fuel costs for every available mode. Check them before you choose. If your engine is degraded, those costs go up.
 
 **Light loads unlock faster modes.** If you're eyeing Express cargo but your tank won't cover Turbo with a full hold, consider taking less. A lighter load at a higher mode can pay more than a heavy load at Economy.
 
 **Hazardous pays well, but think it through.** Accepting Hazardous cargo means your whole hold is committed to that one contract. Make sure the payout is worth giving up the rest of your capacity.
 
 **Cheap outer-system fuel is worth the trip.** Once your engine can reach Ceres or Ganymede reliably, refuelling there instead of at Earth saves money on every subsequent run.
+
+**Do the flip on time.** Every day you delay the midpoint flip costs extra fuel. And don't do it exhausted — get some sleep first.
+
+**Don't skip paperwork.** The customs fines for missing documentation add up. Special cargo generates extra paperwork, so factor that into your planning when loading flagged cargo.
+
+**Sleep is productive.** It's tempting to spend every AP on tasks, but working while exhausted leads to mistakes. A well-rested pilot wastes less fuel and gets more done.

@@ -1,8 +1,5 @@
 // TODO: ship modules degrade and need maintenance
 // TODO: Fatigue affects task success (chance to fail tasks when overtired)
-// TODO: ship flip fuel penalty for delay (each day past midpoint = +5% trip fuel)
-// TODO: sloppy flip (overtired) fuel penalty
-// TODO: navigation check skip penalty (extra fuel on arrival)
 // TODO: contextual ship maintenance variety (drain lines, laundry, secure items, etc.)
 // TODO: passenger events when carrying passenger cargo
 // TODO: random events (micrometeorite, power surge, cargo shift, distress signal, etc.)
@@ -28,6 +25,9 @@ VAR ActionPointsMax = 6
 ~ FlightMode = mode
 ~ PaperworkTotal = count_paperwork_chunks(ShipCargo)
 ~ PaperworkDone = 0
+~ TripFuelCost = fuel_cost
+~ TripFuelPenalty = 0
+~ NavChecksCompleted = 0
 Flying to {LocationData(destination, Name)} for {duration} days…
 -> ship_options
 
@@ -108,8 +108,8 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 = do_flip
 ~ FlipDone = true
 { is_overtired():
-    Your hands tremble on the controls as you initiate the flip sequence. The ship groans through the rotation — not your cleanest work.
-    // TODO: track fuel penalty for sloppy flip
+    ~ TripFuelPenalty = TripFuelPenalty + TripFuelCost / 10  // +10% sloppy flip penalty
+    Your hands tremble on the controls as you initiate the flip sequence. The ship groans through the rotation — not your cleanest work. The sloppy maneuver will cost you extra fuel.
 - else:
     You initiate the flip sequence. The stars wheel past the viewport as the ship rotates 180 degrees. Engines now pointing forward for deceleration. Textbook.
 }
@@ -138,8 +138,8 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 */
 = do_nav_check
+~ NavChecksCompleted++
 You review the flight trajectory and make minor course corrections. Everything's on track.
-// TODO: track nav checks completed; missed checks add fuel penalty at arrival
 -> pass_time(1)
 
 /*
@@ -243,6 +243,10 @@ You heat up a packet of rations. It's not gourmet, but it fills the hole.
 ~ ShipClock--
 ~ TripDay++
 ~ AP = ActionPointsMax + rollover
+// Flip delay penalty: +5% trip fuel for each day past midpoint without flipping
+{ not FlipDone and TripDay > TripDuration / 2:
+    ~ TripFuelPenalty = TripFuelPenalty + TripFuelCost / 20  // +5% trip fuel per day delayed
+}
 // Daily degradation
 ~ ShipCondition = MAX(ShipCondition - 1, 0)
 ~ EngineCondition = MAX(EngineCondition - 1, 0)

@@ -31,6 +31,9 @@ VAR TripDuration = 0      // Total trip length in days
 VAR FlipDone = false      // Has the ship flip been executed this trip?
 VAR PaperworkDone = 0     // Chunks completed
 VAR PaperworkTotal = 0    // Chunks required (calculated at departure)
+VAR TripFuelCost = 0      // Base fuel cost of current trip (for % penalty calcs)
+VAR TripFuelPenalty = 0   // Accumulated fuel penalty during transit
+VAR NavChecksCompleted = 0 // Nav checks completed this trip
 
 LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, TurboSpeed
 
