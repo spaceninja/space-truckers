@@ -306,6 +306,26 @@ The `has_tier_tasks(tier)` function (ship.ink) centralizes the "are there eligib
 - `TaskCap` — Maximum top-level tasks shown (excluding P5 Rest). Default 7.
 - `TasksCompletedToday` — Incremented by `pass_time()`, reset by `next_day()` and `transit()`.
 
+### Fatigue and Task Failure
+
+When fatigue is 70 or above, work tasks are subject to a dice roll that can cause failure or degraded outcomes. The `fatigue_check()` function (ship.ink) handles this using `RANDOM(1, 100)` with three escalating tiers:
+
+| Fatigue | Failure Chance | Exhaustion Warning |
+|---------|---------------|--------------------|
+| 0–69 | 0% | None |
+| 70–79 | 20% | "Running on fumes" |
+| 80–89 | 40% | "Hands are shaking" |
+| 90+ | 70% | "Barely function" |
+
+**Two failure modes:**
+
+- **Degraded** (ship flip, engine maintenance, ship maintenance) — The task completes but with a reduced effect. Ship flip adds a fuel penalty. Engine maintenance restores +8 instead of +15. Ship maintenance restores +5 instead of +12.
+- **Fail + retry** (nav check, paperwork) — The task doesn't count. The counter is not incremented, so the task remains available for retry. AP is still spent.
+
+Only "work" tasks use `fatigue_check()`. Sleep, recreation, eating, and rest are unaffected.
+
+`is_overtired()` is still used for UI concerns (P2 sleep threshold, task offering logic). `fatigue_check()` is used for task outcome resolution.
+
 ---
 
 ## Adding New Content

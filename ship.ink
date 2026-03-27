@@ -1,5 +1,4 @@
 // TODO: ship modules degrade and need maintenance
-// TODO: Fatigue affects task success (chance to fail tasks when overtired)
 // TODO: contextual ship maintenance variety (drain lines, laundry, secure items, etc.)
 // TODO: passenger events when carrying passenger cargo
 // TODO: random events (micrometeorite, power surge, cargo shift, distress signal, etc.)
@@ -52,7 +51,17 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 */
 = ship_options
-{is_overtired(): You're exhausted. Your hands are shaking.}
+{ Fatigue >= 90:
+    You can barely function. Every movement feels like it's happening underwater. You need to sleep.
+- else:
+    { Fatigue >= 80:
+        You're exhausted. Your hands are shaking and your vision blurs when you look at the instruments too long.
+    - else:
+        { Fatigue >= 70:
+            You're running on fumes. Everything takes a little more concentration than it should.
+        }
+    }
+}
 <center><em><small>{ShipClock} days to {LocationData(ShipDestination, Name)} / {AP} AP remaining</small></em></center>
 - (ship_opts)
 
@@ -196,7 +205,7 @@ What sounds good right now?
 */
 = do_flip
 ~ FlipDone = true
-{ is_overtired():
+{ fatigue_check():
     ~ TripFuelPenalty = TripFuelPenalty + TripFuelCost / 10  // +10% sloppy flip penalty
     Your hands tremble on the controls as you initiate the flip sequence. The ship groans through the rotation — not your cleanest work. The sloppy maneuver will cost you extra fuel.
 - else:
@@ -212,11 +221,15 @@ What sounds good right now?
 
 */
 = do_paperwork
-~ PaperworkDone++
-{ PaperworkDone >= PaperworkTotal:
-    You file the last of the paperwork. All customs documentation is in order.
+{ fatigue_check():
+    You stare at the customs forms but can't focus. After filling in the same field twice, you give up. This will have to wait until you've had some rest.
 - else:
-    You work through a stack of customs forms and cargo manifests. {PaperworkTotal - PaperworkDone} chunks remaining.
+    ~ PaperworkDone++
+    { PaperworkDone >= PaperworkTotal:
+        You file the last of the paperwork. All customs documentation is in order.
+    - else:
+        You work through a stack of customs forms and cargo manifests. {PaperworkTotal - PaperworkDone} chunks remaining.
+    }
 }
 -> pass_time(1)
 
@@ -227,8 +240,12 @@ What sounds good right now?
 
 */
 = do_nav_check
-~ NavChecksCompleted++
-You review the flight trajectory and make minor course corrections. Everything's on track.
+{ fatigue_check():
+    You squint at the trajectory data, but the numbers swim in front of your eyes. You'll need to try this again when you're more alert.
+- else:
+    ~ NavChecksCompleted++
+    You review the flight trajectory and make minor course corrections. Everything's on track.
+}
 -> pass_time(1)
 
 /*
@@ -238,8 +255,13 @@ You review the flight trajectory and make minor course corrections. Everything's
 
 */
 = do_engine_maintenance
-~ EngineCondition = MIN(EngineCondition + 15, 100)
-You run diagnostics and tune the engine. Condition improved to {EngineCondition}%.
+{ fatigue_check():
+    ~ EngineCondition = MIN(EngineCondition + 8, 100)
+    You fumble through the diagnostics, missing a few steps. The engine's a little better, but not as much as it should be. Condition: {EngineCondition}%.
+- else:
+    ~ EngineCondition = MIN(EngineCondition + 15, 100)
+    You run diagnostics and tune the engine. Condition improved to {EngineCondition}%.
+}
 -> pass_time(2)
 
 /*
@@ -250,8 +272,13 @@ You run diagnostics and tune the engine. Condition improved to {EngineCondition}
 
 */
 = do_ship_maintenance
-~ ShipCondition = MIN(ShipCondition + 12, 100)
-You swap out the air filters and run a purge cycle. The ship smells noticeably fresher.
+{ fatigue_check():
+    ~ ShipCondition = MIN(ShipCondition + 5, 100)
+    You make a halfhearted attempt at the air filters, but your coordination is off. It's a little better, but you didn't do your best work. Condition: {ShipCondition}%.
+- else:
+    ~ ShipCondition = MIN(ShipCondition + 12, 100)
+    You swap out the air filters and run a purge cycle. The ship smells noticeably fresher.
+}
 -> pass_time(1)
 
 /*
@@ -403,8 +430,29 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 
     Is The Player Overtired?
     Returns true when fatigue is dangerously high,
-    triggering warnings and future task failure chance.
+    triggering warnings and task failure chance.
 
 */
 === function is_overtired()
 ~ return Fatigue >= 70
+
+/*
+
+    Fatigue Check
+    Dice roll for task failure when overtired. Returns true if the
+    player fails (too tired to do good work). Three escalating tiers:
+    70–79: 20% chance, 80–89: 40% chance, 90+: 70% chance.
+
+*/
+=== function fatigue_check()
+{ Fatigue < 70:
+    ~ return false
+}
+~ temp roll = RANDOM(1, 100)
+{ Fatigue >= 90:
+    ~ return roll <= 70
+}
+{ Fatigue >= 80:
+    ~ return roll <= 40
+}
+~ return roll <= 20

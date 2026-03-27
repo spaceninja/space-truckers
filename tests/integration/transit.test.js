@@ -1,5 +1,6 @@
 /**
- * Integration tests for the transit task priority system.
+ * Integration tests for the transit task priority system and
+ * fatigue-based task failure.
  *
  * These tests drive ship_options via ChoosePathString and assert on
  * which choices appear based on game state. Each test creates a fresh
@@ -29,6 +30,23 @@ function pickChoice(story, text) {
     );
   story.ChooseChoiceIndex(idx);
   drainText(story);
+}
+
+/**
+ * Pick a choice and return the output text (before draining to next choice point).
+ */
+function pickChoiceGetText(story, text) {
+  const idx = story.currentChoices.findIndex((c) => c.text.includes(text));
+  if (idx === -1)
+    throw new Error(
+      `Choice not found: "${text}"\nAvailable: ${choiceTexts(story).join(", ")}`
+    );
+  story.ChooseChoiceIndex(idx);
+  let output = "";
+  while (story.canContinue) {
+    output += story.Continue();
+  }
+  return output;
 }
 
 /**
@@ -393,6 +411,276 @@ describe("Task priority system", () => {
       }
       // With shuffle, we should see at least 2 different P3 tasks across 20 runs
       expect(p3Seen.size).toBeGreaterThanOrEqual(2);
+    });
+  });
+});
+
+describe("Fatigue-based task failure", () => {
+  describe("Exhaustion text tiers", () => {
+    it("shows no exhaustion text when fatigue < 70", () => {
+      const story = createStory();
+      story.variablesState["ShipCargo"] = new InkList();
+      story.variablesState["Fatigue"] = 50;
+      story.variablesState["ShipClock"] = 5;
+      story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
+      story.variablesState["AP"] = 6;
+      story.ChoosePathString("transit.ship_options");
+      let text = "";
+      while (story.canContinue) text += story.Continue();
+      expect(text).not.toMatch(/running on fumes/i);
+      expect(text).not.toMatch(/hands are shaking/i);
+      expect(text).not.toMatch(/barely function/i);
+    });
+
+    it("shows tier 1 text at fatigue 70-79", () => {
+      const story = createStory();
+      story.variablesState["ShipCargo"] = new InkList();
+      story.variablesState["Fatigue"] = 75;
+      story.variablesState["ShipClock"] = 5;
+      story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
+      story.variablesState["AP"] = 6;
+      story.ChoosePathString("transit.ship_options");
+      let text = "";
+      while (story.canContinue) text += story.Continue();
+      expect(text).toMatch(/running on fumes/i);
+    });
+
+    it("shows tier 2 text at fatigue 80-89", () => {
+      const story = createStory();
+      story.variablesState["ShipCargo"] = new InkList();
+      story.variablesState["Fatigue"] = 85;
+      story.variablesState["ShipClock"] = 5;
+      story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
+      story.variablesState["AP"] = 6;
+      story.ChoosePathString("transit.ship_options");
+      let text = "";
+      while (story.canContinue) text += story.Continue();
+      expect(text).toMatch(/hands are shaking/i);
+    });
+
+    it("shows tier 3 text at fatigue 90+", () => {
+      const story = createStory();
+      story.variablesState["ShipCargo"] = new InkList();
+      story.variablesState["Fatigue"] = 95;
+      story.variablesState["ShipClock"] = 5;
+      story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
+      story.variablesState["AP"] = 6;
+      story.ChoosePathString("transit.ship_options");
+      let text = "";
+      while (story.canContinue) text += story.Continue();
+      expect(text).toMatch(/barely function/i);
+    });
+  });
+
+  describe("Tasks always succeed when not fatigued", () => {
+    it("nav check succeeds at fatigue 0", () => {
+      const story = setupTransit({
+        Fatigue: 0,
+        TripDay: 6,
+        NavChecksCompleted: 1,
+      });
+      pickChoice(story, "Navigation check");
+      expect(story.variablesState["NavChecksCompleted"]).toBe(2);
+    });
+
+    it("paperwork succeeds at fatigue 0", () => {
+      const story = setupTransit({
+        Fatigue: 0,
+        PaperworkDone: 0,
+        PaperworkTotal: 3,
+      });
+      pickChoice(story, "paperwork");
+      expect(story.variablesState["PaperworkDone"]).toBe(1);
+    });
+
+    it("engine maintenance gives full +15 at fatigue 0", () => {
+      const story = setupTransit({
+        Fatigue: 0,
+        EngineCondition: 70,
+      });
+      pickChoice(story, "engine");
+      pickChoice(story, "diagnostics");
+      expect(story.variablesState["EngineCondition"]).toBe(85);
+    });
+
+    it("ship maintenance gives full +12 at fatigue 0", () => {
+      const story = setupTransit({
+        Fatigue: 0,
+        ShipCondition: 70,
+      });
+      pickChoice(story, "Tidy up");
+      pickChoice(story, "air filters");
+      expect(story.variablesState["ShipCondition"]).toBe(82);
+    });
+  });
+
+  describe("Statistical failure tests at high fatigue", () => {
+    it("nav check sometimes fails at fatigue 90", () => {
+      // Reuse one story instance for performance
+      const story = setupTransit({
+        Fatigue: 90,
+        TripDay: 6,
+        NavChecksCompleted: 0,
+      });
+
+      let successes = 0;
+      const iterations = 100;
+      for (let i = 0; i < iterations; i++) {
+        story.variablesState["Fatigue"] = 90;
+        story.variablesState["TripDay"] = 6;
+        story.variablesState["NavChecksCompleted"] = 0;
+        story.variablesState["AP"] = 6;
+        story.variablesState["ShipClock"] = 5;
+        story.ChoosePathString("transit.ship_options");
+        drainText(story);
+        pickChoice(story, "Navigation check");
+        if (story.variablesState["NavChecksCompleted"] === 1) successes++;
+        // Early exit: once we've seen both success and failure, variety is confirmed
+        if (successes > 0 && successes < i + 1) break;
+      }
+      // At 70% failure rate, we should see both successes and failures
+      expect(successes).toBeGreaterThan(0);
+      expect(successes).toBeLessThan(iterations);
+    });
+
+    it("paperwork sometimes fails at fatigue 90", () => {
+      const story = setupTransit({
+        Fatigue: 90,
+        PaperworkDone: 0,
+        PaperworkTotal: 5,
+      });
+
+      let successes = 0;
+      const iterations = 100;
+      for (let i = 0; i < iterations; i++) {
+        story.variablesState["Fatigue"] = 90;
+        story.variablesState["PaperworkDone"] = 0;
+        story.variablesState["PaperworkTotal"] = 5;
+        story.variablesState["AP"] = 6;
+        story.variablesState["ShipClock"] = 5;
+        story.ChoosePathString("transit.ship_options");
+        drainText(story);
+        pickChoice(story, "paperwork");
+        if (story.variablesState["PaperworkDone"] === 1) successes++;
+        if (successes > 0 && successes < i + 1) break;
+      }
+      expect(successes).toBeGreaterThan(0);
+      expect(successes).toBeLessThan(iterations);
+    });
+
+    it("engine maintenance sometimes gives degraded result at fatigue 90", () => {
+      const story = setupTransit({
+        Fatigue: 90,
+        EngineCondition: 60,
+      });
+
+      let fullBoosts = 0;
+      let degradedBoosts = 0;
+      for (let i = 0; i < 50; i++) {
+        story.variablesState["Fatigue"] = 90;
+        story.variablesState["EngineCondition"] = 60;
+        story.variablesState["AP"] = 6;
+        story.variablesState["ShipClock"] = 5;
+        story.ChoosePathString("transit.ship_options");
+        drainText(story);
+        pickChoice(story, "engine");
+        pickChoice(story, "diagnostics");
+        const cond = story.variablesState["EngineCondition"];
+        if (cond === 75) fullBoosts++;
+        else if (cond === 68) degradedBoosts++;
+        if (fullBoosts > 0 && degradedBoosts > 0) break;
+      }
+      expect(fullBoosts).toBeGreaterThan(0);
+      expect(degradedBoosts).toBeGreaterThan(0);
+    });
+
+    it("ship flip sometimes degrades at fatigue 90 (no longer deterministic)", () => {
+      const story = setupTransit({
+        Fatigue: 90,
+        FlipDone: false,
+        TripDay: 5,
+        TripDuration: 10,
+        TripFuelCost: 100,
+        TripFuelPenalty: 0,
+      });
+
+      let cleanFlips = 0;
+      let sloppyFlips = 0;
+      for (let i = 0; i < 50; i++) {
+        story.variablesState["Fatigue"] = 90;
+        story.variablesState["FlipDone"] = false;
+        story.variablesState["TripDay"] = 5;
+        story.variablesState["TripDuration"] = 10;
+        story.variablesState["TripFuelCost"] = 100;
+        story.variablesState["TripFuelPenalty"] = 0;
+        story.variablesState["AP"] = 6;
+        story.variablesState["ShipClock"] = 5;
+        story.ChoosePathString("transit.ship_options");
+        drainText(story);
+        pickChoice(story, "ship flip");
+        const penalty = story.variablesState["TripFuelPenalty"];
+        if (penalty === 0) cleanFlips++;
+        else sloppyFlips++;
+        if (cleanFlips > 0 && sloppyFlips > 0) break;
+      }
+      // Should see both outcomes — no longer deterministic
+      expect(cleanFlips).toBeGreaterThan(0);
+      expect(sloppyFlips).toBeGreaterThan(0);
+    });
+  });
+
+  describe("Failure narrative text", () => {
+    it("nav check failure tells player to try again", () => {
+      // Run until we get a failure
+      const story = setupTransit({
+        Fatigue: 95,
+        TripDay: 6,
+        NavChecksCompleted: 0,
+      });
+
+      let failureText = null;
+      for (let i = 0; i < 50; i++) {
+        story.variablesState["Fatigue"] = 95;
+        story.variablesState["TripDay"] = 6;
+        story.variablesState["NavChecksCompleted"] = 0;
+        story.variablesState["AP"] = 6;
+        story.variablesState["ShipClock"] = 5;
+        story.ChoosePathString("transit.ship_options");
+        drainText(story);
+        const text = pickChoiceGetText(story, "Navigation check");
+        if (story.variablesState["NavChecksCompleted"] === 0) {
+          failureText = text;
+          break;
+        }
+      }
+      expect(failureText).not.toBeNull();
+      expect(failureText).toMatch(/try this again/i);
+    });
+
+    it("paperwork failure tells player to try again", () => {
+      const story = setupTransit({
+        Fatigue: 95,
+        PaperworkDone: 0,
+        PaperworkTotal: 3,
+      });
+
+      let failureText = null;
+      for (let i = 0; i < 50; i++) {
+        story.variablesState["Fatigue"] = 95;
+        story.variablesState["PaperworkDone"] = 0;
+        story.variablesState["PaperworkTotal"] = 3;
+        story.variablesState["AP"] = 6;
+        story.variablesState["ShipClock"] = 5;
+        story.ChoosePathString("transit.ship_options");
+        drainText(story);
+        const text = pickChoiceGetText(story, "paperwork");
+        if (story.variablesState["PaperworkDone"] === 0) {
+          failureText = text;
+          break;
+        }
+      }
+      expect(failureText).not.toBeNull();
+      expect(failureText).toMatch(/wait|rest/i);
     });
   });
 });
