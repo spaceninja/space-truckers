@@ -51,16 +51,13 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 */
 = ship_options
-{ Fatigue >= 90:
+{
+- Fatigue >= 90:
     You can barely function. Every movement feels like it's happening underwater. You need to sleep.
-- else:
-    { Fatigue >= 80:
-        You're exhausted. Your hands are shaking and your vision blurs when you look at the instruments too long.
-    - else:
-        { Fatigue >= 70:
-            You're running on fumes. Everything takes a little more concentration than it should.
-        }
-    }
+- Fatigue >= 80:
+    You're exhausted. Your hands are shaking and your vision blurs when you look at the instruments too long.
+- Fatigue >= 70:
+    You're running on fumes. Everything takes a little more concentration than it should.
 }
 <center><em><small>{ShipClock} days to {LocationData(ShipDestination, Name)} / {AP} AP remaining</small></em></center>
 - (ship_opts)
