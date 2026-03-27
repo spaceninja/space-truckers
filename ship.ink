@@ -86,7 +86,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 - (p3_shuffle)
 { shuffle:
     - { CHOICE_COUNT() < p3_cap and PaperworkDone < PaperworkTotal: <- task_paperwork }
-    - { CHOICE_COUNT() < p3_cap and TripDay > 0 and TripDay mod 3 == 0: <- task_nav_check }
+    - { CHOICE_COUNT() < p3_cap and TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3: <- task_nav_check }
     - { CHOICE_COUNT() < p3_cap and ShipCondition < 80: <- task_ship_maint }
 }
 ~ p3_loops++
@@ -385,7 +385,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 { tier:
     - 1: ~ return (not FlipDone and TripDay >= TripDuration / 2)
     - 2: ~ return (EngineCondition < 80) or (Fatigue >= 70)
-    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay > 0 and TripDay mod 3 == 0) or (ShipCondition < 80)
+    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3) or (ShipCondition < 80)
     - 4: ~ return true  // Relax is always available
 }
 ~ return false

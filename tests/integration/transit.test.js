@@ -150,6 +150,14 @@ describe("Task priority system", () => {
       expect(hasChoice(story, "Navigation check")).toBe(false);
     });
 
+    it("does not show nav check after completing it", () => {
+      const story = setupTransit({
+        TripDay: 6,
+        NavChecksCompleted: 2, // already done checks for day 3 and day 6
+      });
+      expect(hasChoice(story, "Navigation check")).toBe(false);
+    });
+
     it("shows ship maintenance when condition < 80", () => {
       const story = setupTransit({ ShipCondition: 70 });
       expect(hasChoice(story, "Tidy up the ship")).toBe(true);
