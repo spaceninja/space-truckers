@@ -85,6 +85,10 @@ This might seem backwards, but it makes sense: the outer planets are rich in raw
 
 Flying between ports isn't just sitting around. You've got a ship to maintain and paperwork to file. Each day in transit, you'll spend **action points (AP)** on various tasks. You start each day with 6 AP, and everything costs 1 or 2 AP.
 
+Your task list adapts to your ship's condition each day. Urgent matters appear first — a ship that needs flipping or an engine that's struggling will be at the top of your list. Routine work fills in below, and recreation options round out the bottom. On a quiet day with nothing pressing, you can call it a day and rest if you'd rather skip the busywork.
+
+Some tasks open into sub-options when you select them. Choosing "Take a break" lets you pick between heating up rations, exercising, or watching a movie. Choosing "Get some rest" offers a quick nap or a full sleep cycle. You can always back out without spending AP if you change your mind.
+
 ### The Ship Flip
 
 At the midpoint of every trip, your ship needs to rotate 180 degrees to begin decelerating. This is a required maneuver — if you delay it, course corrections burn extra fuel. Do it promptly, and do it rested. Executing the flip while exhausted results in a sloppy maneuver that wastes fuel.

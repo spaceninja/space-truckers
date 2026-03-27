@@ -34,6 +34,8 @@ VAR PaperworkTotal = 0    // Chunks required (calculated at departure)
 VAR TripFuelCost = 0      // Base fuel cost of current trip (for % penalty calcs)
 VAR TripFuelPenalty = 0   // Accumulated fuel penalty during transit
 VAR NavChecksCompleted = 0 // Nav checks completed this trip
+VAR TaskCap = 7            // Max top-level tasks shown (excluding P5 Rest)
+VAR TasksCompletedToday = 0 // Tasks completed this transit day
 
 LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, TurboSpeed
 
