@@ -51,6 +51,8 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 - (ship_opts)
 
 // Calculate tier floors and caps
+// has_tier_tasks() returns true/false which Ink treats as 1/0,
+// so these work as slot reservations in the cap math below.
 ~ temp p3_floor = has_tier_tasks(3)
 ~ temp p4_floor = has_tier_tasks(4)
 ~ temp p2_cap = TaskCap - p3_floor - p4_floor
