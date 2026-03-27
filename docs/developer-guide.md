@@ -296,9 +296,10 @@ The `has_tier_tasks(tier)` function (ship.ink) centralizes the "are there eligib
 
 ### Adding a New Task
 
-1. Write a `task_*` stitch that injects one choice (and optionally a `*_options` sub-menu stitch)
-2. Add a `{ CHOICE_COUNT() < cap and condition: <- task_* }` line in the appropriate priority section of `ship_options`
-3. Update `has_tier_tasks()` with the new task's condition in the appropriate tier
+1. Add an entry to the appropriate task registry list (`P2Tasks`, `P3Tasks`, or `P4Tasks` in ship.ink) — this keeps the shuffle loop count in sync automatically
+2. Write a `task_*` stitch that injects one choice (and optionally a `*_options` sub-menu stitch)
+3. Add a `{ CHOICE_COUNT() < cap and condition: <- task_* }` line in the appropriate priority section of `ship_options`
+4. Update `has_tier_tasks()` with the new task's condition in the appropriate tier
 
 ### Key Variables
 

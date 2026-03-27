@@ -9,6 +9,12 @@ VAR ShipDestination = Transit
 VAR AP = 6
 VAR ActionPointsMax = 6
 
+// Task registry lists — used only for LIST_COUNT() to keep shuffle loop
+// bounds in sync. Add an entry here when adding a task to a tier's shuffle.
+LIST P2Tasks = EngineMaintenance, UrgentSleep
+LIST P3Tasks = Paperwork, NavCheck, ShipMaintenance
+LIST P4Tasks = Relax, SleepRest
+
 /*
 
     Transit
@@ -72,7 +78,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
     - { CHOICE_COUNT() < p2_cap and Fatigue >= 70: <- task_sleep_urgent }
 }
 ~ p2_loops++
-{ p2_loops < 2 and CHOICE_COUNT() < p2_cap: -> p2_shuffle }
+{ p2_loops < LIST_COUNT(LIST_ALL(P2Tasks)) and CHOICE_COUNT() < p2_cap: -> p2_shuffle }
 
 // P3: Routine — shuffle, respects p3_cap
 - (p3_offer)
@@ -84,7 +90,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
     - { CHOICE_COUNT() < p3_cap and ShipCondition < 80: <- task_ship_maint }
 }
 ~ p3_loops++
-{ p3_loops < 3 and CHOICE_COUNT() < p3_cap: -> p3_shuffle }
+{ p3_loops < LIST_COUNT(LIST_ALL(P3Tasks)) and CHOICE_COUNT() < p3_cap: -> p3_shuffle }
 
 // P4: Recreation — shuffle, respects p4_cap
 - (p4_offer)
@@ -95,7 +101,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
     - { CHOICE_COUNT() < p4_cap and Fatigue >= 30 and Fatigue < 70: <- task_sleep_rest }
 }
 ~ p4_loops++
-{ p4_loops < 2 and CHOICE_COUNT() < p4_cap: -> p4_shuffle }
+{ p4_loops < LIST_COUNT(LIST_ALL(P4Tasks)) and CHOICE_COUNT() < p4_cap: -> p4_shuffle }
 
 // P5: Rest — only when no P1–P3 tasks are active
 ~ temp has_obligations = has_tier_tasks(1) or has_tier_tasks(2) or has_tier_tasks(3)
