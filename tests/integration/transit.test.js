@@ -1,0 +1,398 @@
+/**
+ * Integration tests for the transit task priority system.
+ *
+ * These tests drive ship_options via ChoosePathString and assert on
+ * which choices appear based on game state. Each test creates a fresh
+ * story instance.
+ *
+ * Choice matching uses text includes so tests are robust to minor
+ * phrasing changes.
+ */
+
+import { describe, it, expect, beforeEach } from "vitest";
+import { InkList } from "inkjs/full";
+import { createStory, L, drainText } from "../helpers/story.js";
+
+function choiceTexts(story) {
+  return story.currentChoices.map((c) => c.text);
+}
+
+function hasChoice(story, text) {
+  return story.currentChoices.some((c) => c.text.includes(text));
+}
+
+function pickChoice(story, text) {
+  const idx = story.currentChoices.findIndex((c) => c.text.includes(text));
+  if (idx === -1)
+    throw new Error(
+      `Choice not found: "${text}"\nAvailable: ${choiceTexts(story).join(", ")}`
+    );
+  story.ChooseChoiceIndex(idx);
+  drainText(story);
+}
+
+/**
+ * Set up a story in transit state and navigate to ship_options.
+ * Returns the story at the first choice point.
+ */
+function setupTransit(overrides = {}) {
+  const story = createStory();
+  // Initialize required list variables
+  story.variablesState["ShipCargo"] = new InkList();
+
+  const defaults = {
+    ShipClock: 5,
+    ShipDestination: L(story, "AllLocations.Mars"),
+    TripDuration: 10,
+    TripDay: 3,
+    FlipDone: true,
+    FlightMode: L(story, "FlightModes.Bal"),
+    PaperworkDone: 1,
+    PaperworkTotal: 1,
+    TripFuelCost: 100,
+    TripFuelPenalty: 0,
+    NavChecksCompleted: 0,
+    AP: 6,
+    ActionPointsMax: 6,
+    Fatigue: 0,
+    Morale: 80,
+    ShipCondition: 100,
+    EngineCondition: 100,
+    ShipFuel: 200,
+    TaskCap: 7,
+    TasksCompletedToday: 0,
+  };
+
+  const vars = { ...defaults, ...overrides };
+  for (const [key, value] of Object.entries(vars)) {
+    story.variablesState[key] = value;
+  }
+
+  story.ChoosePathString("transit.ship_options");
+  drainText(story);
+  return story;
+}
+
+describe("Task priority system", () => {
+  describe("P1: Urgent tasks always show", () => {
+    it("shows ship flip at midpoint regardless of other tasks", () => {
+      const story = setupTransit({
+        FlipDone: false,
+        TripDay: 5,
+        TripDuration: 10,
+        // Also activate P2 and P3 tasks
+        EngineCondition: 70,
+        Fatigue: 75,
+        PaperworkDone: 0,
+        PaperworkTotal: 3,
+        ShipCondition: 70,
+      });
+      expect(hasChoice(story, "ship flip")).toBe(true);
+    });
+
+    it("does not show flip before midpoint", () => {
+      const story = setupTransit({
+        FlipDone: false,
+        TripDay: 2,
+        TripDuration: 10,
+      });
+      expect(hasChoice(story, "ship flip")).toBe(false);
+    });
+
+    it("does not show flip when already done", () => {
+      const story = setupTransit({
+        FlipDone: true,
+        TripDay: 5,
+        TripDuration: 10,
+      });
+      expect(hasChoice(story, "ship flip")).toBe(false);
+    });
+  });
+
+  describe("P2: Important tasks", () => {
+    it("shows engine check when condition < 80", () => {
+      const story = setupTransit({ EngineCondition: 70 });
+      expect(hasChoice(story, "engine")).toBe(true);
+    });
+
+    it("does not show engine check when condition >= 80", () => {
+      const story = setupTransit({ EngineCondition: 80 });
+      expect(hasChoice(story, "engine")).toBe(false);
+    });
+
+    it("shows urgent sleep when fatigue >= 70", () => {
+      const story = setupTransit({ Fatigue: 75 });
+      expect(hasChoice(story, "barely keep your eyes open")).toBe(true);
+    });
+
+    it("does not show urgent sleep when fatigue < 70", () => {
+      const story = setupTransit({ Fatigue: 60 });
+      expect(hasChoice(story, "barely keep your eyes open")).toBe(false);
+    });
+  });
+
+  describe("P3: Routine tasks", () => {
+    it("shows paperwork when chunks remain", () => {
+      const story = setupTransit({
+        PaperworkDone: 0,
+        PaperworkTotal: 2,
+      });
+      expect(hasChoice(story, "paperwork")).toBe(true);
+    });
+
+    it("shows nav check on schedule (day divisible by 3)", () => {
+      const story = setupTransit({ TripDay: 6 });
+      expect(hasChoice(story, "Navigation check")).toBe(true);
+    });
+
+    it("does not show nav check off schedule", () => {
+      const story = setupTransit({ TripDay: 4 });
+      expect(hasChoice(story, "Navigation check")).toBe(false);
+    });
+
+    it("does not show nav check after completing it", () => {
+      const story = setupTransit({
+        TripDay: 6,
+        NavChecksCompleted: 2, // already done checks for day 3 and day 6
+      });
+      expect(hasChoice(story, "Navigation check")).toBe(false);
+    });
+
+    it("shows ship maintenance when condition < 80", () => {
+      const story = setupTransit({ ShipCondition: 70 });
+      expect(hasChoice(story, "Tidy up the ship")).toBe(true);
+    });
+  });
+
+  describe("P4: Recreation", () => {
+    it("shows relax option on a quiet day", () => {
+      const story = setupTransit();
+      expect(hasChoice(story, "Take a break")).toBe(true);
+    });
+
+    it("shows sleep rest when fatigue is moderate (30-69)", () => {
+      const story = setupTransit({ Fatigue: 50 });
+      expect(hasChoice(story, "Get some rest")).toBe(true);
+      // Should NOT show the urgent version
+      expect(hasChoice(story, "barely keep your eyes open")).toBe(false);
+    });
+
+    it("does not show P4 sleep when fatigue < 30", () => {
+      const story = setupTransit({ Fatigue: 20 });
+      // "Get some rest" should not appear at all (neither P2 nor P4)
+      expect(hasChoice(story, "Get some rest")).toBe(false);
+    });
+  });
+
+  describe("P4 floor guarantee", () => {
+    it("shows at least 1 P4 task even when many P1-P3 are active", () => {
+      const story = setupTransit({
+        FlipDone: false,
+        TripDay: 6, // midpoint AND nav check day
+        TripDuration: 10,
+        EngineCondition: 70,
+        Fatigue: 75,
+        PaperworkDone: 0,
+        PaperworkTotal: 3,
+        ShipCondition: 70,
+      });
+      // With 6 P1-P3 tasks, P4 should still have at least 1 slot
+      expect(hasChoice(story, "Take a break")).toBe(true);
+    });
+  });
+
+  describe("P3 floor guarantee", () => {
+    it("shows at least 1 P3 task when P2 tasks would fill the cap", () => {
+      // With only 2 P2 tasks currently this won't hit the cap,
+      // but verify P3 tasks appear alongside P2
+      const story = setupTransit({
+        EngineCondition: 70,
+        Fatigue: 75,
+        PaperworkDone: 0,
+        PaperworkTotal: 2,
+        ShipCondition: 70,
+      });
+      // At least one P3 task should appear
+      const choices = choiceTexts(story);
+      const hasP3 =
+        choices.some((c) => c.includes("paperwork")) ||
+        choices.some((c) => c.includes("Tidy up")) ||
+        choices.some((c) => c.includes("Navigation"));
+      expect(hasP3).toBe(true);
+    });
+  });
+
+  describe("P5: Rest", () => {
+    it("shows rest when no P1-P3 tasks are active", () => {
+      const story = setupTransit({
+        FlipDone: true,
+        EngineCondition: 100,
+        Fatigue: 0,
+        PaperworkDone: 1,
+        PaperworkTotal: 1,
+        TripDay: 4, // not a nav check day
+        ShipCondition: 100,
+      });
+      expect(hasChoice(story, "Call it a day")).toBe(true);
+    });
+
+    it("does not show rest when P3 tasks are active", () => {
+      const story = setupTransit({
+        FlipDone: true,
+        EngineCondition: 100,
+        Fatigue: 0,
+        PaperworkDone: 0,
+        PaperworkTotal: 2, // paperwork incomplete = P3 active
+        TripDay: 4,
+        ShipCondition: 100,
+      });
+      expect(hasChoice(story, "Call it a day")).toBe(false);
+    });
+
+    it("does not show rest when P2 tasks are active", () => {
+      const story = setupTransit({
+        FlipDone: true,
+        EngineCondition: 70, // engine degraded = P2 active
+        Fatigue: 0,
+        PaperworkDone: 1,
+        PaperworkTotal: 1,
+        TripDay: 4,
+        ShipCondition: 100,
+      });
+      expect(hasChoice(story, "Call it a day")).toBe(false);
+    });
+
+    it("spends all remaining AP and advances the day", () => {
+      const story = setupTransit({
+        AP: 4,
+        ShipClock: 3,
+        FlipDone: true,
+        EngineCondition: 100,
+        Fatigue: 20,
+        PaperworkDone: 1,
+        PaperworkTotal: 1,
+        TripDay: 4,
+        ShipCondition: 100,
+      });
+      pickChoice(story, "Call it a day");
+      // Day should have advanced (ShipClock decremented)
+      expect(story.variablesState["ShipClock"]).toBe(2);
+    });
+
+    it("does not accumulate fatigue when resting", () => {
+      const story = setupTransit({
+        AP: 4,
+        ShipClock: 3,
+        Fatigue: 20,
+        FlipDone: true,
+        EngineCondition: 100,
+        PaperworkDone: 1,
+        PaperworkTotal: 1,
+        TripDay: 4,
+        ShipCondition: 100,
+      });
+      pickChoice(story, "Call it a day");
+      // Fatigue should decrease by 10 (mild rest benefit), not increase
+      expect(story.variablesState["Fatigue"]).toBe(10);
+    });
+  });
+
+  describe("Sub-menus", () => {
+    it("relax sub-menu shows rations, workout, and movie", () => {
+      const story = setupTransit();
+      pickChoice(story, "Take a break");
+      expect(hasChoice(story, "rations")).toBe(true);
+      expect(hasChoice(story, "workout")).toBe(true);
+      expect(hasChoice(story, "movie")).toBe(true);
+      expect(hasChoice(story, "Never mind")).toBe(true);
+    });
+
+    it("relax Never mind returns to top-level without spending AP", () => {
+      const story = setupTransit({ AP: 6 });
+      pickChoice(story, "Take a break");
+      pickChoice(story, "Never mind");
+      expect(story.variablesState["AP"]).toBe(6);
+      // Should be back at ship_options with choices available
+      expect(story.currentChoices.length).toBeGreaterThan(0);
+    });
+
+    it("sleep sub-menu shows nap when fatigue >= 30", () => {
+      const story = setupTransit({ Fatigue: 50 });
+      pickChoice(story, "Get some rest");
+      expect(hasChoice(story, "nap")).toBe(true);
+      expect(hasChoice(story, "full cycle")).toBe(true);
+    });
+
+    it("sleep sub-menu hides full sleep when fatigue < 40", () => {
+      const story = setupTransit({ Fatigue: 35 });
+      pickChoice(story, "Get some rest");
+      expect(hasChoice(story, "nap")).toBe(true);
+      expect(hasChoice(story, "full cycle")).toBe(false);
+    });
+
+    it("engine sub-menu shows diagnostics option", () => {
+      const story = setupTransit({ EngineCondition: 70 });
+      pickChoice(story, "engine");
+      expect(hasChoice(story, "diagnostics")).toBe(true);
+      expect(hasChoice(story, "Never mind")).toBe(true);
+    });
+
+    it("ship maintenance sub-menu shows air filters option", () => {
+      const story = setupTransit({ ShipCondition: 70 });
+      pickChoice(story, "Tidy up");
+      expect(hasChoice(story, "air filters")).toBe(true);
+      expect(hasChoice(story, "Never mind")).toBe(true);
+    });
+  });
+
+  describe("TaskCap enforcement", () => {
+    it("respects a reduced TaskCap", () => {
+      const story = setupTransit({
+        TaskCap: 3,
+        // Activate several tasks across tiers
+        PaperworkDone: 0,
+        PaperworkTotal: 2,
+        ShipCondition: 70,
+        TripDay: 6, // nav check day
+      });
+      const choices = choiceTexts(story);
+      // Should not exceed TaskCap + possible Rest
+      // Rest won't show since P3 tasks are active
+      expect(choices.length).toBeLessThanOrEqual(3);
+    });
+  });
+
+  describe("Shuffle variety", () => {
+    it("offers different P3 tasks across runs with different seeds", () => {
+      // Reuse a single story instance across seeds to avoid repeated compilation
+      const story = setupTransit({
+        TaskCap: 3, // Force only 1 P3 slot (cap 3, floor p4=1, so p3_cap=2, p2_cap=1)
+        PaperworkDone: 0,
+        PaperworkTotal: 2,
+        ShipCondition: 70,
+        TripDay: 6, // nav check day — all 3 P3 tasks eligible
+      });
+
+      const p3Seen = new Set();
+      for (let seed = 0; seed < 20; seed++) {
+        story.state.storySeed = seed;
+        // Reset variables and re-navigate with this seed
+        story.variablesState["PaperworkDone"] = 0;
+        story.variablesState["PaperworkTotal"] = 2;
+        story.variablesState["ShipCondition"] = 70;
+        story.variablesState["TripDay"] = 6;
+        story.variablesState["TaskCap"] = 3;
+        story.ChoosePathString("transit.ship_options");
+        drainText(story);
+        const choices = choiceTexts(story);
+        if (choices.some((c) => c.includes("paperwork"))) p3Seen.add("paperwork");
+        if (choices.some((c) => c.includes("Navigation"))) p3Seen.add("nav");
+        if (choices.some((c) => c.includes("Tidy"))) p3Seen.add("ship_maint");
+        // Early exit once variety is confirmed
+        if (p3Seen.size >= 2) break;
+      }
+      // With shuffle, we should see at least 2 different P3 tasks across 20 runs
+      expect(p3Seen.size).toBeGreaterThanOrEqual(2);
+    });
+  });
+});

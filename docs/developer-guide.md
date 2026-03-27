@@ -249,6 +249,65 @@ Ink evaluates `a * b / c` as `a * (b / c)`, not `(a * b) / c`. With integer math
 
 ---
 
+## Task Priority System
+
+The transit day presents tasks to the player via a priority-based selection system. Tasks are organized into five tiers, and the system uses Ink's threading (`<-`) and `CHOICE_COUNT()` to dynamically build the choice list.
+
+### Priority Tiers
+
+| Tier | Label | Selection Rule |
+|---|---|---|
+| P1 | Urgent | Always shown when applicable. No cap. |
+| P2 | Important | Shown when stat thresholds met. Shuffled. Capped at `TaskCap - p3_floor - p4_floor`. |
+| P3 | Routine | Shown on schedule or when relevant. Shuffled. Capped at `TaskCap - p4_floor`. |
+| P4 | Recreation | Fills remaining slots. Shuffled. Capped at `TaskCap`. |
+| P5 | Rest | Shown only when no P1–P3 tasks are active. |
+
+`TaskCap` (default 7) controls the maximum number of top-level tasks. P3 and P4 each have a floor of 1 slot (if eligible tasks exist in that tier), ensuring the player always has at least one routine task and one recreation option.
+
+### Threading + CHOICE_COUNT() Pattern
+
+Ink evaluates all choices in a block simultaneously — you can't run code between them. The solution (from [inkle's official tips](https://gist.github.com/joningold/a28cc5113c6310f45fd4ad8f7958196b)) is to put each task in its own stitch, thread it into the main flow with `<-`, and use `CHOICE_COUNT()` to enforce the cap:
+
+```ink
+// Each task is threaded in if its condition is met and cap allows
+{ CHOICE_COUNT() < p3_cap and ShipCondition < 80: <- task_ship_maint }
+
+= task_ship_maint
++ [Tidy up the ship] -> ship_maint_options
+```
+
+Shuffle blocks randomize which tasks within a tier get offered first, providing day-to-day variety when more tasks are eligible than slots allow.
+
+### Grouped Tasks and Sub-Menus
+
+Related tasks are collapsed into single top-level entries that expand into sub-menus with flavor text:
+
+- **Sleep** (P2 when fatigue ≥ 70, P4 when 30–69) → nap (1 AP), full sleep (2 AP)
+- **Relax** (P4, always) → heat rations (1 AP), workout (1 AP), movie (2 AP)
+- **Ship maintenance** (P3, when condition < 80) → clean filters (1 AP), more in future
+- **Engine care** (P2, when condition < 80) → run diagnostics (2 AP)
+
+Each sub-menu includes a free "Never mind" back option. After completing a sub-task, the player returns to the top-level task list.
+
+### has_tier_tasks() Function
+
+The `has_tier_tasks(tier)` function (ship.ink) centralizes the "are there eligible tasks at this priority?" check. It's used for floor calculations and Rest gating. When adding new tasks to any tier, update the appropriate case in this function.
+
+### Adding a New Task
+
+1. Add an entry to the appropriate task registry list (`P2Tasks`, `P3Tasks`, or `P4Tasks` in ship.ink) — this keeps the shuffle loop count in sync automatically
+2. Write a `task_*` stitch that injects one choice (and optionally a `*_options` sub-menu stitch)
+3. Add a `{ CHOICE_COUNT() < cap and condition: <- task_* }` line in the appropriate priority section of `ship_options`
+4. Update `has_tier_tasks()` with the new task's condition in the appropriate tier
+
+### Key Variables
+
+- `TaskCap` — Maximum top-level tasks shown (excluding P5 Rest). Default 7.
+- `TasksCompletedToday` — Incremented by `pass_time()`, reset by `next_day()` and `transit()`.
+
+---
+
 ## Adding New Content
 
 ### New Cargo Entry
