@@ -60,3 +60,30 @@ All tests share the factory in `tests/helpers/story.js`:
 - `L(story, 'ListName.ItemName')` — constructs an `InkList` value for passing to `EvaluateFunction`
 - `cargo(story, ...names)` — builds a multi-item hold by unioning list values
 - `drainText(story)` — advances past output text to the next choice point
+
+## Performance
+
+`createStory()` compiles the full Ink source and is the most expensive operation in tests. Keep these guidelines in mind to avoid CI timeouts:
+
+- **Reuse story instances in loops.** For statistical or iteration-based tests, create the story once, then reset variables and call `ChoosePathString()` for each iteration. Each re-navigation is cheap; compilation is not.
+- **Early-exit when possible.** For tests like "verify at least N distinct outcomes", break out of the loop as soon as the condition is met rather than running all iterations.
+- **Keep iteration counts reasonable.** 50–100 iterations is fine when reusing a single story instance.
+
+```js
+// Good: one story, many iterations
+const story = setupTransit({ Fatigue: 90, ... });
+for (let i = 0; i < 100; i++) {
+  story.variablesState["Fatigue"] = 90;
+  story.variablesState["AP"] = 6;
+  story.ChoosePathString("transit.ship_options");
+  drainText(story);
+  // ... assert ...
+  if (conditionMet) break; // early exit
+}
+
+// Bad: new story per iteration (causes CI timeouts)
+for (let i = 0; i < 100; i++) {
+  const story = setupTransit({ Fatigue: 90 }); // compiles every time!
+  // ...
+}
+```

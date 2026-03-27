@@ -113,7 +113,7 @@ The general state of your ship (cleanliness, air filters, tidiness) also degrade
 
 You have two personal stats to manage:
 
-- **Fatigue** builds up as you work. Sleep (2 AP) resets it fully; naps (1 AP) take the edge off. If you push too hard, you'll start making mistakes — like that sloppy ship flip.
+- **Fatigue** builds up as you work. Sleep (2 AP) resets it fully; naps (1 AP) take the edge off. If you push too hard, you'll start making mistakes — sloppy engine work, botched navigation checks, customs forms you have to redo. The more exhausted you are, the more likely things go wrong. You'll see warnings when fatigue is getting dangerous, and at extreme levels almost everything you try will go sideways.
 - **Morale** decays slowly each day, faster if your ship is a mess. Recreation activities (cooking a meal, watching a movie, exercising) restore it. If morale drops too low, you'll lose AP each day.
 
 The early game is a balancing act: there's a lot of work to do and not enough hours. As you upgrade your ship, automation handles more of the busywork, leaving more time for you.
