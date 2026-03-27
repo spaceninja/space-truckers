@@ -356,23 +356,32 @@ describe("Task priority system", () => {
 
   describe("Shuffle variety", () => {
     it("offers different P3 tasks across runs with different seeds", () => {
+      // Reuse a single story instance across seeds to avoid repeated compilation
+      const story = setupTransit({
+        TaskCap: 3, // Force only 1 P3 slot (cap 3, floor p4=1, so p3_cap=2, p2_cap=1)
+        PaperworkDone: 0,
+        PaperworkTotal: 2,
+        ShipCondition: 70,
+        TripDay: 6, // nav check day — all 3 P3 tasks eligible
+      });
+
       const p3Seen = new Set();
       for (let seed = 0; seed < 20; seed++) {
-        const story = setupTransit({
-          TaskCap: 3, // Force only 1 P3 slot (cap 3, floor p4=1, so p3_cap=2, p2_cap=1)
-          PaperworkDone: 0,
-          PaperworkTotal: 2,
-          ShipCondition: 70,
-          TripDay: 6, // nav check day — all 3 P3 tasks eligible
-        });
         story.state.storySeed = seed;
-        // Re-navigate to get shuffle with this seed
+        // Reset variables and re-navigate with this seed
+        story.variablesState["PaperworkDone"] = 0;
+        story.variablesState["PaperworkTotal"] = 2;
+        story.variablesState["ShipCondition"] = 70;
+        story.variablesState["TripDay"] = 6;
+        story.variablesState["TaskCap"] = 3;
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         const choices = choiceTexts(story);
         if (choices.some((c) => c.includes("paperwork"))) p3Seen.add("paperwork");
         if (choices.some((c) => c.includes("Navigation"))) p3Seen.add("nav");
         if (choices.some((c) => c.includes("Tidy"))) p3Seen.add("ship_maint");
+        // Early exit once variety is confirmed
+        if (p3Seen.size >= 2) break;
       }
       // With shuffle, we should see at least 2 different P3 tasks across 20 runs
       expect(p3Seen.size).toBeGreaterThanOrEqual(2);
