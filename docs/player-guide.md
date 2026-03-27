@@ -118,6 +118,14 @@ You have two personal stats to manage:
 
 The early game is a balancing act: there's a lot of work to do and not enough hours. As you upgrade your ship, automation handles more of the busywork, leaving more time for you.
 
+### Random Events
+
+Space is unpredictable. On longer trips, unexpected things happen — a micrometeorite punches through the hull, a power surge ripples through the systems, cargo shifts loose in the hold. When something happens, you deal with it immediately before getting back to your task list.
+
+Most events require immediate action (patching the hull, securing cargo), but some offer a choice. A distress signal from a nearby ship gives you options: stop and spend half your day helping them for a generous reward, pass over some supplies for a smaller reward, or radio for help and keep flying. A navigation shortcut might save you a day — or cost you one.
+
+Being exhausted makes emergencies worse. A fatigued repair takes longer and may cause additional damage. Rest before you need it, not after something goes wrong.
+
 ---
 
 ## Engine Upgrades
