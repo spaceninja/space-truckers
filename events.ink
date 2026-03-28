@@ -10,10 +10,17 @@
     fires. EventCooldownDay prevents more than one event per day.
 
     Adding a new event:
-    1. Write an event_* knot below
-    2. Add a branch to the random_event eligibility/selection block
+    1. Add an entry to the Events list below
+    2. Write an event_* knot below
+    3. Add a branch to the random_event eligibility/selection block
+    4. If the event has an eligibility condition, add a subtraction line in random_event
 
 */
+
+// Event registry — used only for LIST_COUNT() to keep eligible_count in sync.
+// Add an entry here when adding a new event. If the event has an eligibility
+// condition, also add a subtraction line in random_event below.
+LIST Events = Micrometeorite, PowerSurge, DistressSignal, CargoShift, Shortcut
 
 /*
 
@@ -23,11 +30,12 @@
 */
 === random_event
 ~ temp has_cargo = ShipCargo != ()
-~ temp eligible_count = 4 + has_cargo  // always: meteor, surge, distress, shortcut; +cargo shift if cargo
-
-// Shortcut ineligible when arriving tomorrow (can't meaningfully change ShipClock)
 ~ temp shortcut_ok = ShipClock > 1
-~ eligible_count = eligible_count - (not shortcut_ok)
+
+// Start with full event count, subtract ineligible events
+~ temp eligible_count = LIST_COUNT(LIST_ALL(Events))
+~ eligible_count -= (not has_cargo)   // CargoShift requires cargo
+~ eligible_count -= (not shortcut_ok) // Shortcut requires ShipClock > 1
 
 { eligible_count <= 0:
     // Fallback: no eligible events, skip
