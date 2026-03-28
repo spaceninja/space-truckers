@@ -139,6 +139,53 @@ describe("Event triggering", () => {
     expect(hasChoice(story, "Take a break")).toBe(true);
   });
 
+  it("events do not repeat within a trip", () => {
+    // Fire all 5 events by calling random_event repeatedly.
+    // After all 5 have fired, the pool should be empty and the
+    // dispatcher should fall through to ship_options.
+    const story = createStory();
+    story.variablesState["ShipCargo"] = new InkList();
+    // Give cargo so CargoShift is eligible
+    story.variablesState["ShipCargo"] = L(story, "AllCargo.001_Plums");
+    story.variablesState["ShipClock"] = 5;
+    story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
+    story.variablesState["TripDuration"] = 10;
+    story.variablesState["TripDay"] = 3;
+    story.variablesState["FlipDone"] = true;
+    story.variablesState["FlightMode"] = L(story, "FlightModes.Bal");
+    story.variablesState["PaperworkDone"] = 1;
+    story.variablesState["PaperworkTotal"] = 1;
+    story.variablesState["TripFuelCost"] = 100;
+    story.variablesState["TripFuelPenalty"] = 0;
+    story.variablesState["AP"] = 6;
+    story.variablesState["ActionPointsMax"] = 6;
+    story.variablesState["Fatigue"] = 0;
+    story.variablesState["Morale"] = 80;
+    story.variablesState["ShipCondition"] = 100;
+    story.variablesState["EngineCondition"] = 100;
+    story.variablesState["ShipFuel"] = 200;
+    story.variablesState["TaskCap"] = 7;
+    story.variablesState["TasksCompletedToday"] = 0;
+    story.variablesState["EventChance"] = 0;
+    story.variablesState["EventCooldownDay"] = -1;
+    story.variablesState["CargoDamagePct"] = 0;
+
+    // Fire all 5 events
+    for (let i = 0; i < 5; i++) {
+      story.variablesState["AP"] = 6;
+      story.variablesState["EngineCondition"] = 100;
+      story.variablesState["TripFuelPenalty"] = 0;
+      story.variablesState["CargoDamagePct"] = 0;
+      story.variablesState["ShipClock"] = 5;
+      story.ChoosePathString("random_event");
+      drainText(story);
+    }
+
+    // After 5 events, the Events list should be empty
+    const eventsRemaining = story.variablesState["Events"];
+    expect(eventsRemaining.Count).toBe(0);
+  });
+
   it("event fires when EventChance is 100", () => {
     // With EventChance at 100, RANDOM(1,100) <= 100 is always true.
     // The event will fire and divert before the task list.
@@ -408,11 +455,8 @@ describe("Event: Cargo Shift", () => {
 
   it("does not fire without cargo (not eligible)", () => {
     // Cargo shift requires has_cargo. With empty ShipCargo, it should never
-    // be selected. Test that the dispatcher skips it by verifying roll never
-    // picks it when ShipCargo is empty. We test eligibility logic directly
-    // by checking the dispatcher always produces a non-cargo-shift event
-    // when cargo is empty. Since we can't control the roll, we verify that
-    // the cargo damage accumulator stays 0 over many dispatcher calls.
+    // be selected. We run the dispatcher multiple times, resetting the
+    // Events pool each iteration (events are removed after firing).
     const story = createStory();
     story.variablesState["ShipCargo"] = new InkList(); // empty
     story.variablesState["ShipClock"] = 5;
@@ -438,21 +482,21 @@ describe("Event: Cargo Shift", () => {
     story.variablesState["EventCooldownDay"] = -1;
     story.variablesState["CargoDamagePct"] = 0;
 
+    // Save initial Events list (all active) for resetting between iterations
+    const allEvents = story.variablesState["Events"];
+
     // Run the dispatcher 20 times
     for (let i = 0; i < 20; i++) {
       story.variablesState["AP"] = 6;
       story.variablesState["EngineCondition"] = 100;
       story.variablesState["TripFuelPenalty"] = 0;
       story.variablesState["CargoDamagePct"] = 0;
+      story.variablesState["Events"] = allEvents;
       story.ChoosePathString("random_event");
       drainText(story);
     }
-    // With no cargo, cargo shift can never fire, so CargoDamagePct stays 0
-    // (micrometeorite can add cargo damage, but we reset it each iteration)
-    // This test just verifies the dispatcher doesn't throw with empty cargo.
-    // The 0-damage assertion is soft — micrometeorite could have hit cargo
-    // but cargo was empty. The real invariant is: no crash when no cargo.
-    expect(true).toBe(true); // dispatcher completes without error
+    // This test verifies the dispatcher doesn't crash with empty cargo.
+    expect(true).toBe(true);
   });
 });
 

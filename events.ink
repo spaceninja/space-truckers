@@ -9,53 +9,53 @@
     starts at 0% and increases 3% per check. Resets to 0 after an event
     fires. EventCooldownDay prevents more than one event per day.
 
+    Events don't repeat within a trip — each event is removed from the
+    Events list after firing. The list is reset to all-active in transit().
+
     Adding a new event:
-    1. Add an entry to the Events list below
+    1. Add an entry to the Events list below (in parentheses = active)
     2. Write an event_* knot below
-    3. Add a branch to the random_event eligibility/selection block
-    4. If the event has an eligibility condition, add a subtraction line in random_event
+    3. Add a dispatch line in random_event: { chosen == Name: -> event_name }
+    4. If the event has an eligibility condition, add a removal line in random_event
 
 */
 
-// Event registry — used only for LIST_COUNT() to keep eligible_count in sync.
-// Add an entry here when adding a new event. If the event has an eligibility
-// condition, also add a subtraction line in random_event below.
-LIST Events = Micrometeorite, PowerSurge, DistressSignal, CargoShift, Shortcut
+// Event registry — tracks which events are still available this trip.
+// Events are set active at trip start and deactivated after firing,
+// preventing repeats. Add new events here and in the dispatch block below.
+LIST Events = (Micrometeorite), (PowerSurge), (DistressSignal), (CargoShift), (Shortcut)
 
 /*
 
     Random Event Dispatcher
-    Picks a random eligible event and diverts to it.
+    Builds an eligible set from remaining events, picks one at random.
+    The chosen event is removed from the pool so it won't repeat this trip.
 
 */
 === random_event
-~ temp has_cargo = ShipCargo != ()
-~ temp shortcut_ok = ShipClock > 1
-
-// Start with full event count, subtract ineligible events
-~ temp eligible_count = LIST_COUNT(LIST_ALL(Events))
-~ eligible_count -= (not has_cargo)   // CargoShift requires cargo
-~ eligible_count -= (not shortcut_ok) // Shortcut requires ShipClock > 1
+// Start with events that haven't fired this trip, remove ineligible ones
+~ temp eligible = Events
+{ ShipCargo == ():
+    ~ eligible -= CargoShift
+}
+{ ShipClock <= 1:
+    ~ eligible -= Shortcut
+}
+~ temp eligible_count = LIST_COUNT(eligible)
 
 { eligible_count <= 0:
-    // Fallback: no eligible events, skip
+    // No eligible events remain, skip
     -> transit.ship_options
 }
 
-~ temp roll = RANDOM(1, eligible_count)
+~ temp chosen = LIST_RANDOM(eligible)
+~ Events -= chosen  // remove from pool so it won't repeat this trip
 
-// Build the eligible list in order, skipping ineligible entries
-{ roll == 1: -> event_micrometeorite }
-~ roll--
-{ roll == 1: -> event_power_surge }
-~ roll--
-{ roll == 1: -> event_distress_signal }
-~ roll--
-{ has_cargo and roll == 1: -> event_cargo_shift }
-{ has_cargo:
-    ~ roll--
-}
-{ shortcut_ok and roll == 1: -> event_shortcut }
+{ chosen == Micrometeorite: -> event_micrometeorite }
+{ chosen == PowerSurge: -> event_power_surge }
+{ chosen == DistressSignal: -> event_distress_signal }
+{ chosen == CargoShift: -> event_cargo_shift }
+{ chosen == Shortcut: -> event_shortcut }
 // Fallback (shouldn't reach here)
 -> event_micrometeorite
 
