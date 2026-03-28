@@ -124,6 +124,8 @@ Space is unpredictable. On longer trips, unexpected things happen — a micromet
 
 Most events require immediate action (patching the hull, securing cargo), but some offer a choice. A distress signal from a nearby ship gives you options: stop and spend half your day helping them for a generous reward, pass over some supplies for a smaller reward, or radio for help and keep flying. A navigation shortcut might save you a day — or cost you one.
 
+When you're carrying passengers, you'll encounter additional events — birthdays to celebrate, complaints to handle, conversations to have, and the occasional medical emergency. Passengers make trips more interesting (and more stressful). That pay bonus exists for a reason.
+
 Being exhausted makes emergencies worse. A fatigued repair takes longer and may cause additional damage. Rest before you need it, not after something goes wrong.
 
 ---

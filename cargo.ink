@@ -1519,6 +1519,21 @@ LIST AllCargo =
 
 /*
 
+    Returns true if any cargo in the hold has the Passengers flag.
+
+*/
+=== function has_passenger_cargo(items)
+~ temp item = pop(items)
+{ item:
+    { CargoData(item, Passengers):
+        ~ return true
+    }
+    ~ return has_passenger_cargo(items)
+}
+~ return false
+
+/*
+
     Gets a randomized selection of cargo from the specified port.
     Express cargo is filtered out if the destination is unreachable in Turbo
     at the player's current engine tier.

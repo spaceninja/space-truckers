@@ -1,6 +1,5 @@
 // TODO: ship modules degrade and need maintenance
 // TODO: contextual ship maintenance variety (drain lines, laundry, secure items, etc.)
-// TODO: passenger events when carrying passenger cargo
 
 VAR ShipClock = 0
 VAR ShipDestination = Transit
@@ -39,6 +38,9 @@ LIST P4Tasks = Relax, SleepRest
 // Remove events whose eligibility is fixed for the whole trip
 { ShipCargo == ():
     ~ Events -= CargoShift
+}
+{ not has_passenger_cargo(ShipCargo):
+    ~ Events -= PassengerEvents
 }
 ~ CargoDamagePct = 0
 Flying to {LocationData(destination, Name)} for {duration} days…

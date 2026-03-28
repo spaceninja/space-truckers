@@ -23,7 +23,11 @@
 // Event registry — tracks which events are still available this trip.
 // Events are set active at trip start and deactivated after firing,
 // preventing repeats. Add new events here and in the dispatch block below.
-LIST Events = (Micrometeorite), (PowerSurge), (DistressSignal), (CargoShift), (Shortcut)
+LIST Events = (Micrometeorite), (PowerSurge), (DistressSignal), (CargoShift), (Shortcut), (PassengerBirthday), (PassengerComplaint), (PassengerConversation), (MedicalEmergency)
+
+// Passenger event subset — removed from Events at trip start when no
+// passenger cargo is aboard. Keep in sync with the Events list above.
+VAR PassengerEvents = (PassengerBirthday, PassengerComplaint, PassengerConversation, MedicalEmergency)
 
 /*
 
@@ -54,6 +58,10 @@ LIST Events = (Micrometeorite), (PowerSurge), (DistressSignal), (CargoShift), (S
 { chosen == DistressSignal: -> event_distress_signal }
 { chosen == CargoShift: -> event_cargo_shift }
 { chosen == Shortcut: -> event_shortcut }
+{ chosen == PassengerBirthday: -> event_passenger_birthday }
+{ chosen == PassengerComplaint: -> event_passenger_complaint }
+{ chosen == PassengerConversation: -> event_passenger_conversation }
+{ chosen == MedicalEmergency: -> event_medical_emergency }
 // Fallback (shouldn't reach here)
 -> event_micrometeorite
 
@@ -67,6 +75,16 @@ LIST Events = (Micrometeorite), (PowerSurge), (DistressSignal), (CargoShift), (S
 */
 === function damage_random_system(amount)
 ~ EngineCondition = MAX(EngineCondition - amount, 0)
+
+/*
+
+    Medical Module Check
+    Stub: always returns false. When the module system is implemented
+    (roadmap item #5), update this to check for an installed medical module.
+
+*/
+=== function has_medical_module()
+~ return false
 
 /*
 
@@ -238,3 +256,140 @@ Your nav computer flags an alternate route — a gravitational slingshot corrido
     Turns out there's a reason nobody comes this way. The debris is denser than the charts suggested and you spend hours carefully threading through it. You've actually lost time.
 }
 -> transit.ship_options
+
+/*
+
+    Passenger Birthday
+    A passenger's birthday. Opportunity to celebrate.
+    Only fires when carrying passenger cargo.
+
+*/
+=== event_passenger_birthday
+One of your passengers flags you down in the corridor. Turns out it's their birthday — they're sheepish about mentioning it, but you can tell they'd appreciate some acknowledgment.
+
++ [Throw a small celebration — break out some rations and make it festive]
+    -> birthday_celebrate
++ [Wish them a happy birthday and get back to work]
+    ~ Morale = MIN(Morale + 5, 100)
+    You wish them well with a genuine smile. They seem touched that you remembered. Small gestures count for something out here.
+    -> transit.ship_options
+
+= birthday_celebrate
+You clear a table in the common area, dig out something that passes for cake mix, and round up the other passengers.
+{ fatigue_check():
+    You're running on fumes and it shows. The "celebration" is half-hearted — you burn the cake and can barely keep your eyes open through the singing. It's the thought that counts, but only just.
+    ~ Morale = MIN(Morale + 5, 100)
+- else:
+    It's nothing fancy, but the passengers are laughing and trading stories, and for a little while the ship feels less like a cargo hauler and more like somewhere people actually want to be.
+    ~ Morale = MIN(Morale + 10, 100)
+}
+-> transit.pass_time(1)
+
+/*
+
+    Passenger Complaint
+    A passenger is unhappy about conditions aboard the ship.
+    Only fires when carrying passenger cargo.
+
+*/
+=== event_passenger_complaint
+A passenger corners you outside the cockpit. The air recycler is making a noise that's keeping them up, the food is awful, and the heating in their berth is inconsistent. They want something done about it.
+
++ [See what you can do to fix their complaints]
+    -> complaint_accommodate
++ [Apologise but explain this is a cargo ship, not a cruise liner]
+    ~ Morale = MIN(MAX(Morale - 5, 0), 100)
+    You're sympathetic but honest — this is a working freighter, not a passenger vessel. They're not happy, but they accept it. The mood aboard drops a little.
+    -> transit.ship_options
+
+= complaint_accommodate
+You head down to check the recycler and tweak the heating.
+{ fatigue_check():
+    You try, but you're too tired to focus. You fiddle with the recycler and adjust the heating, but honestly you're not sure you've fixed anything. The passenger thanks you, though they don't sound convinced.
+- else:
+    ~ Morale = MIN(Morale + 5, 100)
+    The recycler had a loose panel — easy fix once you found it. You adjust the heating and throw in an extra blanket for good measure. The passenger seems genuinely grateful.
+}
+-> transit.pass_time(1)
+
+/*
+
+    Passenger Conversation
+    A passenger strikes up a conversation during downtime.
+    Only fires when carrying passenger cargo.
+    No fatigue check — this is a relaxing interaction.
+
+*/
+=== event_passenger_conversation
+You're running through a systems check when one of your passengers drifts into the cockpit. They're not complaining — they're just curious. They ask about the ship, the route, what it's like out here.
+
++ [Chat with them for a while]
+    ~ Morale = MIN(Morale + 5, 100)
+    ~ Fatigue = MAX(Fatigue - 5, 0)
+    You lean back and talk. They're good company — asking questions, listening to the answers, sharing their own stories. By the time they head back to their berth, you feel lighter than you have in days.
+    -> transit.pass_time(1)
++ [Politely excuse yourself — you've got work to do]
+    You explain you're in the middle of something and they nod, heading back without complaint. Back to work.
+    -> transit.ship_options
+
+/*
+
+    Medical Emergency
+    A passenger collapses with a medical emergency. The player must choose
+    between calling a medical shuttle (against the passenger's wishes) or
+    letting them stay aboard and gambling on the outcome.
+    Only fires when carrying passenger cargo.
+
+    // TODO: This event is a good candidate for a "delayed event outcome"
+    // system — resolve the passenger's fate a day or two later instead of
+    // immediately, to build tension. If another event would also benefit
+    // from delayed resolution, build the system then.
+
+*/
+=== event_medical_emergency
+A shout from the passenger berths snaps you out of your routine. One of your passengers has collapsed — they're conscious but in bad shape. You radio for emergency medical services and get a response: a fast medical shuttle can intercept your trajectory within hours.
+
+But when you tell the passenger, they grab your arm. Their family is aboard — spouse, kids. The shuttle only has room for the patient. "Please," they say. "Don't send me away from them."
+
+You look at the shuttle ETA on your console, then at the family huddled in the doorway. This feels like a bad idea. What if they get worse?
+
++ [Call the shuttle — their health comes first]
+    -> medical_call_shuttle
++ [Let them stay — respect their wishes and do what you can]
+    -> medical_stay_aboard
+
+= medical_call_shuttle
+You make the call. The passenger argues, then pleads, but you hold firm. When the shuttle docks, the medics transfer them quickly and professionally. The family watches from the airlock window as the shuttle pulls away.
+~ Morale = MIN(MAX(Morale - 10, 0), 100)
+~ ShipClock = ShipClock + 1
+The ship is quiet afterward. You did the right thing — you know that. But the kids won't look at you, and the silence is heavier than it should be.
+-> transit.pass_time(2)
+
+= medical_stay_aboard
+You tell the shuttle to stand by and turn back to the passenger. "Alright. You're staying. But you do exactly what I tell you."
+~ Morale = MIN(Morale + 5, 100)
+The family crowds in, grateful and terrified in equal measure. You dig out the first aid kit and do everything you can.
+-> medical_stay_outcome
+
+= medical_stay_outcome
+~ temp outcome_roll = RANDOM(1, 100)
+~ temp improve_chance = 50
+~ temp worsen_chance = 90
+{ has_medical_module():
+    ~ improve_chance = 75
+    ~ worsen_chance = 100  // no death possible with medical module
+}
+{
+- outcome_roll <= improve_chance:
+    Over the next few hours, colour returns to their face. Their breathing steadies. By evening they're sitting up, sipping water, and arguing with their spouse about whether they should have taken the shuttle. You take that as a good sign.
+- outcome_roll <= worsen_chance:
+    ~ Morale = MIN(MAX(Morale - 10, 0), 100)
+    They don't improve. If anything, they get worse — fever spikes, breathing goes shallow. You do what you can, but you're a pilot, not a doctor. They're stable enough to make it to port, but it's going to be a rough ride. You can't shake the feeling you made the wrong call.
+- else:
+    // 10% chance without medical module — the worst outcome
+    ~ Morale = MIN(MAX(Morale - 20, 0), 100)
+    You do everything right. You follow every step in the emergency manual. It's not enough.
+    They pass quietly in the small hours, family around them. You sit in the cockpit afterward, staring at the stars, wondering if you'd made a different choice whether it would have mattered.
+    The family doesn't blame you. That almost makes it worse.
+}
+-> transit.pass_time(1)

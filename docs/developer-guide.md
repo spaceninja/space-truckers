@@ -333,17 +333,24 @@ Random events are P0 interruptions that fire during transit, bypassing the task 
 **Triggering:** Each time `ship_options` is entered, an escalating probability check fires. `EventChance` starts at 0 and increases by 3 per check. When an event fires, `EventChance` resets to 0 and `EventCooldownDay` is set to the current `TripDay` to prevent a second event the same day.
 
 **Event selection:** When triggered, `random_event` picks randomly from eligible events. Some events have eligibility conditions:
-- **Cargo shift** — only eligible when the player has cargo
-- **Shortcut** — only eligible when `ShipClock > 1`
+- **Cargo shift** — only eligible when the player has cargo (static check at trip start)
+- **Shortcut** — only eligible when `ShipClock > 1` (dynamic check each roll)
+- **Passenger events** — only eligible when the player has passenger cargo (static check at trip start)
+
+**Passenger event eligibility:** The `PassengerEvents` VAR holds the subset of events that require passengers. In `transit()`, `Events -= PassengerEvents` removes all passenger events in one operation when no passenger cargo is aboard. To add a new passenger event, add it to both the `Events` LIST and the `PassengerEvents` VAR (they are adjacent in `events.ink`).
+
+**`has_medical_module()` stub:** Currently always returns `false`. When the module system is implemented (roadmap item #5), update this to check for an installed medical module. Used by the medical emergency event to improve patient outcomes.
 
 **Cargo damage:** `CargoDamagePct` accumulates cargo damage during transit (micrometeorite cargo hit, cargo shift with fatigue failure). It reduces delivery pay at port alongside paperwork penalties. Total combined penalty is capped at 75%. It only increases from event outcomes — normal transit never touches it.
 
 **`damage_random_system(amount)` stub:** Currently always damages `EngineCondition`. When modules are implemented (roadmap item #5), update this function to randomly choose from installed modules + engine.
 
 **Adding a new event:**
-1. Write an `event_*` knot in `events.ink`
-2. Add a branch to the `random_event` eligibility/selection block
-3. If the event has an eligibility condition, add it to `eligible_count` and the dispatch guard
+1. Add an entry to the `Events` LIST in `events.ink`
+2. If the event requires passenger cargo, also add it to the `PassengerEvents` VAR
+3. Write an `event_*` knot in `events.ink`
+4. Add a dispatch line in `random_event`: `{ chosen == Name: -> event_name }`
+5. If the event has a dynamic eligibility condition, add a removal line in `random_event`
 
 ---
 
