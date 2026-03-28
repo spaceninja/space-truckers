@@ -79,6 +79,9 @@ function setupTransit(overrides = {}) {
     ShipFuel: 200,
     TaskCap: 7,
     TasksCompletedToday: 0,
+    EventChance: 0,
+    EventCooldownDay: -1,
+    CargoDamagePct: 0,
   };
 
   const vars = { ...defaults, ...overrides };
@@ -400,6 +403,8 @@ describe("Task priority system", () => {
         story.variablesState["ShipCondition"] = 70;
         story.variablesState["TripDay"] = 6;
         story.variablesState["TaskCap"] = 3;
+        story.variablesState["EventChance"] = 0;
+        story.variablesState["EventCooldownDay"] = -1;
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         const choices = choiceTexts(story);
@@ -531,6 +536,8 @@ describe("Fatigue-based task failure", () => {
         story.variablesState["NavChecksCompleted"] = 0;
         story.variablesState["AP"] = 6;
         story.variablesState["ShipClock"] = 5;
+        story.variablesState["EventChance"] = 0;
+        story.variablesState["EventCooldownDay"] = -1;
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         pickChoice(story, "Navigation check");
@@ -558,6 +565,8 @@ describe("Fatigue-based task failure", () => {
         story.variablesState["PaperworkTotal"] = 5;
         story.variablesState["AP"] = 6;
         story.variablesState["ShipClock"] = 5;
+        story.variablesState["EventChance"] = 0;
+        story.variablesState["EventCooldownDay"] = -1;
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         pickChoice(story, "paperwork");
@@ -581,6 +590,8 @@ describe("Fatigue-based task failure", () => {
         story.variablesState["EngineCondition"] = 60;
         story.variablesState["AP"] = 6;
         story.variablesState["ShipClock"] = 5;
+        story.variablesState["EventChance"] = 0;
+        story.variablesState["EventCooldownDay"] = -1;
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         pickChoice(story, "engine");
@@ -615,6 +626,8 @@ describe("Fatigue-based task failure", () => {
         story.variablesState["TripFuelPenalty"] = 0;
         story.variablesState["AP"] = 6;
         story.variablesState["ShipClock"] = 5;
+        story.variablesState["EventChance"] = 0;
+        story.variablesState["EventCooldownDay"] = -1;
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         pickChoice(story, "ship flip");
@@ -645,6 +658,8 @@ describe("Fatigue-based task failure", () => {
         story.variablesState["NavChecksCompleted"] = 0;
         story.variablesState["AP"] = 6;
         story.variablesState["ShipClock"] = 5;
+        story.variablesState["EventChance"] = 0;
+        story.variablesState["EventCooldownDay"] = -1;
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         const text = pickChoiceGetText(story, "Navigation check");
@@ -671,6 +686,8 @@ describe("Fatigue-based task failure", () => {
         story.variablesState["PaperworkTotal"] = 3;
         story.variablesState["AP"] = 6;
         story.variablesState["ShipClock"] = 5;
+        story.variablesState["EventChance"] = 0;
+        story.variablesState["EventCooldownDay"] = -1;
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         const text = pickChoiceGetText(story, "paperwork");

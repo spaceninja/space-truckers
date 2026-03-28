@@ -3,6 +3,7 @@
 
 INCLUDE port.ink
 INCLUDE ship.ink
+INCLUDE events.ink
 INCLUDE cargo.ink
 INCLUDE locations.ink
 INCLUDE functions.ink
@@ -36,6 +37,10 @@ VAR TripFuelPenalty = 0   // Accumulated fuel penalty during transit
 VAR NavChecksCompleted = 0 // Nav checks completed this trip
 VAR TaskCap = 7            // Max top-level tasks shown (excluding P5 Rest)
 VAR TasksCompletedToday = 0 // Tasks completed this transit day
+
+VAR EventChance = 0        // Escalating probability for random events (0–100)
+VAR EventCooldownDay = -1  // TripDay of last event; prevents pile-ups same day
+VAR CargoDamagePct = 0     // Accumulated cargo damage % (reduces delivery pay)
 
 LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, TurboSpeed
 

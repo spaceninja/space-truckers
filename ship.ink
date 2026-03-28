@@ -1,7 +1,6 @@
 // TODO: ship modules degrade and need maintenance
 // TODO: contextual ship maintenance variety (drain lines, laundry, secure items, etc.)
 // TODO: passenger events when carrying passenger cargo
-// TODO: random events (micrometeorite, power surge, cargo shift, distress signal, etc.)
 
 VAR ShipClock = 0
 VAR ShipDestination = Transit
@@ -34,6 +33,14 @@ LIST P4Tasks = Relax, SleepRest
 ~ TripFuelPenalty = 0
 ~ NavChecksCompleted = 0
 ~ TasksCompletedToday = 0
+~ EventChance = 0
+~ EventCooldownDay = -1
+~ Events = LIST_ALL(Events)
+// Remove events whose eligibility is fixed for the whole trip
+{ ShipCargo == ():
+    ~ Events -= CargoShift
+}
+~ CargoDamagePct = 0
 Flying to {LocationData(destination, Name)} for {duration} days…
 -> ship_options
 
@@ -51,6 +58,16 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 */
 = ship_options
+// P0: Random event check — escalating probability, resets after event fires,
+// cooldown prevents more than one event per day.
+{ EventCooldownDay < TripDay:
+    { RANDOM(1, 100) <= EventChance:
+        ~ EventChance = 0
+        ~ EventCooldownDay = TripDay
+        -> random_event
+    }
+    ~ EventChance += 3
+}
 {
 - Fatigue >= 90:
     You can barely function. Every movement feels like it's happening underwater. You need to sleep.

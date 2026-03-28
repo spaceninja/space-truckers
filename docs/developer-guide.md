@@ -326,6 +326,25 @@ Only "work" tasks use `fatigue_check()`. Sleep, recreation, eating, and rest are
 
 `is_overtired()` is still used for UI concerns (P2 sleep threshold, task offering logic). `fatigue_check()` is used for task outcome resolution.
 
+### Random Events
+
+Random events are P0 interruptions that fire during transit, bypassing the task list entirely. All event code lives in `events.ink`.
+
+**Triggering:** Each time `ship_options` is entered, an escalating probability check fires. `EventChance` starts at 0 and increases by 3 per check. When an event fires, `EventChance` resets to 0 and `EventCooldownDay` is set to the current `TripDay` to prevent a second event the same day.
+
+**Event selection:** When triggered, `random_event` picks randomly from eligible events. Some events have eligibility conditions:
+- **Cargo shift** — only eligible when the player has cargo
+- **Shortcut** — only eligible when `ShipClock > 1`
+
+**Cargo damage:** `CargoDamagePct` accumulates cargo damage during transit (micrometeorite cargo hit, cargo shift with fatigue failure). It reduces delivery pay at port alongside paperwork penalties. Total combined penalty is capped at 75%. It only increases from event outcomes — normal transit never touches it.
+
+**`damage_random_system(amount)` stub:** Currently always damages `EngineCondition`. When modules are implemented (roadmap item #5), update this function to randomly choose from installed modules + engine.
+
+**Adding a new event:**
+1. Write an `event_*` knot in `events.ink`
+2. Add a branch to the `random_event` eligibility/selection block
+3. If the event has an eligibility condition, add it to `eligible_count` and the dispatch guard
+
 ---
 
 ## Adding New Content

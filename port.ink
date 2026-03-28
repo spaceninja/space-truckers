@@ -136,12 +136,15 @@ current mass = {total_mass(ShipCargo)}t
     Deliver Cargo
     Delivers all cargo destined for the current port.
     Incomplete paperwork reduces pay by 10% per missing chunk (capped at 50%).
+    Cargo damage from transit events reduces pay by CargoDamagePct.
+    Total combined penalty is capped at 75%.
 
 */
 = deliver_cargo
 ~ temp _items = ShipCargo
 ~ temp delivery_count = 0
 ~ temp paperwork_penalty_pct = get_paperwork_penalty_pct(PaperworkDone, PaperworkTotal)
+~ temp total_penalty_pct = MIN(paperwork_penalty_pct + CargoDamagePct, 75)
 - (top)
 ~ temp cargo = pop(_items)
 { cargo:
@@ -151,13 +154,12 @@ current mass = {total_mass(ShipCargo)}t
         ~ ShipCargo -= cargo
         ~ temp dist = get_distance(CargoData(cargo, From), here)
         ~ temp pay = get_cargo_pay(cargo, dist)
-        ~ temp penalty_amount = pay * paperwork_penalty_pct
-        ~ temp penalty = penalty_amount / 100
+        ~ temp penalty = pay * total_penalty_pct / 100
         ~ pay = pay - penalty
         ~ PlayerBankBalance += pay
         ~ temp fromName = LocationData(CargoData(cargo, From), Name)
         { penalty > 0:
-            Delivered {CargoData(cargo, Title)} from {fromName} for {pay} € ({penalty} € customs fine).
+            Delivered {CargoData(cargo, Title)} from {fromName} for {pay} € ({penalty} € in penalties).
         - else:
             Delivered {CargoData(cargo, Title)} from {fromName} for {pay} €.
         }
@@ -167,6 +169,9 @@ current mass = {total_mass(ShipCargo)}t
 { delivery_count > 0:
     { paperwork_penalty_pct > 0:
         Incomplete paperwork cost you {paperwork_penalty_pct}% of your delivery pay.
+    }
+    { CargoDamagePct > 0:
+        Damaged cargo cost you an additional {CargoDamagePct}% of your delivery pay.
     }
     All cargo for {LocationData(here, Name)} delivered! Your bank account balance is {PlayerBankBalance} €.
 - else:
