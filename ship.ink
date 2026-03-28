@@ -36,6 +36,10 @@ LIST P4Tasks = Relax, SleepRest
 ~ EventChance = 0
 ~ EventCooldownDay = -1
 ~ Events = LIST_ALL(Events)
+// Remove events whose eligibility is fixed for the whole trip
+{ ShipCargo == ():
+    ~ Events -= CargoShift
+}
 ~ CargoDamagePct = 0
 Flying to {LocationData(destination, Name)} for {duration} days…
 -> ship_options

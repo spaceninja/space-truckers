@@ -33,12 +33,10 @@ LIST Events = (Micrometeorite), (PowerSurge), (DistressSignal), (CargoShift), (S
 
 */
 === random_event
-// Start with events that haven't fired this trip, remove ineligible ones
+// Start with events that haven't fired this trip, remove dynamically ineligible ones
+// (Static eligibility like cargo checks is handled at trip start in transit())
 ~ temp eligible = Events
-{ ShipCargo == ():
-    ~ eligible -= CargoShift
-}
-{ ShipClock <= 1:
+{ eligible ? Shortcut and ShipClock <= 1:
     ~ eligible -= Shortcut
 }
 ~ temp eligible_count = LIST_COUNT(eligible)
