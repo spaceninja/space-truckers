@@ -140,13 +140,16 @@ describe("Event triggering", () => {
   });
 
   it("events do not repeat within a trip", () => {
-    // Fire all 5 events by calling random_event repeatedly.
-    // After all 5 have fired, the pool should be empty and the
+    // Fire all general events by calling random_event repeatedly.
+    // After all have fired, the pool should be empty and the
     // dispatcher should fall through to ship_options.
     const story = createStory();
     story.variablesState["ShipCargo"] = new InkList();
-    // Give cargo so CargoShift is eligible
+    // Give non-passenger cargo so CargoShift is eligible
     story.variablesState["ShipCargo"] = L(story, "AllCargo.001_Plums");
+    // Remove passenger events (no passenger cargo — simulates what transit() does)
+    const passengerEvents = story.variablesState["PassengerEvents"];
+    story.variablesState["Events"] = story.variablesState["Events"].Without(passengerEvents);
     story.variablesState["ShipClock"] = 5;
     story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
     story.variablesState["TripDuration"] = 10;
