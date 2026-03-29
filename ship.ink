@@ -461,6 +461,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
     Tunnel called from next_day(). Tasks that have been in the backlog for
     two days (present in both Backlog and StaleBacklog) auto-resolve with
     a condition penalty. Each settled task is replaced with a fresh one.
+    Loops until all overdue tasks are resolved.
 
 */
 = settle_stale_tasks
@@ -468,6 +469,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 { LIST_COUNT(overdue) <= 0:
     ->->
 }
+- (settle_next)
 ~ temp task = pop(overdue)
 ~ Backlog -= task
 ~ StaleBacklog -= task
@@ -477,53 +479,18 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
     { shuffle:
     -   That clicking in the engine has become a grinding noise. You should have handled the {maint_task_name(task)}. Engine: {EngineCondition}%.
     -   The {maint_task_name(task)} you've been putting off? It's causing problems now. Engine: {EngineCondition}%.
+    -   The {maint_task_name(task)} went unattended. Engine: {EngineCondition}%.
     }
 - else:
     ~ ShipCondition = MAX(ShipCondition - 5, 0)
     { shuffle:
     -   The {maint_task_name(task)} you've been ignoring is now a real problem. Ship: {ShipCondition}%.
     -   You should have dealt with the {maint_task_name(task)} yesterday. The ship's paying for it. Ship: {ShipCondition}%.
-    }
-}
-// Recurse for remaining overdue tasks
-{ LIST_COUNT(overdue) > 0:
-    ~ task = pop(overdue)
-    ~ Backlog -= task
-    ~ StaleBacklog -= task
-    ~ replace_backlog_task()
-    { is_engine_task(task):
-        ~ EngineCondition = MAX(EngineCondition - 5, 0)
-        The {maint_task_name(task)} also went unattended. Engine: {EngineCondition}%.
-    - else:
-        ~ ShipCondition = MAX(ShipCondition - 5, 0)
-        The {maint_task_name(task)} also went unattended. Ship: {ShipCondition}%.
+    -   The {maint_task_name(task)} went unattended. Ship: {ShipCondition}%.
     }
 }
 { LIST_COUNT(overdue) > 0:
-    ~ task = pop(overdue)
-    ~ Backlog -= task
-    ~ StaleBacklog -= task
-    ~ replace_backlog_task()
-    { is_engine_task(task):
-        ~ EngineCondition = MAX(EngineCondition - 5, 0)
-        And the {maint_task_name(task)} too. Engine: {EngineCondition}%.
-    - else:
-        ~ ShipCondition = MAX(ShipCondition - 5, 0)
-        And the {maint_task_name(task)} too. Ship: {ShipCondition}%.
-    }
-}
-{ LIST_COUNT(overdue) > 0:
-    ~ task = pop(overdue)
-    ~ Backlog -= task
-    ~ StaleBacklog -= task
-    ~ replace_backlog_task()
-    { is_engine_task(task):
-        ~ EngineCondition = MAX(EngineCondition - 5, 0)
-        The {maint_task_name(task)} makes four. Engine: {EngineCondition}%.
-    - else:
-        ~ ShipCondition = MAX(ShipCondition - 5, 0)
-        The {maint_task_name(task)} makes four. Ship: {ShipCondition}%.
-    }
+    -> settle_next
 }
 ->->
 
