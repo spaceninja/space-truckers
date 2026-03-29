@@ -24,8 +24,14 @@ VAR FlightMode = Bal
 
 VAR Fatigue = 0           // 0–100 scale. Gravity-modified accumulation.
 VAR Morale = 80           // 0–100 scale. Decays daily, boosted by recreation.
-VAR ShipCondition = 100   // 0–100%. Degrades 1%/day. Affects morale.
-VAR EngineCondition = 100 // 0–100%. Degrades 1%/day. Affects fuel cost.
+VAR ShipCondition = 100   // 0–100%. Degrades from skipped maintenance. Affects morale.
+VAR EngineCondition = 100 // 0–100%. Degrades from skipped maintenance. Affects fuel cost.
+
+// Maintenance backlog — 4 tasks drawn from MaintTasks, persisting until completed.
+// Skipped tasks age: fresh → stale → auto-resolve with condition penalty.
+LIST MaintTasks = EngTune, FuelLine, Injector, Coolant, AirFilter, HullCheck, DrainLines, Scrub
+VAR Backlog = ()          // current maintenance tasks (always ~4)
+VAR StaleBacklog = ()     // tasks that survived yesterday without completion
 
 VAR TripDay = 0           // Current day of trip (incremented in next_day)
 VAR TripDuration = 0      // Total trip length in days

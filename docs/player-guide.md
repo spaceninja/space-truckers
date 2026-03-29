@@ -101,13 +101,15 @@ Every few days, a navigation check will appear in your task list. These are quic
 
 Every trip requires customs documentation — one base chunk of flight log paperwork, plus extra forms for any special cargo (Express, Hazardous, Passengers). You can file paperwork at any point during the trip, but any missing chunks when you dock result in customs fines that reduce your delivery pay.
 
-### Engine Condition
+### Ship Maintenance
 
-Your engine degrades 1% per day during transit. A degraded engine burns more fuel — at 80% condition, fuel costs are 10% higher. You can spend AP on engine maintenance during transit to keep it in shape, and ship condition resets when you reach port.
+Your ship needs constant attention. Each trip, you'll have a backlog of maintenance tasks — engine tune-ups, fuel line cleaning, air filter swaps, hull inspections, and more. There are always about four tasks waiting for you, and completing one just means another takes its place.
 
-### Ship Condition
+If you skip a task, it sticks around and gets flagged as overdue. Skip it again and it resolves on its own — badly. That engine tune you put off? It's now a grinding noise and a hit to your engine condition. Tasks you stay on top of keep the ship running smoothly; tasks you ignore cause problems.
 
-The general state of your ship (cleanliness, air filters, tidiness) also degrades daily. A dirty ship affects your morale, which can reduce your daily AP. Spending time cleaning keeps things livable.
+**Engine condition** affects fuel costs. A degraded engine burns more fuel — at 80% condition, fuel costs are 10% higher. **Ship condition** affects morale — a dirty ship makes you miserable faster.
+
+When you reach port, you can pay for professional repairs: an engine overhaul or a cleaning service to restore conditions to 100%. The price depends on how much work needs doing.
 
 ### Fatigue and Morale
 

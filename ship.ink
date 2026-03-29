@@ -1,6 +1,3 @@
-// TODO: ship modules degrade and need maintenance
-// TODO: contextual ship maintenance variety (drain lines, laundry, secure items, etc.)
-
 VAR ShipClock = 0
 VAR ShipDestination = Transit
 VAR AP = 6
@@ -9,7 +6,7 @@ VAR ActionPointsMax = 6
 // Task registry lists — used only for LIST_COUNT() to keep shuffle loop
 // bounds in sync. Add an entry here when adding a task to a tier's shuffle.
 LIST P2Tasks = EngineMaintenance, UrgentSleep
-LIST P3Tasks = Paperwork, NavCheck, ShipMaintenance
+LIST P3Tasks = Paperwork, NavCheck, MaintBacklog
 LIST P4Tasks = Relax, SleepRest
 
 /*
@@ -34,6 +31,7 @@ LIST P4Tasks = Relax, SleepRest
 ~ TasksCompletedToday = 0
 ~ EventChance = 0
 ~ EventCooldownDay = -1
+~ generate_backlog()
 ~ Events = LIST_ALL(Events)
 // Remove events whose eligibility is fixed for the whole trip
 { ShipCargo == ():
@@ -112,7 +110,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 { shuffle:
     - { CHOICE_COUNT() < p3_cap and PaperworkDone < PaperworkTotal: <- task_paperwork }
     - { CHOICE_COUNT() < p3_cap and TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3: <- task_nav_check }
-    - { CHOICE_COUNT() < p3_cap and ShipCondition < 80: <- task_ship_maint }
+    - { CHOICE_COUNT() < p3_cap and LIST_COUNT(Backlog) > 0: <- task_maintenance }
 }
 ~ p3_loops++
 { p3_loops < LIST_COUNT(LIST_ALL(P3Tasks)) and CHOICE_COUNT() < p3_cap: -> p3_shuffle }
@@ -166,8 +164,8 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 = task_sleep_rest
 + [Get some rest] -> sleep_options
 
-= task_ship_maint
-+ [Tidy up the ship] -> ship_maint_options
+= task_maintenance
++ [Ship maintenance — {LIST_COUNT(Backlog)} tasks{ LIST_COUNT(Backlog ^ StaleBacklog) > 0: (overdue!)}] -> maintenance_options
 
 = task_relax
 + [Take a break] -> relax_options
@@ -185,7 +183,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 = engine_options
 You pop open the engine access panel. Condition: {EngineCondition}%.
-+ [Run diagnostics and tune (2 AP)] -> do_engine_maintenance
++ [Run diagnostics and tune (2 AP)] -> do_engine_tune
 + [Never mind] -> ship_options
 
 = sleep_options
@@ -198,12 +196,30 @@ You pop open the engine access panel. Condition: {EngineCondition}%.
 + { Fatigue >= 40 } [Sleep for a full cycle (2 AP)] -> sleep(2)
 + [Never mind] -> ship_options
 
-= ship_maint_options
-The ship could use some attention. Condition: {ShipCondition}%.
-+ [Clean the air filters (1 AP)] -> do_ship_maintenance
-// Future: + [Drain the waste lines (1 AP)] -> do_drain_lines
-// Future: + [Do the laundry (1 AP)] -> do_laundry
+= maintenance_options
+{ LIST_COUNT(Backlog ^ StaleBacklog) > 0:
+    Some of these have been waiting. You should get to them before things get worse.
+- else:
+    The ship needs some attention.
+}
+Engine: {EngineCondition}% / Ship: {ShipCondition}%
+~ temp _maint = Backlog
+- (maint_top)
+~ temp task = pop(_maint)
+{ task:
+    <- maint_choice(task)
+    -> maint_top
+}
+-
 + [Never mind] -> ship_options
+
+= maint_choice(task)
+~ temp stale = StaleBacklog ? task
+{ stale:
+    + [{ maint_task_name(task) } — overdue (1 AP)] -> do_maintenance(task)
+- else:
+    + [{ maint_task_name(task) } (1 AP)] -> do_maintenance(task)
+}
 
 = relax_options
 What sounds good right now?
@@ -266,11 +282,12 @@ What sounds good right now?
 
 /*
 
-    Engine Maintenance
-    Restore some engine condition. Costs 2 AP (1 AP with Basic Toolkit module).
+    Engine Tune (P2)
+    Deep engine diagnostics when condition is critical. Costs 2 AP.
+    Separate from the backlog — this is an urgent, targeted repair.
 
 */
-= do_engine_maintenance
+= do_engine_tune
 { fatigue_check():
     ~ EngineCondition = MIN(EngineCondition + 8, 100)
     You fumble through the diagnostics, missing a few steps. The engine's a little better, but not as much as it should be. Condition: {EngineCondition}%.
@@ -282,18 +299,38 @@ What sounds good right now?
 
 /*
 
-    Ship Maintenance
-    Restore ship condition. Currently only air filters; future versions
-    will select contextually from a pool of maintenance tasks.
+    Backlog Maintenance
+    Complete a maintenance task from the backlog. Costs 1 AP.
+    The task is removed from Backlog (and StaleBacklog if stale),
+    then a replacement task is generated to keep the backlog at 4.
 
 */
-= do_ship_maintenance
+= do_maintenance(task)
+~ complete_maintenance_task(task)
 { fatigue_check():
-    ~ ShipCondition = MIN(ShipCondition + 5, 100)
-    You make a halfhearted attempt at the air filters, but your coordination is off. It's a little better, but you didn't do your best work. Condition: {ShipCondition}%.
+    { is_engine_task(task):
+        ~ EngineCondition = MIN(EngineCondition + 3, 100)
+        You go through the motions on the {maint_task_name(task)} but your hands aren't steady. It's done, but not your best work.
+    - else:
+        ~ ShipCondition = MIN(ShipCondition + 3, 100)
+        You take a run at the {maint_task_name(task)} but you're too tired to do it properly. It'll have to do.
+    }
 - else:
-    ~ ShipCondition = MIN(ShipCondition + 12, 100)
-    You swap out the air filters and run a purge cycle. The ship smells noticeably fresher.
+    { is_engine_task(task):
+        ~ EngineCondition = MIN(EngineCondition + 5, 100)
+        { shuffle:
+        -   You work through the {maint_task_name(task)}. The engine sounds healthier already.
+        -   The {maint_task_name(task)} goes smoothly. Engine condition: {EngineCondition}%.
+        -   You finish the {maint_task_name(task)} and wipe your hands. Good as it's going to get.
+        }
+    - else:
+        ~ ShipCondition = MIN(ShipCondition + 5, 100)
+        { shuffle:
+        -   You handle the {maint_task_name(task)}. The ship feels a little more livable.
+        -   The {maint_task_name(task)} is done. Ship condition: {ShipCondition}%.
+        -   You knock out the {maint_task_name(task)}. One less thing to worry about.
+        }
+    }
 }
 -> pass_time(1)
 
@@ -394,9 +431,11 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 { not FlipDone and TripDay > TripDuration / 2:
     ~ TripFuelPenalty = TripFuelPenalty + TripFuelCost / 20  // +5% trip fuel per day delayed
 }
-// Daily degradation
-~ ShipCondition = MAX(ShipCondition - 1, 0)
-~ EngineCondition = MAX(EngineCondition - 1, 0)
+// Settle stale tasks — tasks in both Backlog and StaleBacklog have survived
+// two days without completion. Apply condition penalty and replace them.
+-> settle_stale_tasks ->
+// Age today's backlog — current tasks become tomorrow's stale set
+~ StaleBacklog = Backlog
 // Morale decay: faster if ship is dirty
 { ShipCondition < 50:
     ~ Morale = MAX(Morale - 3, 0)
@@ -418,6 +457,78 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 
 /*
 
+    Settle Stale Tasks
+    Tunnel called from next_day(). Tasks that have been in the backlog for
+    two days (present in both Backlog and StaleBacklog) auto-resolve with
+    a condition penalty. Each settled task is replaced with a fresh one.
+
+*/
+= settle_stale_tasks
+~ temp overdue = Backlog ^ StaleBacklog
+{ LIST_COUNT(overdue) <= 0:
+    ->->
+}
+~ temp task = pop(overdue)
+~ Backlog -= task
+~ StaleBacklog -= task
+~ replace_backlog_task()
+{ is_engine_task(task):
+    ~ EngineCondition = MAX(EngineCondition - 5, 0)
+    { shuffle:
+    -   That clicking in the engine has become a grinding noise. You should have handled the {maint_task_name(task)}. Engine: {EngineCondition}%.
+    -   The {maint_task_name(task)} you've been putting off? It's causing problems now. Engine: {EngineCondition}%.
+    }
+- else:
+    ~ ShipCondition = MAX(ShipCondition - 5, 0)
+    { shuffle:
+    -   The {maint_task_name(task)} you've been ignoring is now a real problem. Ship: {ShipCondition}%.
+    -   You should have dealt with the {maint_task_name(task)} yesterday. The ship's paying for it. Ship: {ShipCondition}%.
+    }
+}
+// Recurse for remaining overdue tasks
+{ LIST_COUNT(overdue) > 0:
+    ~ task = pop(overdue)
+    ~ Backlog -= task
+    ~ StaleBacklog -= task
+    ~ replace_backlog_task()
+    { is_engine_task(task):
+        ~ EngineCondition = MAX(EngineCondition - 5, 0)
+        The {maint_task_name(task)} also went unattended. Engine: {EngineCondition}%.
+    - else:
+        ~ ShipCondition = MAX(ShipCondition - 5, 0)
+        The {maint_task_name(task)} also went unattended. Ship: {ShipCondition}%.
+    }
+}
+{ LIST_COUNT(overdue) > 0:
+    ~ task = pop(overdue)
+    ~ Backlog -= task
+    ~ StaleBacklog -= task
+    ~ replace_backlog_task()
+    { is_engine_task(task):
+        ~ EngineCondition = MAX(EngineCondition - 5, 0)
+        And the {maint_task_name(task)} too. Engine: {EngineCondition}%.
+    - else:
+        ~ ShipCondition = MAX(ShipCondition - 5, 0)
+        And the {maint_task_name(task)} too. Ship: {ShipCondition}%.
+    }
+}
+{ LIST_COUNT(overdue) > 0:
+    ~ task = pop(overdue)
+    ~ Backlog -= task
+    ~ StaleBacklog -= task
+    ~ replace_backlog_task()
+    { is_engine_task(task):
+        ~ EngineCondition = MAX(EngineCondition - 5, 0)
+        The {maint_task_name(task)} makes four. Engine: {EngineCondition}%.
+    - else:
+        ~ ShipCondition = MAX(ShipCondition - 5, 0)
+        The {maint_task_name(task)} makes four. Ship: {ShipCondition}%.
+    }
+}
+->->
+
+/*
+
     Has Tier Tasks
     Returns true if any tasks at the given priority tier are currently eligible.
     Used for floor calculations and Rest gating.
@@ -428,7 +539,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 { tier:
     - 1: ~ return (not FlipDone and TripDay >= TripDuration / 2)
     - 2: ~ return (EngineCondition < 80) or (Fatigue >= 70)
-    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3) or (ShipCondition < 80)
+    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3) or (LIST_COUNT(Backlog) > 0)
     - 4: ~ return true  // Relax is always available
 }
 ~ return false
@@ -472,3 +583,49 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
     ~ return roll <= 40
 }
 ~ return roll <= 20
+
+/*
+
+    Maintenance Task Helpers
+    Functions for the persistent maintenance backlog system.
+
+*/
+
+// Is this task an engine task? Engine tasks affect EngineCondition,
+// ship tasks affect ShipCondition.
+=== function is_engine_task(task)
+~ return task == EngTune or task == FuelLine or task == Injector or task == Coolant
+
+// Human-readable name for a maintenance task.
+=== function maint_task_name(task)
+{ task:
+- EngTune:    ~ return "engine tune-up"
+- FuelLine:   ~ return "fuel line cleaning"
+- Injector:   ~ return "injector calibration"
+- Coolant:    ~ return "coolant system check"
+- AirFilter:  ~ return "air filter swap"
+- HullCheck:  ~ return "hull inspection"
+- DrainLines: ~ return "drain line flush"
+- Scrub:      ~ return "common area scrub"
+}
+~ return "maintenance"
+
+// Generate the initial backlog of 4 random tasks at trip start.
+=== function generate_backlog()
+~ temp pool = LIST_ALL(MaintTasks)
+~ Backlog = list_random_subset_of_size(pool, 4)
+~ StaleBacklog = ()
+
+// Complete a maintenance task: remove from backlog and stale,
+// then add a replacement task.
+=== function complete_maintenance_task(task)
+~ Backlog -= task
+~ StaleBacklog -= task
+~ replace_backlog_task()
+
+// Add one new random task to the backlog, avoiding duplicates.
+=== function replace_backlog_task()
+~ temp available = LIST_ALL(MaintTasks) - Backlog
+{ LIST_COUNT(available) > 0:
+    ~ Backlog += LIST_RANDOM(available)
+}
