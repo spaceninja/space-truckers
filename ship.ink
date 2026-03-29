@@ -165,7 +165,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 + [Get some rest] -> sleep_options
 
 = task_maintenance
-+ [Ship maintenance — {LIST_COUNT(Backlog)} tasks{ LIST_COUNT(Backlog ^ StaleBacklog) > 0: (overdue!)}] -> maintenance_options
++ [Ship maintenance — {LIST_COUNT(Backlog)} tasks{ has_overdue_tasks(): (overdue!)}] -> maintenance_options
 
 = task_relax
 + [Take a break] -> relax_options
@@ -197,7 +197,7 @@ You pop open the engine access panel. Condition: {EngineCondition}%.
 + [Never mind] -> ship_options
 
 = maintenance_options
-{ LIST_COUNT(Backlog ^ StaleBacklog) > 0:
+{ has_overdue_tasks():
     Some of these have been waiting. You should get to them before things get worse.
 - else:
     The ship needs some attention.
@@ -589,6 +589,10 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ Backlog -= task
 ~ StaleBacklog -= task
 ~ replace_backlog_task()
+
+// Are any backlog tasks overdue (survived two days without completion)?
+=== function has_overdue_tasks()
+~ return LIST_COUNT(Backlog ^ StaleBacklog) > 0
 
 // Add one new random task to the backlog, avoiding duplicates.
 === function replace_backlog_task()
