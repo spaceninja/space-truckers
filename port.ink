@@ -7,7 +7,6 @@ VAR PortCargo = ()
 */
 === arrive_in_port(port)
 ~ here = port
-~ ShipCondition = 100
 -> settle_trip_penalties ->
 ~ PortCargo = get_available_cargo(port, 5)
 
@@ -20,6 +19,7 @@ Welcome to {LocationData(port, Name)}!
 + [Manage cargo] -> manage_cargo
 + [Deliver cargo] -> deliver_cargo
 + [Buy fuel] -> fuel_station
++ { EngineCondition < 100 or ShipCondition < 100 } [Ship repairs] -> repair_services
 + [Ship out!] -> ship_out
 - -> port_opts
 
@@ -229,6 +229,40 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
     "Thank you, come again!"
 }
 - -> fuel_station
+
+/*
+
+    Ship Repairs
+    Pay to restore engine and ship condition at port.
+    Engine repair: (100 - condition) × 2 €
+    Cleaning service: (100 - condition) × 1 €
+
+*/
+= repair_services
+~ temp engine_damage = 100 - EngineCondition
+~ temp ship_damage = 100 - ShipCondition
+~ temp engine_cost = engine_damage * 2
+~ temp ship_cost = ship_damage * 1
+Engine condition: {EngineCondition}% / Ship condition: {ShipCondition}%. Your balance: {PlayerBankBalance} €.
++ { EngineCondition < 100 and PlayerBankBalance >= engine_cost }
+    [Engine repair — restore to 100% ({engine_cost} €)]
+    ~ PlayerBankBalance -= engine_cost
+    ~ EngineCondition = 100
+    The mechanics go over your engine thoroughly. It's running like new.
+    -> repair_services
++ { EngineCondition < 100 and PlayerBankBalance < engine_cost }
+    [Engine repair — restore to 100% ({engine_cost} €) — can't afford #UNCLICKABLE]
+    -> repair_services
++ { ShipCondition < 100 and PlayerBankBalance >= ship_cost }
+    [Cleaning service — restore to 100% ({ship_cost} €)]
+    ~ PlayerBankBalance -= ship_cost
+    ~ ShipCondition = 100
+    A cleaning crew sweeps through the ship. Everything is spotless.
+    -> repair_services
++ { ShipCondition < 100 and PlayerBankBalance < ship_cost }
+    [Cleaning service — restore to 100% ({ship_cost} €) — can't afford #UNCLICKABLE]
+    -> repair_services
++ [Done] -> port_opts
 
 /*
 

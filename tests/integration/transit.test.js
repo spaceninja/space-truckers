@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { InkList } from "inkjs/full";
-import { createStory, L, drainText } from "../helpers/story.js";
+import { createStory, L, cargo, drainText } from "../helpers/story.js";
 
 function choiceTexts(story) {
   return story.currentChoices.map((c) => c.text);
@@ -57,6 +57,15 @@ function setupTransit(overrides = {}) {
   const story = createStory();
   // Initialize required list variables
   story.variablesState["ShipCargo"] = new InkList();
+  // Populate maintenance backlog (transit() does this via generate_backlog(),
+  // but setupTransit jumps directly to ship_options)
+  story.variablesState["Backlog"] = cargo(
+    story,
+    "MaintTasks.EngTune",
+    "MaintTasks.AirFilter",
+    "MaintTasks.FuelLine",
+    "MaintTasks.HullCheck"
+  );
 
   const defaults = {
     ShipClock: 5,
@@ -179,9 +188,10 @@ describe("Task priority system", () => {
       expect(hasChoice(story, "Navigation check")).toBe(false);
     });
 
-    it("shows ship maintenance when condition < 80", () => {
-      const story = setupTransit({ ShipCondition: 70 });
-      expect(hasChoice(story, "Tidy up the ship")).toBe(true);
+    it("shows ship maintenance when backlog has tasks", () => {
+      const story = setupTransit();
+      // Backlog is always populated at trip start
+      expect(hasChoice(story, "Ship maintenance")).toBe(true);
     });
   });
 
@@ -237,15 +247,26 @@ describe("Task priority system", () => {
       const choices = choiceTexts(story);
       const hasP3 =
         choices.some((c) => c.includes("paperwork")) ||
-        choices.some((c) => c.includes("Tidy up")) ||
+        choices.some((c) => c.includes("Ship maintenance")) ||
         choices.some((c) => c.includes("Navigation"));
       expect(hasP3).toBe(true);
     });
   });
 
   describe("P5: Rest", () => {
+    // Rest only shows when no P1-P3 tasks are active. Since the backlog
+    // is always populated in setupTransit, clear it for Rest tests.
+    function setupRestTransit(overrides = {}) {
+      const story = setupTransit(overrides);
+      story.variablesState["Backlog"] = new InkList();
+      // Re-enter ship_options after clearing backlog
+      story.ChoosePathString("transit.ship_options");
+      drainText(story);
+      return story;
+    }
+
     it("shows rest when no P1-P3 tasks are active", () => {
-      const story = setupTransit({
+      const story = setupRestTransit({
         FlipDone: true,
         EngineCondition: 100,
         Fatigue: 0,
@@ -257,13 +278,14 @@ describe("Task priority system", () => {
       expect(hasChoice(story, "Call it a day")).toBe(true);
     });
 
-    it("does not show rest when P3 tasks are active", () => {
+    it("does not show rest when P3 tasks are active (backlog populated)", () => {
+      // Default setupTransit has backlog = P3 active
       const story = setupTransit({
         FlipDone: true,
         EngineCondition: 100,
         Fatigue: 0,
-        PaperworkDone: 0,
-        PaperworkTotal: 2, // paperwork incomplete = P3 active
+        PaperworkDone: 1,
+        PaperworkTotal: 1,
         TripDay: 4,
         ShipCondition: 100,
       });
@@ -271,7 +293,7 @@ describe("Task priority system", () => {
     });
 
     it("does not show rest when P2 tasks are active", () => {
-      const story = setupTransit({
+      const story = setupRestTransit({
         FlipDone: true,
         EngineCondition: 70, // engine degraded = P2 active
         Fatigue: 0,
@@ -284,7 +306,7 @@ describe("Task priority system", () => {
     });
 
     it("spends all remaining AP and advances the day", () => {
-      const story = setupTransit({
+      const story = setupRestTransit({
         AP: 4,
         ShipClock: 3,
         FlipDone: true,
@@ -301,7 +323,7 @@ describe("Task priority system", () => {
     });
 
     it("does not accumulate fatigue when resting", () => {
-      const story = setupTransit({
+      const story = setupRestTransit({
         AP: 4,
         ShipClock: 3,
         Fatigue: 20,
@@ -358,10 +380,12 @@ describe("Task priority system", () => {
       expect(hasChoice(story, "Never mind")).toBe(true);
     });
 
-    it("ship maintenance sub-menu shows air filters option", () => {
-      const story = setupTransit({ ShipCondition: 70 });
-      pickChoice(story, "Tidy up");
-      expect(hasChoice(story, "air filters")).toBe(true);
+    it("maintenance sub-menu shows backlog tasks", () => {
+      const story = setupTransit();
+      pickChoice(story, "Ship maintenance");
+      // Should show at least one maintenance task and a back option
+      const choices = choiceTexts(story);
+      expect(choices.length).toBeGreaterThanOrEqual(2); // at least 1 task + Never mind
       expect(hasChoice(story, "Never mind")).toBe(true);
     });
   });
@@ -373,7 +397,6 @@ describe("Task priority system", () => {
         // Activate several tasks across tiers
         PaperworkDone: 0,
         PaperworkTotal: 2,
-        ShipCondition: 70,
         TripDay: 6, // nav check day
       });
       const choices = choiceTexts(story);
@@ -508,14 +531,22 @@ describe("Fatigue-based task failure", () => {
       expect(story.variablesState["EngineCondition"]).toBe(85);
     });
 
-    it("ship maintenance gives full +12 at fatigue 0", () => {
+    it("backlog maintenance gives +5 condition at fatigue 0", () => {
       const story = setupTransit({
         Fatigue: 0,
-        ShipCondition: 70,
+        ShipCondition: 80,
+        EngineCondition: 80,
       });
-      pickChoice(story, "Tidy up");
-      pickChoice(story, "air filters");
-      expect(story.variablesState["ShipCondition"]).toBe(82);
+      const condBefore = story.variablesState["ShipCondition"];
+      const engBefore = story.variablesState["EngineCondition"];
+      pickChoice(story, "Ship maintenance");
+      // Pick the first maintenance task (index 0)
+      story.ChooseChoiceIndex(0);
+      story.ContinueMaximally();
+      const condAfter = story.variablesState["ShipCondition"];
+      const engAfter = story.variablesState["EngineCondition"];
+      // One of the two conditions should have increased by 5
+      expect(condAfter - condBefore + engAfter - engBefore).toBe(5);
     });
   });
 

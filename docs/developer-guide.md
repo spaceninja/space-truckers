@@ -197,9 +197,43 @@ Penalties come in two forms:
 - **Fuel penalties** accumulate mid-trip in `TripFuelPenalty` and are settled on arrival by deducting from `ShipFuel`. If fuel goes to zero, a towing narrative fires with a large money penalty.
 - **Money penalties** (paperwork fines) reduce delivery pay at port.
 
-### Engine Degradation
+### Maintenance Backlog
 
-Engine condition degrades 1% per day during transit. Degraded engines burn more fuel, applied at departure:
+Ships maintain a persistent backlog of 4 maintenance tasks during transit. Tasks are drawn from the `MaintTasks` LIST (8 total: 4 engine, 4 ship) and tracked in two VARs:
+
+- **`Backlog`** — current tasks (always ~4)
+- **`StaleBacklog`** — tasks that survived yesterday without completion
+
+**Task categories:** Engine tasks (EngTune, FuelLine, Injector, Coolant) affect `EngineCondition`. Ship tasks (AirFilter, HullCheck, DrainLines, Scrub) affect `ShipCondition`. The `is_engine_task()` function categorizes them.
+
+**Task lifecycle (three stages):**
+
+| Stage | How it gets there | Consequence |
+|-------|------------------|-------------|
+| **Fresh** | Just generated | None — player has today to do it |
+| **Stale** | Survived one day without completion | Shown with "overdue" marker |
+| **Auto-resolve** | In both `Backlog` and `StaleBacklog` at start of next day | Condition -5 to appropriate stat, task replaced |
+
+**In `next_day()` each morning:**
+1. **Settle stale tasks:** `Backlog ^ StaleBacklog` = tasks that survived 2 days → apply condition -5 penalty, print consequence, remove from backlog
+2. **Age today's tasks:** `StaleBacklog = Backlog` (current backlog becomes tomorrow's stale set)
+3. **Refill backlog:** `refill_backlog()` adds fresh random tasks until the backlog is back to 4
+
+Replacement tasks are only generated at start of day, not on completion. This means the player can shrink their backlog during the day — completing all 4 tasks leaves a clean slate until morning. This gives a sense of accomplishment and means only tasks the player didn't touch become stale.
+
+**When a player completes a task:** `complete_maintenance_task(task)` removes it from both `Backlog` and `StaleBacklog`. No replacement is generated until the next day.
+
+**Trip initialization:** `generate_backlog()` is called in `transit()` to create the initial 4-task backlog using `list_random_subset_of_size()`. `StaleBacklog` starts empty.
+
+**Conditions no longer degrade passively.** Engine and ship condition only change from:
+- Skipped maintenance (auto-resolve penalty: -5 per task)
+- Event damage (`damage_random_system()`, micrometeorite cargo hits)
+- Completed maintenance (+5 on success, +3 on fatigue-degraded)
+- Port repair services (restore to 100%)
+
+### Engine Degradation Fuel Penalty
+
+Degraded engines burn more fuel, applied at departure:
 
 ```
 penalty_pct = (100 - EngineCondition) / 2
@@ -233,6 +267,17 @@ Each missing chunk costs 10% of delivery pay, capped at 50%. This is applied per
 ### Towing Scenario
 
 If `TripFuelPenalty` exceeds remaining `ShipFuel` on arrival, fuel is set to 0 and the player pays a tow fee of 200% of the trip's base fuel cost. This can push `PlayerBankBalance` negative.
+
+### Port Repair Services
+
+The player can pay for repairs at any port (port.ink, `repair_services`). The option only appears when at least one condition is below 100%.
+
+| Service | Effect | Cost |
+|---------|--------|------|
+| Engine repair | Restore EngineCondition to 100% | `(100 - condition) × 2` € |
+| Cleaning service | Restore ShipCondition to 100% | `(100 - condition) × 1` € |
+
+Ship condition no longer resets to 100% on arrival — this was a bug that has been fixed.
 
 ### Ink Integer Math Pitfall
 
@@ -271,10 +316,10 @@ Ink evaluates all choices in a block simultaneously — you can't run code betwe
 
 ```ink
 // Each task is threaded in if its condition is met and cap allows
-{ CHOICE_COUNT() < p3_cap and ShipCondition < 80: <- task_ship_maint }
+{ CHOICE_COUNT() < p3_cap and LIST_COUNT(Backlog) > 0: <- task_maintenance }
 
-= task_ship_maint
-+ [Tidy up the ship] -> ship_maint_options
+= task_maintenance
++ [Ship maintenance — {LIST_COUNT(Backlog)} tasks] -> maintenance_options
 ```
 
 Shuffle blocks randomize which tasks within a tier get offered first, providing day-to-day variety when more tasks are eligible than slots allow.
@@ -285,7 +330,7 @@ Related tasks are collapsed into single top-level entries that expand into sub-m
 
 - **Sleep** (P2 when fatigue ≥ 70, P4 when 30–69) → nap (1 AP), full sleep (2 AP)
 - **Relax** (P4, always) → heat rations (1 AP), workout (1 AP), movie (2 AP)
-- **Ship maintenance** (P3, when condition < 80) → clean filters (1 AP), more in future
+- **Ship maintenance** (P3, when backlog has tasks) → shows all backlog tasks (1 AP each), stale tasks marked "overdue"
 - **Engine care** (P2, when condition < 80) → run diagnostics (2 AP)
 
 Each sub-menu includes a free "Never mind" back option. After completing a sub-task, the player returns to the top-level task list.
@@ -319,7 +364,7 @@ When fatigue is 70 or above, work tasks are subject to a dice roll that can caus
 
 **Two failure modes:**
 
-- **Degraded** (ship flip, engine maintenance, ship maintenance) — The task completes but with a reduced effect. Ship flip adds a fuel penalty. Engine maintenance restores +8 instead of +15. Ship maintenance restores +5 instead of +12.
+- **Degraded** (ship flip, engine tune, backlog maintenance) — The task completes but with a reduced effect. Ship flip adds a fuel penalty. Engine tune restores +8 instead of +15. Backlog maintenance restores +3 instead of +5.
 - **Fail + retry** (nav check, paperwork) — The task doesn't count. The counter is not incremented, so the task remains available for retry. AP is still spent.
 
 Only "work" tasks use `fatigue_check()`. Sleep, recreation, eating, and rest are unaffected.
