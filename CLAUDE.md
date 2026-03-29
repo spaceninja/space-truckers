@@ -1,5 +1,9 @@
 # Space Truckers
 
+An interactive fiction game written in [Ink](https://github.com/inkle/ink) (inkle's narrative scripting language). The player hauls cargo between solar system ports, managing fuel, maintenance, fatigue, and morale during transit. Progression comes from engine upgrades and ship modules that automate routine tasks.
+
+Key docs: `docs/developer-guide.md` (design rationale), `docs/player-guide.md` (gameplay). Project-specific code patterns are in `.claude/rules/project-patterns.md`. Open GitHub issues track remaining module system work.
+
 ## PR Branching
 
 Always create feature branches from the latest `main`, never from another feature branch:
