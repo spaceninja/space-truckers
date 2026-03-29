@@ -17,6 +17,16 @@ No single run is the "obviously correct" choice. A heavier load earns more money
 
 ---
 
+## Design Philosophy
+
+**Failure = complication, not disaster.** A single missed task should be noticeable but not devastating — roughly 5–10% of a trip's profit. Several failures compound to make a trip unprofitable. The player should never lose the game from one bad day, but should feel the consequences of sustained neglect.
+
+**Progression arc.** The early game is a busy, stressful balancing act — too many tasks, not enough AP. The player cannot do everything every day and must prioritise. The late game feels qualitatively different: ship modules automate the busywork, and the player's decisions shift from "can I keep this ship running?" to "how do I maximise revenue across routes?"
+
+**Events present choices, not taxes.** Random events should offer a "safe but costly" option and a "risky but rewarding" option. The player should feel agency, not just punishment.
+
+---
+
 ## Distance Units
 
 Distances are internal, abstract units. They are never displayed to the player and do not correspond to real astronomical distances. They are tuned to produce satisfying fuel cost and trip duration numbers at each engine tier.

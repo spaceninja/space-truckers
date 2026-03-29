@@ -32,7 +32,7 @@ New constants added to `simulator.html` must include a citation comment pointing
 
 ## Documentation
 
-Before opening a PR, review `docs/developer-guide.md` and `docs/player-guide.md` to check if changes in the PR require documentation updates. Update them as part of the PR.
+Before opening a PR, review `docs/developer-guide.md`, `docs/player-guide.md`, and `.claude/rules/project-patterns.md` to check if changes in the PR require documentation updates. Update them as part of the PR.
 
 ## Testing
 
