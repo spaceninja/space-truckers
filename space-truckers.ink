@@ -29,7 +29,9 @@ VAR EngineCondition = 100 // 0–100%. Degrades from skipped maintenance. Affect
 
 // Maintenance backlog — 4 tasks drawn from MaintTasks, persisting until completed.
 // Skipped tasks age: fresh → stale → auto-resolve with condition penalty.
+// EngineTasks is the subset that affects EngineCondition; the rest affect ShipCondition.
 LIST MaintTasks = EngTune, FuelLine, Injector, Coolant, AirFilter, HullCheck, DrainLines, Scrub
+VAR EngineTasks = (EngTune, FuelLine, Injector, Coolant)
 VAR Backlog = ()          // current maintenance tasks (always ~4)
 VAR StaleBacklog = ()     // tasks that survived yesterday without completion
 

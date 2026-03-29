@@ -559,9 +559,9 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 */
 
 // Is this task an engine task? Engine tasks affect EngineCondition,
-// ship tasks affect ShipCondition.
+// ship tasks affect ShipCondition. Subset defined by EngineTasks VAR.
 === function is_engine_task(task)
-~ return task == EngTune or task == FuelLine or task == Injector or task == Coolant
+~ return EngineTasks ? task
 
 // Human-readable name for a maintenance task.
 === function maint_task_name(task)
