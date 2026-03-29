@@ -432,10 +432,12 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
     ~ TripFuelPenalty = TripFuelPenalty + TripFuelCost / 20  // +5% trip fuel per day delayed
 }
 // Settle stale tasks — tasks in both Backlog and StaleBacklog have survived
-// two days without completion. Apply condition penalty and replace them.
+// two days without completion. Apply condition penalty and remove them.
 -> settle_stale_tasks ->
 // Age today's backlog — current tasks become tomorrow's stale set
 ~ StaleBacklog = Backlog
+// Refill backlog to 4 with fresh tasks (replacing completed and settled ones)
+~ refill_backlog()
 // Morale decay: faster if ship is dirty
 { ShipCondition < 50:
     ~ Morale = MAX(Morale - 3, 0)
@@ -473,7 +475,6 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ temp task = pop(overdue)
 ~ Backlog -= task
 ~ StaleBacklog -= task
-~ replace_backlog_task()
 { is_engine_task(task):
     ~ EngineCondition = MAX(EngineCondition - 5, 0)
     { shuffle:
@@ -583,20 +584,23 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ Backlog = list_random_subset_of_size(pool, 4)
 ~ StaleBacklog = ()
 
-// Complete a maintenance task: remove from backlog and stale,
-// then add a replacement task.
+// Complete a maintenance task: remove from backlog and stale.
+// Replacement tasks are generated at start of next day, not immediately.
 === function complete_maintenance_task(task)
 ~ Backlog -= task
 ~ StaleBacklog -= task
-~ replace_backlog_task()
 
 // Are any backlog tasks overdue (survived two days without completion)?
 === function has_overdue_tasks()
 ~ return LIST_COUNT(Backlog ^ StaleBacklog) > 0
 
-// Add one new random task to the backlog, avoiding duplicates.
-=== function replace_backlog_task()
-~ temp available = LIST_ALL(MaintTasks) - Backlog
-{ LIST_COUNT(available) > 0:
-    ~ Backlog += LIST_RANDOM(available)
+// Refill the backlog to 4 tasks with random non-duplicate entries.
+// Called at start of each day in next_day(), not on task completion.
+=== function refill_backlog()
+{ LIST_COUNT(Backlog) < 4:
+    ~ temp available = LIST_ALL(MaintTasks) - Backlog
+    { LIST_COUNT(available) > 0:
+        ~ Backlog += LIST_RANDOM(available)
+        ~ refill_backlog()
+    }
 }

@@ -215,10 +215,13 @@ Ships maintain a persistent backlog of 4 maintenance tasks during transit. Tasks
 | **Auto-resolve** | In both `Backlog` and `StaleBacklog` at start of next day | Condition -5 to appropriate stat, task replaced |
 
 **In `next_day()` each morning:**
-1. **Settle stale tasks:** `Backlog ^ StaleBacklog` = tasks that survived 2 days → apply condition -5 penalty, print consequence, replace with new task
+1. **Settle stale tasks:** `Backlog ^ StaleBacklog` = tasks that survived 2 days → apply condition -5 penalty, print consequence, remove from backlog
 2. **Age today's tasks:** `StaleBacklog = Backlog` (current backlog becomes tomorrow's stale set)
+3. **Refill backlog:** `refill_backlog()` adds fresh random tasks until the backlog is back to 4
 
-**When a player completes a task:** `complete_maintenance_task(task)` removes it from both lists and calls `replace_backlog_task()` to generate a replacement from the pool, avoiding duplicates.
+Replacement tasks are only generated at start of day, not on completion. This means the player can shrink their backlog during the day — completing all 4 tasks leaves a clean slate until morning. This gives a sense of accomplishment and means only tasks the player didn't touch become stale.
+
+**When a player completes a task:** `complete_maintenance_task(task)` removes it from both `Backlog` and `StaleBacklog`. No replacement is generated until the next day.
 
 **Trip initialization:** `generate_backlog()` is called in `transit()` to create the initial 4-task backlog using `list_random_subset_of_size()`. `StaleBacklog` starts empty.
 
