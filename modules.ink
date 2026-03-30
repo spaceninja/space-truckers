@@ -192,7 +192,7 @@
 -> drone_pass_1
 // Pass 2: fresh tasks
 - (drone_pass_2_start)
-~ candidates = Backlog - StaleBacklog
+~ candidates = Backlog
 - (drone_pass_2)
 { LIST_COUNT(candidates) <= 0 or processed >= capacity:
     ->->
