@@ -103,7 +103,7 @@ Every trip requires customs documentation — one base chunk of flight log paper
 
 ### Ship Maintenance
 
-Your ship needs constant attention. Each trip, you'll have a backlog of maintenance tasks — engine tune-ups, fuel line cleaning, air filter swaps, hull inspections, and more. There are always about four tasks waiting for you, and completing one just means another takes its place.
+Your ship needs constant attention. Each day in transit, four new maintenance tasks are added to your backlog — engine tune-ups, fuel line cleaning, air filter swaps, hull inspections, and more. If you don't stay on top of them, they accumulate and start to feel overwhelming.
 
 If you skip a task, it sticks around and gets flagged as overdue. Skip it again and it resolves on its own — badly. That engine tune you put off? It's now a grinding noise and a hit to your engine condition. Tasks you stay on top of keep the ship running smoothly; tasks you ignore cause problems.
 
@@ -129,6 +129,41 @@ Most events require immediate action (patching the hull, securing cargo), but so
 When you're carrying passengers, you'll encounter additional events — birthdays to celebrate, complaints to handle, conversations to have, and the occasional medical emergency. Passengers make trips more interesting (and more stressful). That pay bonus exists for a reason.
 
 Being exhausted makes emergencies worse. A fatigued repair takes longer and may cause additional damage. Rest before you need it, not after something goes wrong.
+
+---
+
+## Ship Modules
+
+At any port, you can visit the **Ship upgrades** menu to buy modules that automate some of your daily work. Modules are a major quality-of-life improvement — they handle maintenance tasks automatically so you can focus on other things.
+
+### Available Modules
+
+**Repair Drones** (600€) — Automatically handle engine maintenance tasks from your daily backlog. At full condition (75-100%), they handle 2 tasks per day. At reduced condition (50-74%), they handle 1. Below 50%, they go offline.
+
+**Cleaning Drones** (500€) — Same as Repair Drones, but for ship maintenance tasks (air filters, hull inspections, scrubbing, drain lines).
+
+### New vs Refurbished
+
+Each module is available in two versions:
+
+- **New** — Full price. Starts at 100% condition. Can be repaired to 100%.
+- **Refurbished** — Half price. Starts at 60% condition (reduced effectiveness). Can only be repaired to 80% max.
+
+A refurbished module is a budget option that gets you automation earlier, but it's fragile — one random event can knock it from full effectiveness to reduced. A new module has a much larger buffer against damage.
+
+### Module Maintenance
+
+Modules need occasional attention:
+
+- **Module diagnostics** — A task that appears every few days when you have modules installed. Costs 1 AP. If you ignore it for too long, all your module conditions degrade.
+- **Random events** — Events that damage your ship have a chance of hitting your modules instead of your engine.
+- **Port repairs** — You can pay to restore module conditions at any port. The cost depends on how much damage needs fixing.
+
+### The Economics
+
+With both drone modules at full effectiveness, they handle 4 maintenance tasks per day — 2 engine, 2 ship. Combined with a task or two of manual work, you can keep on top of the daily backlog easily. Without drones, the backlog accumulates and penalties start mounting.
+
+The investment pays for itself quickly: fewer condition penalties mean less money spent on port repairs and fuel (since engine condition affects fuel costs). Plus, the freed-up AP lets you focus on recreation and sleep, keeping morale and fatigue in check.
 
 ---
 
