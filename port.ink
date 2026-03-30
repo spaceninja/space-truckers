@@ -20,6 +20,7 @@ Welcome to {LocationData(port, Name)}!
 + [Deliver cargo] -> deliver_cargo
 + [Buy fuel] -> fuel_station
 + { EngineCondition < 100 or ShipCondition < 100 } [Ship repairs] -> repair_services
++ [Ship upgrades] -> ship_upgrades
 + [Ship out!] -> ship_out
 - -> port_opts
 

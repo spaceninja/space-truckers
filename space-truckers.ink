@@ -7,6 +7,7 @@ INCLUDE events.ink
 INCLUDE cargo.ink
 INCLUDE locations.ink
 INCLUDE functions.ink
+INCLUDE modules.ink
 
 
 VAR PlayerBankBalance = 200
@@ -27,12 +28,12 @@ VAR Morale = 80           // 0–100 scale. Decays daily, boosted by recreation.
 VAR ShipCondition = 100   // 0–100%. Degrades from skipped maintenance. Affects morale.
 VAR EngineCondition = 100 // 0–100%. Degrades from skipped maintenance. Affects fuel cost.
 
-// Maintenance backlog — 4 tasks drawn from MaintTasks, persisting until completed.
+// Maintenance backlog — 4 new tasks added each day, accumulating if neglected.
 // Skipped tasks age: fresh → stale → auto-resolve with condition penalty.
 // EngineTasks is the subset that affects EngineCondition; the rest affect ShipCondition.
 LIST MaintTasks = EngTune, FuelLine, Injector, Coolant, AirFilter, HullCheck, DrainLines, Scrub
 VAR EngineTasks = (EngTune, FuelLine, Injector, Coolant)
-VAR Backlog = ()          // current maintenance tasks (always ~4)
+VAR Backlog = ()          // current maintenance tasks (accumulates daily)
 VAR StaleBacklog = ()     // tasks that survived yesterday without completion
 
 VAR TripDay = 0           // Current day of trip (incremented in next_day)
@@ -49,6 +50,18 @@ VAR TasksCompletedToday = 0 // Tasks completed this transit day
 VAR EventChance = 0        // Escalating probability for random events (0–100)
 VAR EventCooldownDay = -1  // TripDay of last event; prevents pile-ups same day
 VAR CargoDamagePct = 0     // Accumulated cargo damage % (reduces delivery pay)
+
+// Module system — ship modules that automate routine tasks.
+LIST ShipModules = RepairDrones, CleaningDrones
+LIST ModuleStats = ModName, ModPrice, ModDesc
+VAR InstalledModules = ()      // currently installed modules
+VAR RefurbishedModules = ()    // subset of InstalledModules bought refurbished (80% max cap)
+
+// Per-module condition (0 = not installed, 1-100 = condition)
+VAR RepairDronesCondition = 0
+VAR CleaningDronesCondition = 0
+
+VAR DiagnosticCountdown = 5    // days until next module diagnostic task
 
 LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, TurboSpeed
 

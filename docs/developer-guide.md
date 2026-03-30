@@ -209,9 +209,9 @@ Penalties come in two forms:
 
 ### Maintenance Backlog
 
-Ships maintain a persistent backlog of 4 maintenance tasks during transit. Tasks are drawn from the `MaintTasks` LIST (8 total: 4 engine, 4 ship) and tracked in two VARs:
+Ships maintain a persistent maintenance backlog during transit. 4 new tasks are added each day from the `MaintTasks` LIST (8 total: 4 engine, 4 ship). Tasks accumulate if neglected (max 8 due to LIST size). Tracked in two VARs:
 
-- **`Backlog`** — current tasks (always ~4)
+- **`Backlog`** — current tasks (accumulates daily)
 - **`StaleBacklog`** — tasks that survived yesterday without completion
 
 **Task categories:** Engine tasks (EngTune, FuelLine, Injector, Coolant) affect `EngineCondition`. Ship tasks (AirFilter, HullCheck, DrainLines, Scrub) affect `ShipCondition`. The `is_engine_task()` function categorizes them.
@@ -227,9 +227,11 @@ Ships maintain a persistent backlog of 4 maintenance tasks during transit. Tasks
 **In `next_day()` each morning:**
 1. **Settle stale tasks:** `Backlog ^ StaleBacklog` = tasks that survived 2 days → apply condition -5 penalty, print consequence, remove from backlog
 2. **Age today's tasks:** `StaleBacklog = Backlog` (current backlog becomes tomorrow's stale set)
-3. **Refill backlog:** `refill_backlog()` adds fresh random tasks until the backlog is back to 4
+3. **Add daily tasks:** `add_daily_tasks()` adds 4 new random tasks (or as many as available from unused task types)
+4. **Drone auto-complete:** Active drone modules handle tasks from the backlog, preferring stale tasks
+5. **Diagnostic countdown:** If modules are installed, decrement `DiagnosticCountdown`. If overdue by 2+ days, degrade all module conditions
 
-Replacement tasks are only generated at start of day, not on completion. This means the player can shrink their backlog during the day — completing all 4 tasks leaves a clean slate until morning. This gives a sense of accomplishment and means only tasks the player didn't touch become stale.
+Tasks accumulate if the player doesn't stay on top of them. The `MaintTasks` LIST has 8 entries, so the maximum possible backlog is 8. When stale tasks are settled (penalties applied, tasks removed), those task types become available to be re-added. This creates a cycle where neglect feels overwhelming but drones and diligent play keep it manageable.
 
 **When a player completes a task:** `complete_maintenance_task(task)` removes it from both `Backlog` and `StaleBacklog`. No replacement is generated until the next day.
 
@@ -394,11 +396,11 @@ Random events are P0 interruptions that fire during transit, bypassing the task 
 
 **Passenger event eligibility:** The `PassengerEvents` VAR holds the subset of events that require passengers. In `transit()`, `Events -= PassengerEvents` removes all passenger events in one operation when no passenger cargo is aboard. To add a new passenger event, add it to both the `Events` LIST and the `PassengerEvents` VAR (they are adjacent in `events.ink`).
 
-**`has_medical_module()` stub:** Currently always returns `false`. When the module system is implemented (roadmap item #5), update this to check for an installed medical module. Used by the medical emergency event to improve patient outcomes.
+**`has_medical_module()` stub:** Currently always returns `false`. When the Medical Bay module is implemented, update this to check `is_module_active(MedBay)`. Used by the medical emergency event to improve patient outcomes.
 
 **Cargo damage:** `CargoDamagePct` accumulates cargo damage during transit (micrometeorite cargo hit, cargo shift with fatigue failure). It reduces delivery pay at port alongside paperwork penalties. Total combined penalty is capped at 75%. It only increases from event outcomes — normal transit never touches it.
 
-**`damage_random_system(amount)` stub:** Currently always damages `EngineCondition`. When modules are implemented (roadmap item #5), update this function to randomly choose from installed modules + engine.
+**`damage_random_system(amount)`:** Damages a random system — 50% chance engine, 50% chance a random installed module. If no modules are installed, always damages engine. Module condition floors at 1 (not 0, since 0 = not installed).
 
 **Adding a new event:**
 1. Add an entry to the `Events` LIST in `events.ink`
@@ -406,6 +408,59 @@ Random events are P0 interruptions that fire during transit, bypassing the task 
 3. Write an `event_*` knot in `events.ink`
 4. Add a dispatch line in `random_event`: `{ chosen == Name: -> event_name }`
 5. If the event has a dynamic eligibility condition, add a removal line in `random_event`
+
+---
+
+## Module System
+
+Ship modules automate routine tasks, reducing the daily AP burden as the player progresses. Module infrastructure lives in `modules.ink`; VARs and LISTs are declared in `space-truckers.ink`.
+
+### Data Model
+
+Modules follow the same LIST + function lookup pattern as cargo, locations, and engines:
+
+- **`ShipModules` LIST** — all module types
+- **`ModuleStats` LIST** — stat keys (`ModName`, `ModPrice`, `ModDesc`)
+- **`ModuleData(module, stat)`** — returns the requested stat
+- **Per-module condition VARs** — `RepairDronesCondition`, `CleaningDronesCondition`, etc. (0 = not installed, 1-100 = condition)
+- **`InstalledModules` VAR** — LIST of currently installed modules
+- **`RefurbishedModules` VAR** — subset bought refurbished (80% max condition cap)
+
+### Graduated Effectiveness
+
+| Condition | Drone Effect | Other Modules |
+|-----------|-------------|---------------|
+| 75-100% | Auto-complete 2 tasks/day | Full effect |
+| 50-74% | Auto-complete 1 task/day | Reduced effect |
+| Below 50% | Offline | Offline |
+
+### Drone Modules
+
+- **Repair Drones** (600€) — auto-complete engine maintenance tasks from backlog
+- **Cleaning Drones** (500€) — auto-complete ship maintenance tasks from backlog
+
+Drones run as a tunnel (`drone_auto_tasks`) called from `next_day()` (after settle → age → add daily tasks) and at trip start (after `generate_backlog()`). They prefer stale tasks over fresh ones.
+
+### Module Maintenance (Three Layers)
+
+1. **Random event damage:** `damage_random_system()` — 50% chance engine, 50% chance random installed module
+2. **Periodic diagnostic task:** P3 task every ~5 days (`DiagnosticCountdown`). Costs 1 AP. Skipping for 2+ days degrades all installed module conditions by 5
+3. **Port repair:** Pay to restore module conditions. Cost: `(max_condition - condition) × price / 100`
+
+### Purchase UI
+
+Port menu option `[Ship upgrades]` diverts to `ship_upgrades` in `modules.ink`. Offers:
+- **Buy new** — full price, 100% condition
+- **Buy refurbished** — 50% price, 60% starting condition, 80% max cap
+- **Repair** installed modules
+
+### Adding a New Module
+
+1. Add an entry to `ShipModules` LIST in `space-truckers.ink`
+2. Add a condition VAR (e.g., `VAR NewModuleCondition = 0`) in `space-truckers.ink`
+3. Add a row to `ModuleData()` in `modules.ink`
+4. Add cases to `get_module_condition()` and `set_module_condition()` in `modules.ink`
+5. Wire module-specific behavior (e.g., add auto-complete logic to `drone_auto_tasks` or update `has_medical_module()`)
 
 ---
 

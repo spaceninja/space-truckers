@@ -12,6 +12,7 @@ This document records useful patterns that would be helpful in future work. It i
 | `cargo.ink`          | Cargo LIST, `CargoData()` lookup, helper functions                                  |
 | `locations.ink`      | Location LIST, `LocationData()` lookup, distances, fuel prices                      |
 | `events.ink`         | Random event system: dispatch, event knots, `damage_random_system()`                |
+| `modules.ink`        | Module data, accessors, drone tunnels, purchase/repair UI                           |
 | `functions.ink`      | Shared utility functions: `pop()`, `pop_random()`, `list_random_subset_of_size()`   |
 | `simulator.html`     | Standalone balance tool (mirrors game constants — keep in sync)                     |
 
@@ -27,7 +28,7 @@ LIST CargoStats = From, To, Mass, Title, Express, Fragile
 }
 ```
 
-This pattern is used for `CargoData`, `LocationData`, `EngineData`, and will be used for `ModuleData`.
+This pattern is used for `CargoData`, `LocationData`, `EngineData`, and `ModuleData`.
 
 ## VAR Subset Pattern
 
@@ -49,7 +50,7 @@ Tasks are threaded (`<-`) into `ship_options` using `CHOICE_COUNT()` caps:
 | ---- | --------------------------------------------- | ------------------------------- |
 | P1   | Urgent (ship flip)                            | No cap                          |
 | P2   | Important (engine, urgent sleep)              | `TaskCap - p3_floor - p4_floor` |
-| P3   | Routine (paperwork, nav, maintenance backlog) | `TaskCap - p4_floor`            |
+| P3   | Routine (paperwork, nav, maintenance backlog, module diagnostics) | `TaskCap - p4_floor`            |
 | P4   | Recreation (relax, sleep)                     | `TaskCap`                       |
 | P5   | Rest (skip day)                               | Only when no P1-P3 active       |
 
@@ -57,10 +58,22 @@ Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes e
 
 ## Maintenance Backlog (ship.ink)
 
-- 4 persistent tasks from `MaintTasks` LIST, tracked in `Backlog`/`StaleBacklog` VARs
-- Tasks completed during the day shrink the backlog; `refill_backlog()` runs in `next_day()`
+- 4 new tasks added daily from `MaintTasks` LIST via `add_daily_tasks()`, tracked in `Backlog`/`StaleBacklog` VARs
+- Tasks accumulate if neglected (max 8 due to LIST size); settled stale tasks free those types for reuse
 - Two-day aging: fresh → stale (overdue marker) → auto-resolve with -5 condition penalty
 - `is_engine_task()` uses `EngineTasks ? task` to categorize; `has_overdue_tasks()` checks staleness
+- Drone modules auto-complete tasks after daily setup (settle → age → add → drones)
+
+## Module System (modules.ink)
+
+- `ShipModules` LIST, `InstalledModules` VAR, per-module condition VARs (0 = not installed)
+- `ModuleData(module, stat)` lookup, `get_module_condition()`/`set_module_condition()` accessors
+- `is_module_active(module)` — installed AND condition >= 50
+- `get_drone_capacity(module)` — 2 at 75%+, 1 at 50-74%, 0 below 50%
+- `drone_auto_tasks` tunnel: runs in `next_day()` and at trip start; prefers stale tasks
+- `RefurbishedModules` VAR tracks 80% max cap; `get_module_max_condition()` enforces it
+- Diagnostic P3 task: `DiagnosticCountdown` VAR, every ~5 days, -5 all modules if skipped 2+ days
+- Purchase UI: `ship_upgrades` knot with buy new/refurb/repair options
 
 ## Ink Gotchas
 

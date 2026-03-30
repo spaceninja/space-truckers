@@ -68,13 +68,25 @@ VAR PassengerEvents = (PassengerBirthday, PassengerComplaint, PassengerConversat
 /*
 
     Damage Random System
-    Stub: always damages EngineCondition for now.
-    When modules are implemented, update this function to randomly
-    choose from installed modules + engine.
+    Damages a random system: 50% chance engine, 50% chance a random
+    installed module. If no modules installed, always damages engine.
+    Module condition floors at 1 (not 0, since 0 = not installed).
 
 */
 === function damage_random_system(amount)
-~ EngineCondition = MAX(EngineCondition - amount, 0)
+~ temp module_count = LIST_COUNT(InstalledModules)
+{ module_count == 0:
+    ~ EngineCondition = MAX(EngineCondition - amount, 0)
+    ~ return
+}
+~ temp roll = RANDOM(1, 100)
+{ roll <= 50:
+    ~ EngineCondition = MAX(EngineCondition - amount, 0)
+    ~ return
+}
+~ temp target = LIST_RANDOM(InstalledModules)
+~ temp current = get_module_condition(target)
+~ set_module_condition(target, MAX(current - amount, 1))
 
 /*
 

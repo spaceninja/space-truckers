@@ -6,7 +6,7 @@ VAR ActionPointsMax = 6
 // Task registry lists — used only for LIST_COUNT() to keep shuffle loop
 // bounds in sync. Add an entry here when adding a task to a tier's shuffle.
 LIST P2Tasks = EngineMaintenance, UrgentSleep
-LIST P3Tasks = Paperwork, NavCheck, MaintBacklog
+LIST P3Tasks = Paperwork, NavCheck, MaintBacklog, Diagnostic
 LIST P4Tasks = Relax, SleepRest
 
 /*
@@ -32,6 +32,7 @@ LIST P4Tasks = Relax, SleepRest
 ~ EventChance = 0
 ~ EventCooldownDay = -1
 ~ generate_backlog()
+-> drone_auto_tasks ->
 ~ Events = LIST_ALL(Events)
 // Remove events whose eligibility is fixed for the whole trip
 { ShipCargo == ():
@@ -111,6 +112,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
     - { CHOICE_COUNT() < p3_cap and PaperworkDone < PaperworkTotal: <- task_paperwork }
     - { CHOICE_COUNT() < p3_cap and TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3: <- task_nav_check }
     - { CHOICE_COUNT() < p3_cap and LIST_COUNT(Backlog) > 0: <- task_maintenance }
+    - { CHOICE_COUNT() < p3_cap and DiagnosticCountdown <= 0 and LIST_COUNT(InstalledModules) > 0: <- task_diagnostic }
 }
 ~ p3_loops++
 { p3_loops < LIST_COUNT(LIST_ALL(P3Tasks)) and CHOICE_COUNT() < p3_cap: -> p3_shuffle }
@@ -152,6 +154,9 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 = task_nav_check
 + [Navigation check (1 AP)] -> do_nav_check
+
+= task_diagnostic
++ [Run module diagnostics{DiagnosticCountdown < 0: — overdue!} (1 AP)] -> do_diagnostic
 
 // --- Group tasks (open sub-menus) ---
 
@@ -277,6 +282,22 @@ What sounds good right now?
 - else:
     ~ NavChecksCompleted++
     You review the flight trajectory and make minor course corrections. Everything's on track.
+}
+-> pass_time(1)
+
+/*
+
+    Module Diagnostics
+    Run a diagnostic sweep on installed modules. Resets the diagnostic
+    countdown. Costs 1 AP.
+
+*/
+= do_diagnostic
+~ DiagnosticCountdown = 5
+{ fatigue_check():
+    You fumble through the module diagnostics. Not your most thorough work, but it'll do.
+- else:
+    You run a diagnostic sweep on your installed modules. Everything checks out.
 }
 -> pass_time(1)
 
@@ -436,8 +457,17 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 -> settle_stale_tasks ->
 // Age today's backlog — current tasks become tomorrow's stale set
 ~ StaleBacklog = Backlog
-// Refill backlog to 4 with fresh tasks (replacing completed and settled ones)
-~ refill_backlog()
+// Add 4 new daily tasks (tasks accumulate if neglected)
+~ add_daily_tasks()
+// Drone auto-complete — drones handle backlog tasks, preferring stale
+-> drone_auto_tasks ->
+// Module diagnostic countdown and degradation
+{ LIST_COUNT(InstalledModules) > 0:
+    ~ DiagnosticCountdown--
+}
+{ DiagnosticCountdown < -1 and LIST_COUNT(InstalledModules) > 0:
+    -> degrade_all_modules ->
+}
 // Morale decay: faster if ship is dirty
 { ShipCondition < 50:
     ~ Morale = MAX(Morale - 3, 0)
@@ -507,7 +537,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 { tier:
     - 1: ~ return (not FlipDone and TripDay >= TripDuration / 2)
     - 2: ~ return (EngineCondition < 80) or (Fatigue >= 70)
-    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3) or (LIST_COUNT(Backlog) > 0)
+    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3) or (LIST_COUNT(Backlog) > 0) or (DiagnosticCountdown <= 0 and LIST_COUNT(InstalledModules) > 0)
     - 4: ~ return true  // Relax is always available
 }
 ~ return false
@@ -594,13 +624,20 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 === function has_overdue_tasks()
 ~ return LIST_COUNT(Backlog ^ StaleBacklog) > 0
 
-// Refill the backlog to 4 tasks with random non-duplicate entries.
-// Called at start of each day in next_day(), not on task completion.
-=== function refill_backlog()
-{ LIST_COUNT(Backlog) < 4:
-    ~ temp available = LIST_ALL(MaintTasks) - Backlog
-    { LIST_COUNT(available) > 0:
-        ~ Backlog += LIST_RANDOM(available)
-        ~ refill_backlog()
-    }
+// Add 4 new daily maintenance tasks. Tasks accumulate if neglected
+// (max 8 due to LIST size). Called at start of each day in next_day().
+=== function add_daily_tasks()
+~ temp available = LIST_ALL(MaintTasks) - Backlog
+~ temp to_add = 4
+{ LIST_COUNT(available) < to_add:
+    ~ to_add = LIST_COUNT(available)
 }
+~ add_daily_tasks_loop(available, to_add)
+
+// Recursive helper for add_daily_tasks().
+=== function add_daily_tasks_loop(ref available, remaining)
+{ remaining <= 0 or LIST_COUNT(available) <= 0:
+    ~ return
+}
+~ Backlog += pop_random(available)
+~ add_daily_tasks_loop(available, remaining - 1)
