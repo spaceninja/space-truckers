@@ -170,18 +170,23 @@
 
     Process Drone
     Tunnel that handles a single drone module's auto-completion.
-    Two passes: stale tasks first, then fresh tasks.
+    Loops through stale tasks first, then fresh, completing up to capacity.
     Uses gathers for looping to keep temp vars in scope.
 
 */
 = process_drone(module, engine_only)
 ~ temp capacity = get_drone_capacity(module)
 ~ temp processed = 0
-// Pass 1: stale tasks
+~ temp stale_pass = true
 ~ temp candidates = Backlog ^ StaleBacklog
-- (drone_pass_1)
+- (drone_loop)
 { LIST_COUNT(candidates) <= 0 or processed >= capacity:
-    -> drone_pass_2_start
+    { stale_pass and processed < capacity:
+        ~ stale_pass = false
+        ~ candidates = Backlog
+        -> drone_loop
+    }
+    ->->
 }
 ~ temp task = pop(candidates)
 { is_engine_task(task) == engine_only:
@@ -189,21 +194,7 @@
     ~ processed++
     -> drone_notify(task, engine_only) ->
 }
--> drone_pass_1
-// Pass 2: fresh tasks
-- (drone_pass_2_start)
-~ candidates = Backlog
-- (drone_pass_2)
-{ LIST_COUNT(candidates) <= 0 or processed >= capacity:
-    ->->
-}
-~ task = pop(candidates)
-{ is_engine_task(task) == engine_only:
-    ~ complete_maintenance_task(task)
-    ~ processed++
-    -> drone_notify(task, engine_only) ->
-}
--> drone_pass_2
+-> drone_loop
 
 = drone_notify(task, engine_only)
 { engine_only:
