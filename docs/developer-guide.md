@@ -396,7 +396,7 @@ Random events are P0 interruptions that fire during transit, bypassing the task 
 
 **Passenger event eligibility:** The `PassengerEvents` VAR holds the subset of events that require passengers. In `transit()`, `Events -= PassengerEvents` removes all passenger events in one operation when no passenger cargo is aboard. To add a new passenger event, add it to both the `Events` LIST and the `PassengerEvents` VAR (they are adjacent in `events.ink`).
 
-**`has_medical_module()` stub:** Currently always returns `false`. When the Medical Bay module is implemented, update this to check `is_module_active(MedBay)`. Used by the medical emergency event to improve patient outcomes.
+**`has_medical_module()`:** Returns `is_module_active(WellnessSuite)`. Used by the medical emergency event to improve patient outcomes — better recovery odds and no possibility of a fatal outcome when the suite is active (condition >= 50%).
 
 **Cargo damage:** `CargoDamagePct` accumulates cargo damage during transit (micrometeorite cargo hit, cargo shift with fatigue failure). It reduces delivery pay at port alongside paperwork penalties. Total combined penalty is capped at 75%. It only increases from event outcomes — normal transit never touches it.
 
@@ -441,6 +441,18 @@ Modules follow the same LIST + function lookup pattern as cargo, locations, and 
 
 Drones run as a tunnel (`drone_auto_tasks`) called from `next_day()` (after settle → age → add daily tasks) and at trip start (after `generate_backlog()`). They prefer stale tasks over fresh ones.
 
+### Non-Drone Modules
+
+Non-drone modules run via a separate `module_auto_tasks` tunnel, called immediately after `drone_auto_tasks` in both `next_day()` and at trip start.
+
+- **Auto-Nav Computer** (800€) — auto-completes nav checks (due every 3 days). Full (75%+): every check. Reduced (50-74%): every other check (when `NavChecksCompleted mod 2 == 0`). The existing nav check task condition naturally suppresses the P3 task when already completed.
+
+- **Cargo Management System** (500€) — auto-files one paperwork chunk per day. Full (75%+): every day. Reduced (50-74%): odd-numbered trip days only. The paperwork task disappears from P3 once `PaperworkDone >= PaperworkTotal`.
+
+- **Entertainment System** (400€) — improves recreation. Full (75%+): all recreation (rations, workout, movie, video games, music) gets a +50% morale bonus via `apply_recreation_bonus(base)`. The bonus uses integer math: `base + base / 2`. Reduced (50-74%): new options (video games, music) available in the P4 shuffle, but no bonus. Below 50%: offline, no new options. New P4 tasks are gated by `is_module_active(Entertainment)` in the shuffle block.
+
+- **Wellness Suite** (500€) — daily fatigue/morale benefit and medical emergency improvement. Full (75%+): -5 fatigue, +2 morale per day. Reduced (50-74%): -3 fatigue, +1 morale. Applied in `module_auto_tasks` with narrative flavor text (gym, autodoc, sunlight simulator, therapy, haircut). Also wires `has_medical_module()` → `is_module_active(WellnessSuite)` to improve medical emergency outcomes.
+
 ### Module Maintenance (Three Layers)
 
 1. **Random event damage:** `damage_random_system()` — 50% chance engine, 50% chance random installed module
@@ -460,7 +472,11 @@ Port menu option `[Ship upgrades]` diverts to `ship_upgrades` in `modules.ink`. 
 2. Add a condition VAR (e.g., `VAR NewModuleCondition = 0`) in `space-truckers.ink`
 3. Add a row to `ModuleData()` in `modules.ink`
 4. Add cases to `get_module_condition()` and `set_module_condition()` in `modules.ink`
-5. Wire module-specific behavior (e.g., add auto-complete logic to `drone_auto_tasks` or update `has_medical_module()`)
+5. Wire module-specific behavior:
+   - For maintenance auto-complete: add a stitch in `drone_auto_tasks` (modules.ink)
+   - For daily passive effects: add a stitch in `module_auto_tasks` (modules.ink)
+   - For task list effects: gate tasks with `is_module_active(Module)` in `ship_options`
+   - For event/combat effects: update the relevant function (e.g., `has_medical_module()`)
 
 ---
 

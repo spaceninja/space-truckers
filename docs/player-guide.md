@@ -142,6 +142,14 @@ At any port, you can visit the **Ship upgrades** menu to buy modules that automa
 
 **Cleaning Drones** (500€) — Same as Repair Drones, but for ship maintenance tasks (air filters, hull inspections, scrubbing, drain lines).
 
+**Auto-Nav Computer** (800€) — Automatically handles the navigation check that comes due every three days. At full condition (75%+), it handles every check. At reduced condition (50-74%), it handles every other check — you'll need to cover the rest manually. Below 50%, it goes offline. When the auto-nav handles a check, the task won't appear in your task list that day.
+
+**Cargo Management System** (500€) — Automatically files one chunk of your trip paperwork each day. At full condition (75%+), it files every day. At reduced condition (50-74%), it only manages to file on odd-numbered trip days. Below 50%, it goes offline. If it handles the last chunk, the paperwork task disappears from your list.
+
+**Entertainment System** (400€) — Upgrades your recreation options and improves how rewarding downtime feels. At full condition (75%+), all recreation activities give a 50% morale bonus, and two new options unlock: "Play video games" (+10 morale) and "Listen to music" (+5 morale). At reduced condition (50-74%), the new options are available but there's no bonus to any recreation. Below 50%, it goes offline and everything reverts to baseline.
+
+**Wellness Suite** (500€) — A combined gym, autodoc, drug printer (supplements, painkillers, stimulants), sunlight simulator, remote therapy service, and yes — a working hair trimmer. Each day the suite is active, it reduces your fatigue by 5 and boosts morale by 2 (at full condition, 75%+), or 3 fatigue / 1 morale at reduced condition (50-74%). It also improves outcomes when you're carrying a passenger who has a medical emergency — better odds of recovery, and no possibility of a fatal outcome. Below 50%, it goes offline.
+
 ### New vs Refurbished
 
 Each module is available in two versions:
@@ -163,7 +171,9 @@ Modules need occasional attention:
 
 With both drone modules at full effectiveness, they handle 4 maintenance tasks per day — 2 engine, 2 ship. Combined with a task or two of manual work, you can keep on top of the daily backlog easily. Without drones, the backlog accumulates and penalties start mounting.
 
-The investment pays for itself quickly: fewer condition penalties mean less money spent on port repairs and fuel (since engine condition affects fuel costs). Plus, the freed-up AP lets you focus on recreation and sleep, keeping morale and fatigue in check.
+The other four modules free up AP and improve your quality of life in ways that compound over a long trip. The Auto-Nav and Cargo Management systems handle routine tasks automatically, leaving more time for sleep and recreation. The Entertainment System makes that recreation more rewarding. The Wellness Suite chips away at fatigue and morale every day — not dramatically, but steadily.
+
+The investment pays for itself quickly: fewer condition penalties mean less money spent on port repairs and fuel (since engine condition affects fuel costs). Plus, the freed-up AP lets you focus on the things that keep you sharp for the long haul.
 
 ---
 

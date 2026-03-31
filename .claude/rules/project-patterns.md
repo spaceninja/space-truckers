@@ -70,10 +70,13 @@ Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes e
 - `ModuleData(module, stat)` lookup, `get_module_condition()`/`set_module_condition()` accessors
 - `is_module_active(module)` — installed AND condition >= 50
 - `get_drone_capacity(module)` — 2 at 75%+, 1 at 50-74%, 0 below 50%
-- `drone_auto_tasks` tunnel: runs in `next_day()` and at trip start; prefers stale tasks
+- `drone_auto_tasks` tunnel: runs in `next_day()` and at trip start; prefers stale tasks (engine/ship task split)
+- `module_auto_tasks` tunnel: runs after `drone_auto_tasks`; handles AutoNav, CargoMgmt, WellnessSuite daily effects
 - `RefurbishedModules` VAR tracks 80% max cap; `get_module_max_condition()` enforces it
 - Diagnostic P3 task: `DiagnosticCountdown` VAR, every ~5 days, -5 all modules if skipped 2+ days
 - Purchase UI: `ship_upgrades` knot with buy new/refurb/repair options
+- Entertainment System: `apply_recreation_bonus(base)` function in ship.ink — +50% morale at 75%+ condition; new P4 tasks `VideoGames`/`ListenMusic` gated by `is_module_active(Entertainment)`
+- WellnessSuite wires `has_medical_module()` in events.ink
 
 ## Ink Gotchas
 
@@ -81,6 +84,7 @@ Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes e
 - **Integer math:** `a * b / c` evaluates as `a * (b / c)`, truncating early. Store `a * b` in a temp first.
 - **`~` on its own line:** Never inline `~ return` inside `{ condition: }`. Use a multi-line block.
 - **VAR list init needs parens:** `VAR X = (A, B, C)` not `VAR X = A, B, C`.
+- **Two conditional syntaxes, don't mix them:** Simple form puts the condition inline (`{ cond:` … `- else:`) and only supports `- else:` as a branch. Extended form puts `{` on its own line and uses `- condition:` for every branch including the first. Mixing them (simple opening + `- condition:` branch) is a compile error.
 
 ## Test Helpers (tests/helpers/story.js)
 

@@ -9,6 +9,10 @@
 { module:
 - RepairDrones:   ~ return module_row(stat, "Repair Drones", 600, "Auto-complete engine maintenance tasks")
 - CleaningDrones: ~ return module_row(stat, "Cleaning Drones", 500, "Auto-complete ship maintenance tasks")
+- AutoNav:        ~ return module_row(stat, "Auto-Nav Computer", 800, "Auto-complete navigation checks")
+- CargoMgmt:      ~ return module_row(stat, "Cargo Management", 500, "Auto-file paperwork daily")
+- Entertainment:  ~ return module_row(stat, "Entertainment System", 400, "Improved recreation and morale boosts")
+- WellnessSuite:  ~ return module_row(stat, "Wellness Suite", 500, "Daily health benefits and emergency medical care")
 }
 ~ return 0
 
@@ -36,6 +40,10 @@
 { module:
 - RepairDrones:   ~ return RepairDronesCondition
 - CleaningDrones: ~ return CleaningDronesCondition
+- AutoNav:        ~ return AutoNavCondition
+- CargoMgmt:      ~ return CargoMgmtCondition
+- Entertainment:  ~ return EntertainmentCondition
+- WellnessSuite:  ~ return WellnessSuiteCondition
 }
 ~ return 0
 
@@ -49,6 +57,10 @@
 { module:
 - RepairDrones:   ~ RepairDronesCondition = value
 - CleaningDrones: ~ CleaningDronesCondition = value
+- AutoNav:        ~ AutoNavCondition = value
+- CargoMgmt:      ~ CargoMgmtCondition = value
+- Entertainment:  ~ EntertainmentCondition = value
+- WellnessSuite:  ~ WellnessSuiteCondition = value
 }
 
 /*
@@ -208,6 +220,98 @@
     -   The cleaning drone has already handled the {maint_task_name(task)}.
     -   Your cleaning drone quietly takes care of the {maint_task_name(task)}.
     -   You notice the cleaning drone has been busy — the {maint_task_name(task)} is done.
+    }
+}
+->->
+
+/*
+
+    Module Auto-Tasks
+    Tunnel called from next_day() and at transit start, after drone_auto_tasks.
+    Handles daily auto-complete logic for non-drone modules.
+
+*/
+=== module_auto_tasks
+{ InstalledModules ? AutoNav:
+    -> process_auto_nav ->
+}
+{ InstalledModules ? CargoMgmt:
+    -> process_cargo_mgmt ->
+}
+{ InstalledModules ? WellnessSuite:
+    -> process_wellness ->
+}
+->->
+
+= process_auto_nav
+~ temp nav_cond = get_module_condition(AutoNav)
+{ TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3:
+    { nav_cond >= 75:
+        ~ NavChecksCompleted++
+        { shuffle:
+        -   The auto-nav computer completes the course correction while you eat breakfast.
+        -   A soft chime — the nav computer has finished today's trajectory check.
+        -   Navigation check auto-completed. The computer confirms you're on course.
+        }
+    - else:
+        { nav_cond >= 50:
+            { NavChecksCompleted mod 2 == 0:
+                ~ NavChecksCompleted++
+                The auto-nav computer struggles through the course correction. It's running slow, but gets the job done.
+            - else:
+                The auto-nav computer is too degraded to handle this check. You'll need to do it manually.
+            }
+        }
+    }
+}
+->->
+
+= process_cargo_mgmt
+~ temp cargo_cond = get_module_condition(CargoMgmt)
+{ PaperworkDone < PaperworkTotal:
+    { cargo_cond >= 75:
+        ~ PaperworkDone = PaperworkDone + 1
+        { PaperworkDone >= PaperworkTotal:
+            The cargo management system files the last of your paperwork. All customs documentation handled automatically.
+        - else:
+            { shuffle:
+            -   The cargo management system files a chunk of paperwork overnight. {PaperworkTotal - PaperworkDone} chunks remaining.
+            -   Your cargo system auto-processed some customs forms. {PaperworkTotal - PaperworkDone} chunks left.
+            }
+        }
+    - else:
+        { cargo_cond >= 50:
+            { TripDay mod 2 == 1:
+                ~ PaperworkDone = PaperworkDone + 1
+                The cargo management system slowly processes a paperwork chunk. It's running at reduced capacity.
+            }
+        }
+    }
+}
+->->
+
+= process_wellness
+~ temp well_cond = get_module_condition(WellnessSuite)
+{ well_cond >= 75:
+    ~ Fatigue = MAX(Fatigue - 5, 0)
+    ~ Morale = MIN(Morale + 2, 100)
+    { shuffle:
+    -   You squeeze in a quick session in the ship's gym. Your body thanks you.
+    -   The autodoc dispenses your daily vitamin pack. It's the little things.
+    -   You spend twenty minutes under the sunlight simulator. Somehow it actually helps.
+    -   You check in with the remote therapy service. Just talking helps more than you expected.
+    -   The hair trimmer takes care of business. You look almost human again.
+    -   You grab the painkiller the autodoc recommends for the ache in your shoulder. Problem solved.
+    }
+- else:
+    { well_cond >= 50:
+        ~ Fatigue = MAX(Fatigue - 3, 0)
+        ~ Morale = MIN(Morale + 1, 100)
+        { shuffle:
+        -   The gym equipment is acting up again, but you manage a short session.
+        -   The autodoc is running slow, but eventually dispenses your supplements.
+        -   The sunlight simulator flickers a bit, but you take what you can get.
+        }
     }
 }
 ->->
