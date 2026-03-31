@@ -32,7 +32,6 @@ LIST P4Tasks = Relax, SleepRest, VideoGames, ListenMusic
 ~ EventChance = 0
 ~ EventCooldownDay = -1
 ~ generate_backlog()
--> drone_auto_tasks ->
 -> module_auto_tasks ->
 ~ Events = LIST_ALL(Events)
 // Remove events whose eligibility is fixed for the whole trip
@@ -488,9 +487,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ StaleBacklog = Backlog
 // Add 4 new daily tasks (tasks accumulate if neglected)
 ~ add_daily_tasks()
-// Drone auto-complete — drones handle backlog tasks, preferring stale
--> drone_auto_tasks ->
-// Non-drone module auto-tasks (auto-nav, cargo mgmt, wellness suite)
+// Module auto-tasks — all modules run daily auto-complete logic
 -> module_auto_tasks ->
 // Module diagnostic countdown and degradation
 { LIST_COUNT(InstalledModules) > 0:

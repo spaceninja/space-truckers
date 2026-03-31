@@ -7,9 +7,9 @@
 */
 === function ModuleData(module, stat)
 { module:
-- RepairDrones:   ~ return module_row(stat, "Repair Drones", 600, "Auto-complete engine maintenance tasks")
-- CleaningDrones: ~ return module_row(stat, "Cleaning Drones", 500, "Auto-complete ship maintenance tasks")
-- AutoNav:        ~ return module_row(stat, "Auto-Nav Computer", 800, "Auto-complete navigation checks")
+- RepairDrones:   ~ return module_row(stat, "Repair Drones", 800, "Auto-complete engine maintenance tasks")
+- CleaningDrones: ~ return module_row(stat, "Cleaning Drones", 600, "Auto-complete ship maintenance tasks")
+- AutoNav:        ~ return module_row(stat, "Auto-Nav Computer", 600, "Auto-complete navigation checks")
 - CargoMgmt:      ~ return module_row(stat, "Cargo Management", 500, "Auto-file paperwork daily")
 - Entertainment:  ~ return module_row(stat, "Entertainment System", 400, "Improved recreation and morale boosts")
 - WellnessSuite:  ~ return module_row(stat, "Wellness Suite", 500, "Daily health benefits and emergency medical care")
@@ -163,18 +163,28 @@
 
 /*
 
-    Drone Auto-Tasks
+    Module Auto-Tasks
     Tunnel called from next_day() and transit start.
-    Active drones auto-complete maintenance tasks from the backlog,
-    preferring stale tasks over fresh ones.
+    All installed modules run their daily auto-complete logic here:
+    drones handle maintenance backlog tasks, other modules handle
+    nav checks, paperwork, and wellness effects.
 
 */
-=== drone_auto_tasks
+=== module_auto_tasks
 { is_module_active(RepairDrones):
     -> process_drone(RepairDrones, true) ->
 }
 { is_module_active(CleaningDrones):
     -> process_drone(CleaningDrones, false) ->
+}
+{ InstalledModules ? AutoNav:
+    -> process_auto_nav ->
+}
+{ InstalledModules ? CargoMgmt:
+    -> process_cargo_mgmt ->
+}
+{ InstalledModules ? WellnessSuite:
+    -> process_wellness ->
 }
 ->->
 
@@ -224,25 +234,6 @@
 }
 ->->
 
-/*
-
-    Module Auto-Tasks
-    Tunnel called from next_day() and at transit start, after drone_auto_tasks.
-    Handles daily auto-complete logic for non-drone modules.
-
-*/
-=== module_auto_tasks
-{ InstalledModules ? AutoNav:
-    -> process_auto_nav ->
-}
-{ InstalledModules ? CargoMgmt:
-    -> process_cargo_mgmt ->
-}
-{ InstalledModules ? WellnessSuite:
-    -> process_wellness ->
-}
-->->
-
 = process_auto_nav
 ~ temp nav_cond = get_module_condition(AutoNav)
 { TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3:
@@ -259,7 +250,7 @@
                 ~ NavChecksCompleted++
                 The auto-nav computer struggles through the course correction. It's running slow, but gets the job done.
             - else:
-                The auto-nav computer is too degraded to handle this check. You'll need to do it manually.
+                The auto-nav is acting up again. It wasn't able to handle today's nav check. You make a mental note to get it looked at next time you're in port.
             }
         }
     }
@@ -283,7 +274,7 @@
         { cargo_cond >= 50:
             { TripDay mod 2 == 1:
                 ~ PaperworkDone = PaperworkDone + 1
-                The cargo management system slowly processes a paperwork chunk. It's running at reduced capacity.
+                The cargo management system pings — it managed to file a chunk of paperwork, but it's taking longer than it should. You make a mental note to have a tech look at it next time you're in port.
             }
         }
     }

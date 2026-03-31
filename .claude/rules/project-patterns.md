@@ -70,8 +70,7 @@ Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes e
 - `ModuleData(module, stat)` lookup, `get_module_condition()`/`set_module_condition()` accessors
 - `is_module_active(module)` — installed AND condition >= 50
 - `get_drone_capacity(module)` — 2 at 75%+, 1 at 50-74%, 0 below 50%
-- `drone_auto_tasks` tunnel: runs in `next_day()` and at trip start; prefers stale tasks (engine/ship task split)
-- `module_auto_tasks` tunnel: runs after `drone_auto_tasks`; handles AutoNav, CargoMgmt, WellnessSuite daily effects
+- `module_auto_tasks` tunnel: runs in `next_day()` and at trip start; handles all modules — drones (engine/ship task split, stale-first), AutoNav, CargoMgmt, WellnessSuite
 - `RefurbishedModules` VAR tracks 80% max cap; `get_module_max_condition()` enforces it
 - Diagnostic P3 task: `DiagnosticCountdown` VAR, every ~5 days, -5 all modules if skipped 2+ days
 - Purchase UI: `ship_upgrades` knot with buy new/refurb/repair options

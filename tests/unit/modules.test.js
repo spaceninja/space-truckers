@@ -127,15 +127,15 @@ describe("get_module_max_condition", () => {
 describe("get_module_repair_cost", () => {
   it("returns correct cost for new RepairDrones at 50%", () => {
     story.EvaluateFunction("set_module_condition", [L(story, "ShipModules.RepairDrones"), 50]);
-    // (100 - 50) * 600 / 100 = 300
-    expect(story.EvaluateFunction("get_module_repair_cost", [L(story, "ShipModules.RepairDrones")])).toBe(300);
+    // (100 - 50) * 800 / 100 = 400
+    expect(story.EvaluateFunction("get_module_repair_cost", [L(story, "ShipModules.RepairDrones")])).toBe(400);
   });
 
   it("returns correct cost for refurbished RepairDrones at 60%", () => {
     story.variablesState["RefurbishedModules"] = L(story, "ShipModules.RepairDrones");
     story.EvaluateFunction("set_module_condition", [L(story, "ShipModules.RepairDrones"), 60]);
-    // (80 - 60) * 600 / 100 = 120
-    expect(story.EvaluateFunction("get_module_repair_cost", [L(story, "ShipModules.RepairDrones")])).toBe(120);
+    // (80 - 60) * 800 / 100 = 160
+    expect(story.EvaluateFunction("get_module_repair_cost", [L(story, "ShipModules.RepairDrones")])).toBe(160);
   });
 
   it("returns 0 when module is at max condition", () => {
@@ -146,11 +146,11 @@ describe("get_module_repair_cost", () => {
 
 describe("ModuleData", () => {
   it("returns correct price for RepairDrones", () => {
-    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.RepairDrones"), L(story, "ModuleStats.ModPrice")])).toBe(600);
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.RepairDrones"), L(story, "ModuleStats.ModPrice")])).toBe(800);
   });
 
   it("returns correct price for CleaningDrones", () => {
-    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.CleaningDrones"), L(story, "ModuleStats.ModPrice")])).toBe(500);
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.CleaningDrones"), L(story, "ModuleStats.ModPrice")])).toBe(600);
   });
 
   it("returns correct name for RepairDrones", () => {
@@ -162,7 +162,7 @@ describe("ModuleData", () => {
   });
 
   it("returns correct price for AutoNav", () => {
-    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.AutoNav"), L(story, "ModuleStats.ModPrice")])).toBe(800);
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.AutoNav"), L(story, "ModuleStats.ModPrice")])).toBe(600);
   });
 
   it("returns correct price for CargoMgmt", () => {

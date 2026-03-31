@@ -138,11 +138,11 @@ At any port, you can visit the **Ship upgrades** menu to buy modules that automa
 
 ### Available Modules
 
-**Repair Drones** (600€) — Automatically handle engine maintenance tasks from your daily backlog. At full condition (75-100%), they handle 2 tasks per day. At reduced condition (50-74%), they handle 1. Below 50%, they go offline.
+**Repair Drones** (800€) — Automatically handle engine maintenance tasks from your daily backlog. At full condition (75-100%), they handle 2 tasks per day. At reduced condition (50-74%), they handle 1. Below 50%, they go offline.
 
-**Cleaning Drones** (500€) — Same as Repair Drones, but for ship maintenance tasks (air filters, hull inspections, scrubbing, drain lines).
+**Cleaning Drones** (600€) — Same as Repair Drones, but for ship maintenance tasks (air filters, hull inspections, scrubbing, drain lines).
 
-**Auto-Nav Computer** (800€) — Automatically handles the navigation check that comes due every three days. At full condition (75%+), it handles every check. At reduced condition (50-74%), it handles every other check — you'll need to cover the rest manually. Below 50%, it goes offline. When the auto-nav handles a check, the task won't appear in your task list that day.
+**Auto-Nav Computer** (600€) — Automatically handles the navigation check that comes due every three days. At full condition (75%+), it handles every check. At reduced condition (50-74%), it handles every other check — you'll need to cover the rest manually. Below 50%, it goes offline. When the auto-nav handles a check, the task won't appear in your task list that day.
 
 **Cargo Management System** (500€) — Automatically files one chunk of your trip paperwork each day. At full condition (75%+), it files every day. At reduced condition (50-74%), it only manages to file on odd-numbered trip days. Below 50%, it goes offline. If it handles the last chunk, the paperwork task disappears from your list.
 

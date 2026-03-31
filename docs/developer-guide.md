@@ -434,19 +434,13 @@ Modules follow the same LIST + function lookup pattern as cargo, locations, and 
 | 50-74% | Auto-complete 1 task/day | Reduced effect |
 | Below 50% | Offline | Offline |
 
-### Drone Modules
+### Module Auto-Tasks
 
-- **Repair Drones** (600€) — auto-complete engine maintenance tasks from backlog
-- **Cleaning Drones** (500€) — auto-complete ship maintenance tasks from backlog
+All module daily behavior runs via the `module_auto_tasks` tunnel, called from `next_day()` (after settle → age → add daily tasks) and at trip start (after `generate_backlog()`).
 
-Drones run as a tunnel (`drone_auto_tasks`) called from `next_day()` (after settle → age → add daily tasks) and at trip start (after `generate_backlog()`). They prefer stale tasks over fresh ones.
-
-### Non-Drone Modules
-
-Non-drone modules run via a separate `module_auto_tasks` tunnel, called immediately after `drone_auto_tasks` in both `next_day()` and at trip start.
-
-- **Auto-Nav Computer** (800€) — auto-completes nav checks (due every 3 days). Full (75%+): every check. Reduced (50-74%): every other check (when `NavChecksCompleted mod 2 == 0`). The existing nav check task condition naturally suppresses the P3 task when already completed.
-
+- **Repair Drones** (800€) — auto-complete engine maintenance tasks from backlog. Prefer stale tasks. Capacity: 2 at 75%+, 1 at 50-74%.
+- **Cleaning Drones** (600€) — auto-complete ship maintenance tasks from backlog. Same capacity tiers as Repair Drones.
+- **Auto-Nav Computer** (600€) — auto-completes nav checks (due every 3 days). Full (75%+): every check. Reduced (50-74%): every other check (when `NavChecksCompleted mod 2 == 0`). The existing nav check task condition naturally suppresses the P3 task when already completed.
 - **Cargo Management System** (500€) — auto-files one paperwork chunk per day. Full (75%+): every day. Reduced (50-74%): odd-numbered trip days only. The paperwork task disappears from P3 once `PaperworkDone >= PaperworkTotal`.
 
 - **Entertainment System** (400€) — improves recreation. Full (75%+): all recreation (rations, workout, movie, video games, music) gets a +50% morale bonus via `apply_recreation_bonus(base)`. The bonus uses integer math: `base + base / 2`. Reduced (50-74%): new options (video games, music) available in the P4 shuffle, but no bonus. Below 50%: offline, no new options. New P4 tasks are gated by `is_module_active(Entertainment)` in the shuffle block.
@@ -473,8 +467,7 @@ Port menu option `[Ship upgrades]` diverts to `ship_upgrades` in `modules.ink`. 
 3. Add a row to `ModuleData()` in `modules.ink`
 4. Add cases to `get_module_condition()` and `set_module_condition()` in `modules.ink`
 5. Wire module-specific behavior:
-   - For maintenance auto-complete: add a stitch in `drone_auto_tasks` (modules.ink)
-   - For daily passive effects: add a stitch in `module_auto_tasks` (modules.ink)
+   - For maintenance auto-complete or daily passive effects: add a stitch in `module_auto_tasks` (modules.ink)
    - For task list effects: gate tasks with `is_module_active(Module)` in `ship_options`
    - For event/combat effects: update the relevant function (e.g., `has_medical_module()`)
 
