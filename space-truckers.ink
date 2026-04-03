@@ -52,7 +52,7 @@ VAR EventCooldownDay = -1  // TripDay of last event; prevents pile-ups same day
 VAR CargoDamagePct = 0     // Accumulated cargo damage % (reduces delivery pay)
 
 // Module system — ship modules that automate routine tasks.
-LIST ShipModules = RepairDrones, CleaningDrones
+LIST ShipModules = RepairDrones, CleaningDrones, AutoNav, CargoMgmt, Entertainment, WellnessSuite
 LIST ModuleStats = ModName, ModPrice, ModDesc
 VAR InstalledModules = ()      // currently installed modules
 VAR RefurbishedModules = ()    // subset of InstalledModules bought refurbished (80% max cap)
@@ -60,6 +60,10 @@ VAR RefurbishedModules = ()    // subset of InstalledModules bought refurbished 
 // Per-module condition (0 = not installed, 1-100 = condition)
 VAR RepairDronesCondition = 0
 VAR CleaningDronesCondition = 0
+VAR AutoNavCondition = 0
+VAR CargoMgmtCondition = 0
+VAR EntertainmentCondition = 0
+VAR WellnessSuiteCondition = 0
 
 VAR DiagnosticCountdown = 5    // days until next module diagnostic task
 

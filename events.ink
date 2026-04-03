@@ -91,12 +91,11 @@ VAR PassengerEvents = (PassengerBirthday, PassengerComplaint, PassengerConversat
 /*
 
     Medical Module Check
-    Stub: always returns false. When the module system is implemented
-    (roadmap item #5), update this to check for an installed medical module.
+    Returns true if the Wellness Suite is installed and active (condition >= 50).
 
 */
 === function has_medical_module()
-~ return false
+~ return is_module_active(WellnessSuite)
 
 /*
 

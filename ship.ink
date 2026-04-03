@@ -7,7 +7,7 @@ VAR ActionPointsMax = 6
 // bounds in sync. Add an entry here when adding a task to a tier's shuffle.
 LIST P2Tasks = EngineMaintenance, UrgentSleep
 LIST P3Tasks = Paperwork, NavCheck, MaintBacklog, Diagnostic
-LIST P4Tasks = Relax, SleepRest
+LIST P4Tasks = Relax, SleepRest, VideoGames, ListenMusic
 
 /*
 
@@ -32,7 +32,7 @@ LIST P4Tasks = Relax, SleepRest
 ~ EventChance = 0
 ~ EventCooldownDay = -1
 ~ generate_backlog()
--> drone_auto_tasks ->
+-> module_auto_tasks ->
 ~ Events = LIST_ALL(Events)
 // Remove events whose eligibility is fixed for the whole trip
 { ShipCargo == ():
@@ -124,6 +124,8 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 { shuffle:
     - { CHOICE_COUNT() < p4_cap: <- task_relax }
     - { CHOICE_COUNT() < p4_cap and Fatigue >= 30 and Fatigue < 70: <- task_sleep_rest }
+    - { CHOICE_COUNT() < p4_cap and is_module_active(Entertainment): <- task_video_games }
+    - { CHOICE_COUNT() < p4_cap and is_module_active(Entertainment): <- task_listen_music }
 }
 ~ p4_loops++
 { p4_loops < LIST_COUNT(LIST_ALL(P4Tasks)) and CHOICE_COUNT() < p4_cap: -> p4_shuffle }
@@ -174,6 +176,12 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 = task_relax
 + [Take a break] -> relax_options
+
+= task_video_games
++ [Play video games (1 AP)] -> do_video_games
+
+= task_listen_music
++ [Listen to music (1 AP)] -> do_listen_music
 
 = task_rest
 + [Call it a day — skip remaining {AP} AP] -> do_rest
@@ -362,7 +370,7 @@ What sounds good right now?
 
 */
 = do_eat_rations
-~ Morale = MIN(Morale + 3, 100)
+~ Morale = MIN(Morale + apply_recreation_bonus(3), 100)
 You heat up a packet of rations. It's not gourmet, but it fills the hole.
 -> pass_time(1)
 
@@ -373,13 +381,33 @@ You heat up a packet of rations. It's not gourmet, but it fills the hole.
 
 */
 = do_recreation(cost, morale_boost)
-~ Morale = MIN(Morale + morale_boost, 100)
+~ Morale = MIN(Morale + apply_recreation_bonus(morale_boost), 100)
 { cost > 1:
     You settle in for a movie. For a couple of hours, you're not a trucker — you're just an audience.
 - else:
     You run through a quick workout routine. Your muscles thank you.
 }
 -> pass_time(cost)
+
+= do_video_games
+~ Morale = MIN(Morale + apply_recreation_bonus(10), 100)
+{ shuffle:
+-   You boot up a game on the entertainment console. Time melts away as you get absorbed in the action.
+-   You spend some time gaming. It's a nice escape from the monotony of deep space hauling.
+-   The entertainment system loads your saved game. For a while, you forget you're hurtling through the void.
+-   You lose an hour to a dogfighting sim. Ironic, given your actual job.
+}
+-> pass_time(1)
+
+= do_listen_music
+~ Morale = MIN(Morale + apply_recreation_bonus(5), 100)
+{ shuffle:
+-   You put on some music and let it fill the cockpit. The ship feels less empty.
+-   You queue up a playlist and let the music wash over you. Simple pleasures.
+-   Music drifts through the ship. You catch yourself humming along.
+-   Something melancholy tonight. It fits the mood, somehow.
+}
+-> pass_time(1)
 
 /*
 
@@ -459,8 +487,8 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ StaleBacklog = Backlog
 // Add 4 new daily tasks (tasks accumulate if neglected)
 ~ add_daily_tasks()
-// Drone auto-complete — drones handle backlog tasks, preferring stale
--> drone_auto_tasks ->
+// Module auto-tasks — all modules run daily auto-complete logic
+-> module_auto_tasks ->
 // Module diagnostic countdown and degradation
 { LIST_COUNT(InstalledModules) > 0:
     ~ DiagnosticCountdown--
@@ -613,6 +641,16 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ temp pool = LIST_ALL(MaintTasks)
 ~ Backlog = list_random_subset_of_size(pool, 4)
 ~ StaleBacklog = ()
+
+// Apply Entertainment System morale bonus to a base recreation boost.
+// At 75%+ condition: +50% bonus (base + base / 2, integer math).
+// Otherwise: base unchanged.
+=== function apply_recreation_bonus(base_boost)
+~ temp bonus = 0
+{ get_module_condition(Entertainment) >= 75:
+    ~ bonus = base_boost / 2
+}
+~ return base_boost + bonus
 
 // Complete a maintenance task: remove from backlog and stale.
 // Replacement tasks are generated at start of next day, not immediately.

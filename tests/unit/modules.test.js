@@ -35,6 +35,26 @@ describe("get_module_condition / set_module_condition", () => {
     story.EvaluateFunction("set_module_condition", [L(story, "ShipModules.CleaningDrones"), 60]);
     expect(story.EvaluateFunction("get_module_condition", [L(story, "ShipModules.CleaningDrones")])).toBe(60);
   });
+
+  it("round-trips AutoNav condition", () => {
+    story.EvaluateFunction("set_module_condition", [L(story, "ShipModules.AutoNav"), 80]);
+    expect(story.EvaluateFunction("get_module_condition", [L(story, "ShipModules.AutoNav")])).toBe(80);
+  });
+
+  it("round-trips CargoMgmt condition", () => {
+    story.EvaluateFunction("set_module_condition", [L(story, "ShipModules.CargoMgmt"), 65]);
+    expect(story.EvaluateFunction("get_module_condition", [L(story, "ShipModules.CargoMgmt")])).toBe(65);
+  });
+
+  it("round-trips Entertainment condition", () => {
+    story.EvaluateFunction("set_module_condition", [L(story, "ShipModules.Entertainment"), 90]);
+    expect(story.EvaluateFunction("get_module_condition", [L(story, "ShipModules.Entertainment")])).toBe(90);
+  });
+
+  it("round-trips WellnessSuite condition", () => {
+    story.EvaluateFunction("set_module_condition", [L(story, "ShipModules.WellnessSuite"), 55]);
+    expect(story.EvaluateFunction("get_module_condition", [L(story, "ShipModules.WellnessSuite")])).toBe(55);
+  });
 });
 
 describe("is_module_active", () => {
@@ -107,15 +127,15 @@ describe("get_module_max_condition", () => {
 describe("get_module_repair_cost", () => {
   it("returns correct cost for new RepairDrones at 50%", () => {
     story.EvaluateFunction("set_module_condition", [L(story, "ShipModules.RepairDrones"), 50]);
-    // (100 - 50) * 600 / 100 = 300
-    expect(story.EvaluateFunction("get_module_repair_cost", [L(story, "ShipModules.RepairDrones")])).toBe(300);
+    // (100 - 50) * 800 / 100 = 400
+    expect(story.EvaluateFunction("get_module_repair_cost", [L(story, "ShipModules.RepairDrones")])).toBe(400);
   });
 
   it("returns correct cost for refurbished RepairDrones at 60%", () => {
     story.variablesState["RefurbishedModules"] = L(story, "ShipModules.RepairDrones");
     story.EvaluateFunction("set_module_condition", [L(story, "ShipModules.RepairDrones"), 60]);
-    // (80 - 60) * 600 / 100 = 120
-    expect(story.EvaluateFunction("get_module_repair_cost", [L(story, "ShipModules.RepairDrones")])).toBe(120);
+    // (80 - 60) * 800 / 100 = 160
+    expect(story.EvaluateFunction("get_module_repair_cost", [L(story, "ShipModules.RepairDrones")])).toBe(160);
   });
 
   it("returns 0 when module is at max condition", () => {
@@ -126,11 +146,11 @@ describe("get_module_repair_cost", () => {
 
 describe("ModuleData", () => {
   it("returns correct price for RepairDrones", () => {
-    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.RepairDrones"), L(story, "ModuleStats.ModPrice")])).toBe(600);
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.RepairDrones"), L(story, "ModuleStats.ModPrice")])).toBe(800);
   });
 
   it("returns correct price for CleaningDrones", () => {
-    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.CleaningDrones"), L(story, "ModuleStats.ModPrice")])).toBe(500);
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.CleaningDrones"), L(story, "ModuleStats.ModPrice")])).toBe(600);
   });
 
   it("returns correct name for RepairDrones", () => {
@@ -139,6 +159,30 @@ describe("ModuleData", () => {
 
   it("returns correct name for CleaningDrones", () => {
     expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.CleaningDrones"), L(story, "ModuleStats.ModName")])).toBe("Cleaning Drones");
+  });
+
+  it("returns correct price for AutoNav", () => {
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.AutoNav"), L(story, "ModuleStats.ModPrice")])).toBe(600);
+  });
+
+  it("returns correct price for CargoMgmt", () => {
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.CargoMgmt"), L(story, "ModuleStats.ModPrice")])).toBe(500);
+  });
+
+  it("returns correct price for Entertainment", () => {
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.Entertainment"), L(story, "ModuleStats.ModPrice")])).toBe(400);
+  });
+
+  it("returns correct price for WellnessSuite", () => {
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.WellnessSuite"), L(story, "ModuleStats.ModPrice")])).toBe(500);
+  });
+
+  it("returns correct name for AutoNav", () => {
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.AutoNav"), L(story, "ModuleStats.ModName")])).toBe("Auto-Nav Computer");
+  });
+
+  it("returns correct name for WellnessSuite", () => {
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.WellnessSuite"), L(story, "ModuleStats.ModName")])).toBe("Wellness Suite");
   });
 });
 
@@ -153,5 +197,55 @@ describe("install_module", () => {
     story.EvaluateFunction("install_module", [L(story, "ShipModules.RepairDrones"), 100]);
     expect(story.EvaluateFunction("get_module_condition", [L(story, "ShipModules.RepairDrones")])).toBe(100);
     expect(story.EvaluateFunction("is_module_active", [L(story, "ShipModules.RepairDrones")])).toBe(true);
+  });
+});
+
+describe("has_medical_module", () => {
+  it("returns false when WellnessSuite not installed", () => {
+    expect(story.EvaluateFunction("has_medical_module")).toBe(false);
+  });
+
+  it("returns false when WellnessSuite installed but below 50%", () => {
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.WellnessSuite"), 49]);
+    expect(story.EvaluateFunction("has_medical_module")).toBe(false);
+  });
+
+  it("returns true when WellnessSuite installed and active (50%+)", () => {
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.WellnessSuite"), 50]);
+    expect(story.EvaluateFunction("has_medical_module")).toBe(true);
+  });
+
+  it("returns true when WellnessSuite installed at full condition", () => {
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.WellnessSuite"), 100]);
+    expect(story.EvaluateFunction("has_medical_module")).toBe(true);
+  });
+});
+
+describe("apply_recreation_bonus", () => {
+  it("returns base boost when Entertainment not installed", () => {
+    expect(story.EvaluateFunction("apply_recreation_bonus", [10])).toBe(10);
+  });
+
+  it("returns base boost when Entertainment installed but below 75%", () => {
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.Entertainment"), 74]);
+    expect(story.EvaluateFunction("apply_recreation_bonus", [10])).toBe(10);
+  });
+
+  it("returns +50% bonus when Entertainment is at 75%+", () => {
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.Entertainment"), 75]);
+    // 10 + 10/2 = 15
+    expect(story.EvaluateFunction("apply_recreation_bonus", [10])).toBe(15);
+  });
+
+  it("applies integer truncation correctly for odd base values", () => {
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.Entertainment"), 100]);
+    // 3 + 3/2 = 3 + 1 = 4 (integer division)
+    expect(story.EvaluateFunction("apply_recreation_bonus", [3])).toBe(4);
+    // 5 + 5/2 = 5 + 2 = 7
+    expect(story.EvaluateFunction("apply_recreation_bonus", [5])).toBe(7);
+    // 8 + 8/2 = 8 + 4 = 12
+    expect(story.EvaluateFunction("apply_recreation_bonus", [8])).toBe(12);
+    // 15 + 15/2 = 15 + 7 = 22
+    expect(story.EvaluateFunction("apply_recreation_bonus", [15])).toBe(22);
   });
 });

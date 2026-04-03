@@ -275,3 +275,205 @@ describe("port upgrades menu", () => {
     expect(hasChoice(story, "Ship upgrades")).toBe(true);
   });
 });
+
+describe("Auto-Nav Computer", () => {
+  it("suppresses nav check task when auto-completed at full condition (75%+)", () => {
+    const s = setupTransit({
+      TripDay: 3,
+      NavChecksCompleted: 0,  // check is due (0 < 3/3 = 1)
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.AutoNav"), 100]);
+
+    // Run module_auto_tasks to simulate daily tick
+    s.EvaluateFunction("module_auto_tasks");
+
+    // NavChecksCompleted should have been incremented
+    expect(s.variablesState["NavChecksCompleted"]).toBe(1);
+
+    // Nav check task should not appear (check satisfied)
+    s.ChoosePathString("transit.ship_options");
+    drainText(s);
+    expect(hasChoice(s, "Navigation check")).toBe(false);
+  });
+
+  it("auto-completes every other check at reduced condition (50-74%)", () => {
+    const s = setupTransit({
+      TripDay: 3,
+      NavChecksCompleted: 0,  // even — should auto-complete
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.AutoNav"), 60]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["NavChecksCompleted"]).toBe(1);
+  });
+
+  it("skips auto-complete on odd NavChecksCompleted at reduced condition", () => {
+    const s = setupTransit({
+      TripDay: 6,
+      NavChecksCompleted: 1,  // odd — should skip
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.AutoNav"), 60]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["NavChecksCompleted"]).toBe(1);  // unchanged
+  });
+
+  it("does not auto-complete when offline (below 50%)", () => {
+    const s = setupTransit({
+      TripDay: 3,
+      NavChecksCompleted: 0,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.AutoNav"), 40]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["NavChecksCompleted"]).toBe(0);  // unchanged
+  });
+
+  it("does not fire on TripDay 0", () => {
+    const s = setupTransit({
+      TripDay: 0,
+      NavChecksCompleted: 0,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.AutoNav"), 100]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["NavChecksCompleted"]).toBe(0);
+  });
+});
+
+describe("Cargo Management System", () => {
+  it("auto-files one paperwork chunk per day at full condition (75%+)", () => {
+    const s = setupTransit({
+      PaperworkDone: 0,
+      PaperworkTotal: 5,
+      TripDay: 2,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 100]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["PaperworkDone"]).toBe(1);
+  });
+
+  it("auto-files on odd trip days at reduced condition (50-74%)", () => {
+    const s = setupTransit({
+      PaperworkDone: 0,
+      PaperworkTotal: 5,
+      TripDay: 1,  // odd
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 60]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["PaperworkDone"]).toBe(1);
+  });
+
+  it("skips auto-filing on even trip days at reduced condition", () => {
+    const s = setupTransit({
+      PaperworkDone: 0,
+      PaperworkTotal: 5,
+      TripDay: 2,  // even
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 60]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["PaperworkDone"]).toBe(0);  // unchanged
+  });
+
+  it("does not file when offline (below 50%)", () => {
+    const s = setupTransit({
+      PaperworkDone: 0,
+      PaperworkTotal: 5,
+      TripDay: 1,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 40]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["PaperworkDone"]).toBe(0);
+  });
+
+  it("does not file when paperwork is already complete", () => {
+    const s = setupTransit({
+      PaperworkDone: 3,
+      PaperworkTotal: 3,
+      TripDay: 1,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 100]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["PaperworkDone"]).toBe(3);  // unchanged
+  });
+
+  it("suppresses paperwork task when all chunks filed", () => {
+    const s = setupTransit({
+      PaperworkDone: 2,
+      PaperworkTotal: 3,
+      TripDay: 1,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 100]);
+    s.EvaluateFunction("module_auto_tasks");  // files chunk 3, now done
+
+    s.ChoosePathString("transit.ship_options");
+    drainText(s);
+    expect(hasChoice(s, "File paperwork")).toBe(false);
+  });
+});
+
+describe("Wellness Suite", () => {
+  it("reduces fatigue and boosts morale at full condition (75%+)", () => {
+    const s = setupTransit({ Fatigue: 40, Morale: 70 });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.WellnessSuite"), 100]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["Fatigue"]).toBe(35);
+    expect(s.variablesState["Morale"]).toBe(72);
+  });
+
+  it("reduces fatigue and boosts morale at reduced condition (50-74%)", () => {
+    const s = setupTransit({ Fatigue: 40, Morale: 70 });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.WellnessSuite"), 60]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["Fatigue"]).toBe(37);
+    expect(s.variablesState["Morale"]).toBe(71);
+  });
+
+  it("does nothing when offline (below 50%)", () => {
+    const s = setupTransit({ Fatigue: 40, Morale: 70 });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.WellnessSuite"), 40]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["Fatigue"]).toBe(40);
+    expect(s.variablesState["Morale"]).toBe(70);
+  });
+
+  it("floors fatigue at 0, not negative", () => {
+    const s = setupTransit({ Fatigue: 3, Morale: 50 });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.WellnessSuite"), 100]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["Fatigue"]).toBe(0);
+  });
+
+  it("caps morale at 100, not above", () => {
+    const s = setupTransit({ Fatigue: 20, Morale: 99 });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.WellnessSuite"), 100]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["Morale"]).toBe(100);
+  });
+});
+
+describe("Entertainment System", () => {
+  it("video games choice appears when Entertainment is active", () => {
+    const s = setupTransit();
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.Entertainment"), 100]);
+
+    s.ChoosePathString("transit.ship_options");
+    drainText(s);
+    expect(hasChoice(s, "Play video games")).toBe(true);
+  });
+
+  it("listen to music choice appears when Entertainment is active", () => {
+    const s = setupTransit();
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.Entertainment"), 100]);
+
+    s.ChoosePathString("transit.ship_options");
+    drainText(s);
+    expect(hasChoice(s, "Listen to music")).toBe(true);
+  });
+
+  it("entertainment choices do not appear when module is offline (below 50%)", () => {
+    const s = setupTransit();
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.Entertainment"), 40]);
+
+    s.ChoosePathString("transit.ship_options");
+    drainText(s);
+    expect(hasChoice(s, "Play video games")).toBe(false);
+    expect(hasChoice(s, "Listen to music")).toBe(false);
+  });
+});
