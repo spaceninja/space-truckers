@@ -85,6 +85,7 @@ Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes e
 - **`~` on its own line:** Never inline `~ return` inside `{ condition: }`. Use a multi-line block.
 - **VAR list init needs parens:** `VAR X = (A, B, C)` not `VAR X = A, B, C`.
 - **Two conditional syntaxes, don't mix them:** Simple form puts the condition inline (`{ cond:` … `- else:`) and only supports `- else:` as a branch. Extended form puts `{` on its own line and uses `- condition:` for every branch including the first. Mixing them (simple opening + `- condition:` branch) is a compile error.
+- **Threads (`<-`) are not tunnels (`-> ... ->`):** A stitch called via `<-` cannot use `->->` to return. Every branch must divert explicitly (e.g., `-> upgrade_menu`). To skip choices for a condition, gate them with `+ { condition }` rather than early-returning with `->->`.
 
 ## Test Helpers (tests/helpers/story.js)
 
