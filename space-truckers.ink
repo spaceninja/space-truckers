@@ -56,6 +56,7 @@ LIST ShipModules = RepairDrones, CleaningDrones, AutoNav, CargoMgmt, Entertainme
 LIST ModuleStats = ModName, ModPrice, ModDesc
 VAR InstalledModules = ()      // currently installed modules
 VAR RefurbishedModules = ()    // subset of InstalledModules bought refurbished (80% max cap)
+VAR RefurbishedEngine = false  // true if current engine was bought refurbished (80% max cap)
 
 // Per-module condition (0 = not installed, 1-100 = condition)
 VAR RepairDronesCondition = 0
@@ -67,7 +68,7 @@ VAR WellnessSuiteCondition = 0
 
 VAR DiagnosticCountdown = 5    // days until next module diagnostic task
 
-LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, TurboSpeed
+LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, TurboSpeed, EngPrice
 
 -> arrive_in_port(here)
 
@@ -86,8 +87,8 @@ LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, Tur
 */
 === function EngineData(mfg, tier, stat)
 { tier == 1:
-    //                       Cap   EcoFF EcoSpd BalFF BalSpd TurboFF TurboSpd
-    ~ return engine_db(stat, 300,  1.1,  1.0,   1.8,  1.5,   4.0,    2.5)
+    //                       Cap   EcoFF EcoSpd BalFF BalSpd TurboFF TurboSpd  Price
+    ~ return engine_db(stat, 300,  1.1,  1.0,   1.8,  1.5,   4.0,    2.5,     0)
 }
 { mfg:
 - Kepler:  ~ return KeplerData(tier, stat)
@@ -103,10 +104,10 @@ LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, Tur
 */
 === function KeplerData(tier, stat)
 { tier:
-//                           Cap   EcoFF EcoSpd BalFF BalSpd TurboFF TurboSpd
-- 2: ~ return engine_db(stat, 500, 0.8,  1.1,   1.5,  2.0,   3.0,    3.0)
-- 3: ~ return engine_db(stat, 650, 0.5,  1.5,   0.9,  2.5,   1.8,    4.0)
-- 4: ~ return engine_db(stat, 800, 0.3,  2.0,   0.6,  3.5,   1.2,    5.0)
+//                           Cap   EcoFF EcoSpd BalFF BalSpd TurboFF TurboSpd  Price
+- 2: ~ return engine_db(stat, 500, 0.8,  1.1,   1.5,  2.0,   3.0,    3.0,     1500)
+- 3: ~ return engine_db(stat, 650, 0.5,  1.5,   0.9,  2.5,   1.8,    4.0,     2500)
+- 4: ~ return engine_db(stat, 800, 0.3,  2.0,   0.6,  3.5,   1.2,    5.0,     4000)
 }
 
 /*
@@ -117,10 +118,10 @@ LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, Tur
 */
 === function OlympusData(tier, stat)
 { tier:
-//                           Cap   EcoFF EcoSpd BalFF BalSpd TurboFF TurboSpd
-- 2: ~ return engine_db(stat, 500, 1.0,  1.1,   1.6,  1.8,   2.4,    3.5)
-- 3: ~ return engine_db(stat, 650, 0.7,  1.3,   1.0,  2.3,   1.3,    4.5)
-- 4: ~ return engine_db(stat, 800, 0.4,  1.8,   0.7,  3.2,   0.8,    5.5)
+//                           Cap   EcoFF EcoSpd BalFF BalSpd TurboFF TurboSpd  Price
+- 2: ~ return engine_db(stat, 500, 1.0,  1.1,   1.6,  1.8,   2.4,    3.5,     1500)
+- 3: ~ return engine_db(stat, 650, 0.7,  1.3,   1.0,  2.3,   1.3,    4.5,     2500)
+- 4: ~ return engine_db(stat, 800, 0.4,  1.8,   0.7,  3.2,   0.8,    5.5,     4000)
 }
 
 /*
@@ -131,10 +132,10 @@ LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, Tur
 */
 === function HuygensData(tier, stat)
 { tier:
-//                           Cap   EcoFF EcoSpd BalFF BalSpd TurboFF TurboSpd
-- 2: ~ return engine_db(stat, 500, 0.6,  1.2,   1.6,  1.8,   3.5,    2.7)
-- 3: ~ return engine_db(stat, 650, 0.4,  1.8,   1.0,  2.3,   2.2,    3.5)
-- 4: ~ return engine_db(stat, 800, 0.2,  2.3,   0.7,  3.2,   1.5,    4.5)
+//                           Cap   EcoFF EcoSpd BalFF BalSpd TurboFF TurboSpd  Price
+- 2: ~ return engine_db(stat, 500, 0.6,  1.2,   1.6,  1.8,   3.5,    2.7,     1500)
+- 3: ~ return engine_db(stat, 650, 0.4,  1.8,   1.0,  2.3,   2.2,    3.5,     2500)
+- 4: ~ return engine_db(stat, 800, 0.2,  2.3,   0.7,  3.2,   1.5,    4.5,     4000)
 }
 
 /*
@@ -143,7 +144,7 @@ LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, Tur
     Returns the requested stat for a single engine tier entry.
 
 */
-=== function engine_db(stat, fuelCap, ecoFuel, ecoSpeed, balFuel, balSpeed, turboFuel, turboSpeed)
+=== function engine_db(stat, fuelCap, ecoFuel, ecoSpeed, balFuel, balSpeed, turboFuel, turboSpeed, price)
 { stat:
 - FuelCap:    ~ return fuelCap
 - EcoFuel:    ~ return ecoFuel
@@ -152,8 +153,7 @@ LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, Tur
 - BalSpeed:   ~ return balSpeed
 - TurboFuel:  ~ return turboFuel
 - TurboSpeed: ~ return turboSpeed
+- EngPrice:   ~ return price
 }
 
-// TODO: implement engine upgrade purchase UI
-// To upgrade: ~ ShipManufacturer = Olympus; ~ ShipEngineTier = 2; ~ ShipFuelCapacity = EngineData(ShipManufacturer, ShipEngineTier, FuelCap)
-// Availability: Kepler at Earth/Luna, Olympus at Mars, Huygens at Ganymede/Titan, all at Ceres
+

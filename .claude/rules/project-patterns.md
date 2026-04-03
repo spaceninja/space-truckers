@@ -73,7 +73,8 @@ Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes e
 - `module_auto_tasks` tunnel: runs in `next_day()` and at trip start; handles all modules — drones (engine/ship task split, stale-first), AutoNav, CargoMgmt, WellnessSuite
 - `RefurbishedModules` VAR tracks 80% max cap; `get_module_max_condition()` enforces it
 - Diagnostic P3 task: `DiagnosticCountdown` VAR, every ~5 days, -5 all modules if skipped 2+ days
-- Purchase UI: `ship_upgrades` knot with buy new/refurb/repair options
+- Purchase UI: `ship_upgrades` knot with buy new/refurb/repair options for modules; `engine_upgrades` stitch for engine purchases (next tier only, manufacturer gated by location)
+- Engine upgrade system: `EngPrice` stat in `EngineStats`, `RefurbishedEngine` VAR (boolean), `get_engine_max_condition()` in functions.ink mirrors `get_module_max_condition()` pattern; manufacturer availability via `manufacturer_available_here(mfg)` checked against `here`
 - Entertainment System: `apply_recreation_bonus(base)` function in ship.ink — +50% morale at 75%+ condition; new P4 tasks `VideoGames`/`ListenMusic` gated by `is_module_active(Entertainment)`
 - WellnessSuite wires `has_medical_module()` in events.ink
 

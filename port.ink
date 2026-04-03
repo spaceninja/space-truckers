@@ -19,7 +19,7 @@ Welcome to {LocationData(port, Name)}!
 + [Manage cargo] -> manage_cargo
 + [Deliver cargo] -> deliver_cargo
 + [Buy fuel] -> fuel_station
-+ { EngineCondition < 100 or ShipCondition < 100 } [Ship repairs] -> repair_services
++ { EngineCondition < get_engine_max_condition() or ShipCondition < 100 } [Ship repairs] -> repair_services
 + [Ship upgrades] -> ship_upgrades
 + [Ship out!] -> ship_out
 - -> port_opts
@@ -240,19 +240,20 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 
 */
 = repair_services
-~ temp engine_damage = 100 - EngineCondition
+~ temp engine_max = get_engine_max_condition()
+~ temp engine_damage = engine_max - EngineCondition
 ~ temp ship_damage = 100 - ShipCondition
 ~ temp engine_cost = engine_damage * 2
 ~ temp ship_cost = ship_damage * 1
-Engine condition: {EngineCondition}% / Ship condition: {ShipCondition}%. Your balance: {PlayerBankBalance} €.
-+ { EngineCondition < 100 and PlayerBankBalance >= engine_cost }
-    [Engine repair — restore to 100% ({engine_cost} €)]
+Engine condition: {EngineCondition}%{RefurbishedEngine: /{engine_max}% max} / Ship condition: {ShipCondition}%. Your balance: {PlayerBankBalance} €.
++ { EngineCondition < engine_max and PlayerBankBalance >= engine_cost }
+    [Engine repair — restore to {engine_max}% ({engine_cost} €)]
     ~ PlayerBankBalance -= engine_cost
-    ~ EngineCondition = 100
-    The mechanics go over your engine thoroughly. It's running like new.
+    ~ EngineCondition = engine_max
+    The mechanics go over your engine thoroughly. It's running as well as it can.
     -> repair_services
-+ { EngineCondition < 100 and PlayerBankBalance < engine_cost }
-    [Engine repair — restore to 100% ({engine_cost} €) — can't afford #UNCLICKABLE]
++ { EngineCondition < engine_max and PlayerBankBalance < engine_cost }
+    [Engine repair — restore to {engine_max}% ({engine_cost} €) — can't afford #UNCLICKABLE]
     -> repair_services
 + { ShipCondition < 100 and PlayerBankBalance >= ship_cost }
     [Cleaning service — restore to 100% ({ship_cost} €)]
@@ -296,8 +297,6 @@ Engine condition: {EngineCondition}% / Ship condition: {ShipCondition}%. Your ba
 + {here != Titan}    [Go to {LocationData(Titan, Name)}]    -> flight_options(Titan)
 + [Cancel] -> port_opts
 
-// TODO: on engine upgrade, run: ~ ShipFuelCapacity = EngineData(ShipManufacturer, ShipEngineTier, FuelCap)
-
 /*
 
     Flight Options
@@ -325,8 +324,8 @@ Engine condition: {EngineCondition}% / Ship condition: {ShipCondition}%. Your ba
 ~ temp has_express    = cargo_has_express(ShipCargo)
 ~ temp blocks_turbo   = cargo_blocks_turbo(ShipCargo)
 You have {ShipFuel} fuel, and a total mass of {total_mass(ShipCargo)}t.
-{EngineCondition < 100:
-    Engine condition: {EngineCondition}% — fuel costs increased.
+{EngineCondition < get_engine_max_condition():
+    Engine condition: {EngineCondition}%{RefurbishedEngine: /{get_engine_max_condition()}% max} — fuel costs increased.
 }
 + {can_use_flight_mode(has_express, ShipFuel, slow_cost)}
     [Economy Mode ({slow_cost} fuel, {slow_time} days)]

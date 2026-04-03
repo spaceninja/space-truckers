@@ -318,10 +318,10 @@ What sounds good right now?
 */
 = do_engine_tune
 { fatigue_check():
-    ~ EngineCondition = MIN(EngineCondition + 8, 100)
+    ~ EngineCondition = MIN(EngineCondition + 8, get_engine_max_condition())
     You fumble through the diagnostics, missing a few steps. The engine's a little better, but not as much as it should be. Condition: {EngineCondition}%.
 - else:
-    ~ EngineCondition = MIN(EngineCondition + 15, 100)
+    ~ EngineCondition = MIN(EngineCondition + 15, get_engine_max_condition())
     You run diagnostics and tune the engine. Condition improved to {EngineCondition}%.
 }
 -> pass_time(2)
@@ -338,7 +338,7 @@ What sounds good right now?
 ~ complete_maintenance_task(task)
 { fatigue_check():
     { is_engine_task(task):
-        ~ EngineCondition = MIN(EngineCondition + 3, 100)
+        ~ EngineCondition = MIN(EngineCondition + 3, get_engine_max_condition())
         You go through the motions on the {maint_task_name(task)} but your hands aren't steady. It's done, but not your best work.
     - else:
         ~ ShipCondition = MIN(ShipCondition + 3, 100)
@@ -346,7 +346,7 @@ What sounds good right now?
     }
 - else:
     { is_engine_task(task):
-        ~ EngineCondition = MIN(EngineCondition + 5, 100)
+        ~ EngineCondition = MIN(EngineCondition + 5, get_engine_max_condition())
         { shuffle:
         -   You work through the {maint_task_name(task)}. The engine sounds healthier already.
         -   The {maint_task_name(task)} goes smoothly. Engine condition: {EngineCondition}%.
