@@ -195,6 +195,30 @@ As you upgrade:
 
 The late-game feeling is qualitatively different from the early game. Your first run to Titan might be a carefully planned multi-leg journey. Your last run to Titan is just another Tuesday.
 
+### Buying an Engine
+
+From any port, visit **Ship upgrades** and choose **Browse engine upgrades**. The shop offers Tier N+1 engines from whatever manufacturers are present at this port — you can only upgrade one tier at a time, but you can switch manufacturers at any upgrade.
+
+Three manufacturers make engines, each with a different specialty:
+
+- **Kepler Drive Systems** — Balanced. Best Balance mode at every tier. Sold at Earth, Luna, and Ceres.
+- **Olympus Propulsion** — Turbo-optimized. Best Turbo mode. Sold at Mars and Ceres.
+- **Huygens Deepspace** — Eco-optimized. Best Eco mode. Sold at Ganymede, Titan, and Ceres.
+
+Ceres carries all three, which makes it a natural hub for upgrades. If you want a Huygens engine but you're based in the inner system, you'll need to make the trip.
+
+Engine prices: Tier 2 — 1,500€ / Tier 3 — 2,500€ / Tier 4 — 4,000€.
+
+### Refurbished Engines
+
+Each manufacturer also offers a refurbished option at half price. The trade-offs:
+
+- **Starts at 60% condition** — immediately less fuel-efficient than a new engine, and you'll want to repair it soon.
+- **Caps at 80% condition** — even after a full overhaul, it can't reach 100%. That means a permanent 10% fuel cost penalty compared to a new engine at the same tier.
+- **Worth it?** If you need the tier upgrade but can't afford the full price, a refurbished engine is a real upgrade — just budget for the efficiency loss. If you can afford new, buy new.
+
+The repair screen will show the condition cap for a refurbished engine (e.g., "restore to 80%") so you always know what you're working with.
+
 ---
 
 ## A Few Tips

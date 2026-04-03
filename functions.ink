@@ -115,10 +115,10 @@
 		I put into my bag: {list_random_subset_of_size(fruitBowl, -> is_color, yellow, 2)}. 
 
 */
-=== function validated_list_random_subset_of_size(sourceList, -> validator, arg, n) 
+=== function validated_list_random_subset_of_size(sourceList, -> validator, arg, n)
 { n > 0:
-    ~ temp el = pop_random(sourceList) 
-    { el: 
+    ~ temp el = pop_random(sourceList)
+    { el:
         {
         - validator(el, arg):
             ~ return el + validated_list_random_subset_of_size(sourceList, validator, arg, n-1)
@@ -127,4 +127,45 @@
         }
     }
 }
-~ return () 
+~ return ()
+
+/*
+
+    Returns the maximum engine condition for the player's current engine.
+    Refurbished engines are capped at 80%; new engines can reach 100%.
+
+*/
+=== function get_engine_max_condition()
+{ RefurbishedEngine:
+    ~ return 80
+}
+~ return 100
+
+/*
+
+    Returns true if the given manufacturer's engines are sold at the current port.
+    Kepler: Earth, Luna, Ceres
+    Olympus: Mars, Ceres
+    Huygens: Ganymede, Titan, Ceres
+
+*/
+=== function manufacturer_available_here(mfg)
+{ mfg:
+- Kepler:  ~ return here == Earth or here == Luna or here == Ceres
+- Olympus: ~ return here == Mars or here == Ceres
+- Huygens: ~ return here == Ganymede or here == Titan or here == Ceres
+}
+~ return false
+
+/*
+
+    Returns the full display name of an engine manufacturer.
+
+*/
+=== function manufacturer_name(mfg)
+{ mfg:
+- Kepler:  ~ return "Kepler Drive Systems"
+- Olympus: ~ return "Olympus Propulsion"
+- Huygens: ~ return "Huygens Deepspace"
+}
+~ return "Unknown"

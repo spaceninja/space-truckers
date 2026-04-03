@@ -8,9 +8,13 @@
  *   Huygens (Titan)  — eco-optimized, best Eco mode
  *
  * Tier 1 is a universal starter engine shared by all manufacturers.
+ *
+ * Also covers:
+ *   get_engine_max_condition  — 100 normally, 80 when RefurbishedEngine=true
+ *   manufacturer_available_here — gates which manufacturers are sold at each port
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { createStory, L } from "../helpers/story.js";
 
 let story;
@@ -24,6 +28,13 @@ function engine(mfg, tier, stat) {
     L(story, `Manufacturers.${mfg}`),
     tier,
     L(story, `EngineStats.${stat}`),
+  ]);
+}
+
+function availableAt(mfg, location) {
+  story.variablesState["here"] = L(story, `AllLocations.${location}`);
+  return story.EvaluateFunction("manufacturer_available_here", [
+    L(story, `Manufacturers.${mfg}`),
   ]);
 }
 
@@ -224,5 +235,89 @@ describe("EngineData", () => {
         });
       });
     }
+  });
+
+  // ── Prices ────────────────────────────────────────────────────────────────
+
+  describe("EngPrice", () => {
+    it("Tier 1 price = 0 (starter, not purchasable)", () => {
+      expect(engine("Kepler", 1, "EngPrice")).toBe(0);
+    });
+
+    it("Tier 2 price = 1500 (same across all manufacturers)", () => {
+      expect(engine("Kepler",  2, "EngPrice")).toBe(1500);
+      expect(engine("Olympus", 2, "EngPrice")).toBe(1500);
+      expect(engine("Huygens", 2, "EngPrice")).toBe(1500);
+    });
+
+    it("Tier 3 price = 2500 (same across all manufacturers)", () => {
+      expect(engine("Kepler",  3, "EngPrice")).toBe(2500);
+      expect(engine("Olympus", 3, "EngPrice")).toBe(2500);
+      expect(engine("Huygens", 3, "EngPrice")).toBe(2500);
+    });
+
+    it("Tier 4 price = 4000 (same across all manufacturers)", () => {
+      expect(engine("Kepler",  4, "EngPrice")).toBe(4000);
+      expect(engine("Olympus", 4, "EngPrice")).toBe(4000);
+      expect(engine("Huygens", 4, "EngPrice")).toBe(4000);
+    });
+  });
+});
+
+// ── get_engine_max_condition ──────────────────────────────────────────────────
+
+describe("get_engine_max_condition", () => {
+  let story;
+  beforeEach(() => { story = createStory(); });
+
+  it("returns 100 when engine is new", () => {
+    story.variablesState["RefurbishedEngine"] = false;
+    expect(story.EvaluateFunction("get_engine_max_condition", [])).toBe(100);
+  });
+
+  it("returns 80 when engine is refurbished", () => {
+    story.variablesState["RefurbishedEngine"] = true;
+    expect(story.EvaluateFunction("get_engine_max_condition", [])).toBe(80);
+  });
+});
+
+// ── manufacturer_available_here ───────────────────────────────────────────────
+
+describe("manufacturer_available_here", () => {
+  let story;
+  beforeEach(() => { story = createStory(); });
+
+  function availableAt(mfg, location) {
+    story.variablesState["here"] = L(story, `AllLocations.${location}`);
+    return story.EvaluateFunction("manufacturer_available_here", [
+      L(story, `Manufacturers.${mfg}`),
+    ]);
+  }
+
+  describe("Kepler (Earth, Luna, Ceres)", () => {
+    it("available at Earth",    () => expect(availableAt("Kepler", "Earth")).toBe(true));
+    it("available at Luna",     () => expect(availableAt("Kepler", "Luna")).toBe(true));
+    it("available at Ceres",    () => expect(availableAt("Kepler", "Ceres")).toBe(true));
+    it("not available at Mars", () => expect(availableAt("Kepler", "Mars")).toBe(false));
+    it("not available at Ganymede", () => expect(availableAt("Kepler", "Ganymede")).toBe(false));
+    it("not available at Titan",    () => expect(availableAt("Kepler", "Titan")).toBe(false));
+  });
+
+  describe("Olympus (Mars, Ceres)", () => {
+    it("available at Mars",  () => expect(availableAt("Olympus", "Mars")).toBe(true));
+    it("available at Ceres", () => expect(availableAt("Olympus", "Ceres")).toBe(true));
+    it("not available at Earth",    () => expect(availableAt("Olympus", "Earth")).toBe(false));
+    it("not available at Luna",     () => expect(availableAt("Olympus", "Luna")).toBe(false));
+    it("not available at Ganymede", () => expect(availableAt("Olympus", "Ganymede")).toBe(false));
+    it("not available at Titan",    () => expect(availableAt("Olympus", "Titan")).toBe(false));
+  });
+
+  describe("Huygens (Ganymede, Titan, Ceres)", () => {
+    it("available at Ganymede", () => expect(availableAt("Huygens", "Ganymede")).toBe(true));
+    it("available at Titan",    () => expect(availableAt("Huygens", "Titan")).toBe(true));
+    it("available at Ceres",    () => expect(availableAt("Huygens", "Ceres")).toBe(true));
+    it("not available at Earth", () => expect(availableAt("Huygens", "Earth")).toBe(false));
+    it("not available at Luna",  () => expect(availableAt("Huygens", "Luna")).toBe(false));
+    it("not available at Mars",  () => expect(availableAt("Huygens", "Mars")).toBe(false));
   });
 });

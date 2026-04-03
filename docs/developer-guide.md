@@ -56,16 +56,41 @@ The inner system (Earth, Luna, Mars) is tightly clustered with distances of 5–
 
 There are four engine tiers. The player starts with tier 1 and can purchase upgrades to reach tier 4.
 
-Each tier has seven stats: `FuelCap`, `EcoFuel`, `EcoSpeed`, `BalFuel`, `BalSpeed`, `TurboFuel`, `TurboSpeed`.
+Each tier has eight stats: `FuelCap`, `EcoFuel`, `EcoSpeed`, `BalFuel`, `BalSpeed`, `TurboFuel`, `TurboSpeed`, `EngPrice`.
 
-| Tier | FuelCap | EcoFuel | EcoSpeed | BalFuel | BalSpeed | TurboFuel | TurboSpeed |
-|---|---|---|---|---|---|---|---|
-| 1 (starter) | 300 | 1.1 | 1.0 | 2.0 | 1.5 | 4.0 | 2.5 |
-| 2 | 500 | 0.8 | 1.0 | 1.5 | 2.0 | 3.0 | 3.0 |
-| 3 | 650 | 0.5 | 1.5 | 0.9 | 2.5 | 1.8 | 4.0 |
-| 4 | 800 | 0.3 | 2.0 | 0.6 | 3.5 | 1.2 | 5.0 |
+The table below shows Kepler stats as the Tier 1 baseline and representative values — manufacturer-specific stats differ for Tiers 2-4.
 
-`FuelFactor` values are multipliers in the fuel cost formula (lower is better). `Speed` values are divisors in the trip duration formula (higher is faster).
+| Tier | FuelCap | EcoFuel | EcoSpeed | BalFuel | BalSpeed | TurboFuel | TurboSpeed | EngPrice |
+|---|---|---|---|---|---|---|---|---|
+| 1 (starter) | 300 | 1.1 | 1.0 | 2.0 | 1.5 | 4.0 | 2.5 | 0 |
+| 2 | 500 | varies | 1.0–1.2 | varies | 1.8–2.0 | varies | 2.7–3.5 | 1,500 |
+| 3 | 650 | varies | 1.3–1.8 | varies | 2.3–2.5 | varies | 3.5–4.5 | 2,500 |
+| 4 | 800 | varies | 1.8–2.3 | varies | 3.2–3.5 | varies | 4.5–5.5 | 4,000 |
+
+`FuelFactor` values are multipliers in the fuel cost formula (lower is better). `Speed` values are divisors in the trip duration formula (higher is faster). `EngPrice` is the new-engine purchase cost; refurbished engines cost 50% of this.
+
+### Engine Manufacturers
+
+Three manufacturers offer engines at Tiers 2-4, each optimized for a different mode:
+
+| Manufacturer | Specialty | Available at |
+|---|---|---|
+| Kepler Drive Systems | Best Balance mode | Earth, Luna, Ceres |
+| Olympus Propulsion | Best Turbo mode | Mars, Ceres |
+| Huygens Deepspace | Best Eco mode | Ganymede, Titan, Ceres |
+
+The player can switch manufacturers at any tier upgrade. Location availability creates meaningful travel decisions — buying a Huygens engine requires a trip to the outer system.
+
+### Refurbished Engines
+
+Refurbished engines follow the same pattern as refurbished modules:
+
+- **Cost:** 50% of new price
+- **Starting condition:** 60%
+- **Max condition cap:** 80% (tracked by `VAR RefurbishedEngine = true`)
+- **Effect:** A permanent −10% fuel efficiency penalty at max condition vs. a new engine
+
+`get_engine_max_condition()` in `functions.ink` returns 80 when `RefurbishedEngine` is true, 100 otherwise. All engine condition caps in `ship.ink` and repair logic in `port.ink` call this function rather than hardcoding 100.
 
 ### What Each Tier Unlocks
 

@@ -336,6 +336,7 @@ Your modules are showing signs of neglect. All module conditions have degraded.
 
 */
 === ship_upgrades
+Engine: {manufacturer_name(ShipManufacturer)} Tier {ShipEngineTier}{RefurbishedEngine: (Refurbished — {get_engine_max_condition()}% max)}, condition {EngineCondition}%, fuel capacity {ShipFuelCapacity}.
 { LIST_COUNT(InstalledModules) > 0:
     Installed modules:
     -> show_module_status ->
@@ -346,6 +347,8 @@ Your modules are showing signs of neglect. All module conditions have degraded.
     + [Browse available modules] -> browse_modules
 }
 + { has_damaged_modules() } [Repair modules] -> repair_modules
++ { ShipEngineTier < 4 and (manufacturer_available_here(Kepler) or manufacturer_available_here(Olympus) or manufacturer_available_here(Huygens)) }
+    [Browse engine upgrades] -> engine_upgrades
 + [Back] -> arrive_in_port.port_opts
 - -> upgrade_menu
 
@@ -460,3 +463,56 @@ Available modules:
     -> repair_modules
 + { PlayerBankBalance < cost } [Repair {module_name(module)} — {cond}% → {max_cond}% ({cost} €) — can't afford #UNCLICKABLE]
     -> repair_modules
+
+/*
+
+    Engine Upgrades
+    Lets the player purchase a Tier N+1 engine from manufacturers available at the current port.
+    Follows the same new/refurbished pattern as module purchases.
+
+    engine_upgrades     — entry point, lists available options
+    engine_buy_choices  — threaded stitch offering new/refurb/can't-afford choices per manufacturer
+
+*/
+= engine_upgrades
+~ temp next_tier = ShipEngineTier + 1
+Available Tier {next_tier} engines at this port:
+<- engine_buy_choices(Kepler, next_tier)
+<- engine_buy_choices(Olympus, next_tier)
+<- engine_buy_choices(Huygens, next_tier)
++ [Back] -> upgrade_menu
+- -> upgrade_menu
+
+= engine_buy_choices(mfg, tier)
+~ temp avail = manufacturer_available_here(mfg)
+~ temp price = EngineData(mfg, tier, EngPrice)
+~ temp half_price = price / 2
+~ temp new_cap = EngineData(mfg, tier, FuelCap)
++ { avail and PlayerBankBalance >= price }
+    [{manufacturer_name(mfg)} Tier {tier} — new ({price} €, {new_cap} fuel capacity)]
+    ~ PlayerBankBalance -= price
+    ~ ShipManufacturer = mfg
+    ~ ShipEngineTier = tier
+    ~ ShipFuelCapacity = new_cap
+    ~ ShipFuel = MIN(ShipFuel, ShipFuelCapacity)
+    ~ EngineCondition = 100
+    ~ RefurbishedEngine = false
+    The installation crew works through the night. By morning, a gleaming {manufacturer_name(mfg)} Tier {tier} engine hums in your hold. Fuel capacity: {ShipFuelCapacity}.
+    -> upgrade_menu
++ { avail and PlayerBankBalance < price }
+    [{manufacturer_name(mfg)} Tier {tier} — new ({price} €) — can't afford #UNCLICKABLE]
+    -> upgrade_menu
++ { avail and PlayerBankBalance >= half_price }
+    [{manufacturer_name(mfg)} Tier {tier} — refurbished ({half_price} €, {new_cap} fuel capacity)]
+    ~ PlayerBankBalance -= half_price
+    ~ ShipManufacturer = mfg
+    ~ ShipEngineTier = tier
+    ~ ShipFuelCapacity = new_cap
+    ~ ShipFuel = MIN(ShipFuel, ShipFuelCapacity)
+    ~ EngineCondition = 60
+    ~ RefurbishedEngine = true
+    A refurbished {manufacturer_name(mfg)} Tier {tier} engine, showing some wear but still solid. Installed at 60% condition — max 80% after repairs. Fuel capacity: {ShipFuelCapacity}.
+    -> upgrade_menu
++ { avail and PlayerBankBalance < half_price }
+    [{manufacturer_name(mfg)} Tier {tier} — refurbished ({half_price} €) — can't afford #UNCLICKABLE]
+    -> upgrade_menu

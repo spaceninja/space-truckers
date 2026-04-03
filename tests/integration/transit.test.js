@@ -91,6 +91,7 @@ function setupTransit(overrides = {}) {
     EventChance: 0,
     EventCooldownDay: -1,
     CargoDamagePct: 0,
+    DEBUG: false,
   };
 
   const vars = { ...defaults, ...overrides };
