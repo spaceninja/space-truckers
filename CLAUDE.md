@@ -24,7 +24,6 @@ Before opening a PR, verify it contains only the intended commits: `git log --on
 | `PAY_RATE` | `space-truckers.ink` — `VAR PayRate` |
 | `SHIP_MASS` | `space-truckers.ink` — ship hull mass |
 | `ENGINES` | `space-truckers.ink` — `EngineData` table |
-| `ENGINE_PRICES` | `space-truckers.ink` — `engine_db()` price parameter |
 | `LOCATION_NAMES` / `LOCATION_DISPLAY` | `locations.ink` — `LocationData Name` |
 | `DISTANCES` | `locations.ink` — `get_distance` |
 | `FUEL_PRICES` | `locations.ink` — `FuelPrice` |
