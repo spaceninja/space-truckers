@@ -9,6 +9,7 @@ INCLUDE locations.ink
 INCLUDE functions.ink
 INCLUDE modules.ink
 
+VAR DEBUG = true
 
 VAR PlayerBankBalance = 200
 VAR PayRate = 3

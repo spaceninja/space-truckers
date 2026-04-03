@@ -134,6 +134,10 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 ~ temp has_obligations = has_tier_tasks(1) or has_tier_tasks(2) or has_tier_tasks(3)
 { not has_obligations: <- task_rest }
 
+// DEBUG: Skip the rest of the trip and arrive at destination immediately
++ { DEBUG } [\[DEBUG\] Skip Trip]
+    -> arrive_in_port(ShipDestination)
+
 // Flow pauses here; accumulated threaded choices are presented to the player
 - (await_choice)
 -> DONE

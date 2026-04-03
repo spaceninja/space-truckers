@@ -22,7 +22,61 @@ Welcome to {LocationData(port, Name)}!
 + { EngineCondition < get_engine_max_condition() or ShipCondition < 100 } [Ship repairs] -> repair_services
 + [Ship upgrades] -> ship_upgrades
 + [Ship out!] -> ship_out
++ { DEBUG } [\[DEBUG\] Cheats] -> debug_cheats
 - -> port_opts
+
+/*
+
+    Debug Cheats
+    Only available when DEBUG = true.
+
+*/
+= debug_cheats
+- (cheat_menu)
+Balance: {PlayerBankBalance} € / Engine: {ShipManufacturer} Tier {ShipEngineTier} / Modules: {LIST_COUNT(InstalledModules)}/{LIST_COUNT(LIST_ALL(ShipModules))}
++ [\[DEBUG\] Add 1000 €]
+    ~ PlayerBankBalance += 1000
+    Balance is now {PlayerBankBalance} €.
+    -> cheat_menu
++ { ShipEngineTier < 2 } [\[DEBUG\] Upgrade to Tier 2 engine]
+    ~ ShipManufacturer = Kepler
+    ~ ShipEngineTier = 2
+    ~ ShipFuelCapacity = EngineData(ShipManufacturer, ShipEngineTier, FuelCap)
+    ~ EngineCondition = 100
+    ~ RefurbishedEngine = false
+    Kepler Tier 2 engine installed.
+    -> cheat_menu
++ { ShipEngineTier < 3 } [\[DEBUG\] Upgrade to Tier 3 engine]
+    ~ ShipManufacturer = Kepler
+    ~ ShipEngineTier = 3
+    ~ ShipFuelCapacity = EngineData(ShipManufacturer, ShipEngineTier, FuelCap)
+    ~ EngineCondition = 100
+    ~ RefurbishedEngine = false
+    Kepler Tier 3 engine installed.
+    -> cheat_menu
++ { ShipEngineTier < 4 } [\[DEBUG\] Upgrade to Tier 4 engine]
+    ~ ShipManufacturer = Kepler
+    ~ ShipEngineTier = 4
+    ~ ShipFuelCapacity = EngineData(ShipManufacturer, ShipEngineTier, FuelCap)
+    ~ EngineCondition = 100
+    ~ RefurbishedEngine = false
+    Kepler Tier 4 engine installed.
+    -> cheat_menu
++ { LIST_COUNT(InstalledModules) < LIST_COUNT(LIST_ALL(ShipModules)) } [\[DEBUG\] Install all modules]
+    -> cheat_install_all_modules
++ [Back] -> port_opts
+- -> cheat_menu
+
+= cheat_install_all_modules
+~ temp _remaining = LIST_ALL(ShipModules) - InstalledModules
+- (install_next)
+~ temp _mod = pop(_remaining)
+~ install_module(_mod, 100)
+{ LIST_COUNT(_remaining) > 0:
+    -> install_next
+}
+All modules installed at 100%.
+-> cheat_menu
 
 /*
 
