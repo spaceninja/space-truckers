@@ -100,3 +100,16 @@ Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes e
 - `drainText(story)` — advance to next choice point
 
 Tests jump to specific knots via `story.ChoosePathString()` and set state via `story.variablesState["VarName"]`.
+
+### Performance
+
+`createStory()` compiles the full Ink source and is expensive (~200ms). Never call it in a loop. For statistical or iteration-based tests, compile once and use `story.ResetState()` between iterations:
+
+```js
+const s = createStory();
+for (let i = 0; i < 30; i++) {
+  s.ResetState();
+  s.EvaluateFunction("some_function");
+  // ... assert ...
+}
+```

@@ -1,9 +1,11 @@
 ---
-name: testing
-description: Testing conventions for Space Truckers — how to write testable Ink code, when and how to write unit and integration tests, and what test helpers are available. Use when writing or modifying Ink functions, working in test files, or when a gameplay interaction warrants a new test.
+name: ink-testing
+description: Conventions for testing an Ink interactive fiction game with inkjs and vitest — how to write testable Ink code, when and how to write unit and integration tests, and what test helpers are available. Use when writing or modifying tests, adding test coverage, or when a gameplay interaction warrants a new test.
 ---
 
-# Testing Conventions
+# Testing an Ink Game
+
+This project tests Ink source files by compiling them with inkjs and running assertions in vitest. These conventions cover how to structure Ink code for testability, when to write each type of test, and how to use the shared test helpers.
 
 ## Write testable Ink code
 
@@ -65,25 +67,23 @@ All tests share the factory in `tests/helpers/story.js`:
 
 `createStory()` compiles the full Ink source and is the most expensive operation in tests. Keep these guidelines in mind to avoid CI timeouts:
 
-- **Reuse story instances in loops.** For statistical or iteration-based tests, create the story once, then reset variables and call `ChoosePathString()` for each iteration. Each re-navigation is cheap; compilation is not.
+- **Reuse story instances in loops.** For statistical or iteration-based tests, create the story once, then use `story.ResetState()` to reset all runtime state between iterations. Each reset is cheap; compilation is not.
 - **Early-exit when possible.** For tests like "verify at least N distinct outcomes", break out of the loop as soon as the condition is met rather than running all iterations.
-- **Keep iteration counts reasonable.** 50–100 iterations is fine when reusing a single story instance.
+- **Keep iteration counts reasonable.** 50-100 iterations is fine when reusing a single story instance.
 
 ```js
 // Good: one story, many iterations
-const story = setupTransit({ Fatigue: 90, ... });
-for (let i = 0; i < 100; i++) {
-  story.variablesState["Fatigue"] = 90;
-  story.variablesState["AP"] = 6;
-  story.ChoosePathString("transit.ship_options");
-  drainText(story);
+const s = createStory();
+for (let i = 0; i < 30; i++) {
+  s.ResetState();
+  s.EvaluateFunction("add_daily_tasks");
   // ... assert ...
   if (conditionMet) break; // early exit
 }
 
 // Bad: new story per iteration (causes CI timeouts)
-for (let i = 0; i < 100; i++) {
-  const story = setupTransit({ Fatigue: 90 }); // compiles every time!
+for (let i = 0; i < 30; i++) {
+  const s = createStory(); // compiles every time!
   // ...
 }
 ```

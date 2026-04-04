@@ -37,3 +37,9 @@ Before opening a PR, review `docs/developer-guide.md`, `docs/player-guide.md`, a
 ## Testing
 
 Always run `npm test` before opening a PR. CI runs `npm run lint` then `npm test` — both must pass.
+
+## Skills
+
+Consult these project skills when working in their domains:
+- `/ink-syntax` — Ink language reference. Use when writing or editing `.ink` files.
+- `/ink-testing` — Testing conventions, helpers, and performance guidelines. Use when writing or modifying tests.
