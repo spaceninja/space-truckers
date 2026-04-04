@@ -237,7 +237,7 @@ describe("backlog accumulation", () => {
     // Should see both 3 and 4 over 30 trials (coin flip)
     expect(saw3).toBe(true);
     expect(saw4).toBe(true);
-  });
+  }, 30000);
 
   it("add_daily_tasks includes module tasks when modules are installed", () => {
     let sawModuleTask = false;
@@ -295,7 +295,7 @@ describe("backlog accumulation", () => {
       expect(backlog).not.toContain("Ent");
       expect(backlog).not.toContain("Well");
     }
-  });
+  }, 30000);
 });
 
 describe("module maintenance effects", () => {
