@@ -325,15 +325,16 @@ What sounds good right now?
 { fatigue_check():
     ~ boost = 1
 }
-{ is_engine_maint(task):
+{
+- is_engine_maint(task):
     ~ EngineCondition = MIN(EngineCondition + boost, get_engine_max_condition())
+- is_module_maint(task):
+    ~ temp module = maint_task_module(task)
+    ~ temp condition = get_module_condition(module)
+    ~ temp max_condition = get_module_max_condition(module)
+    ~ set_module_condition(module, MIN(condition + boost, max_condition))
 - else:
-    { is_module_maint(task):
-        ~ temp mod = maint_task_module(task)
-        ~ set_module_condition(mod, MIN(get_module_condition(mod) + boost, get_module_max_condition(mod)))
-    - else:
-        ~ ShipCondition = MIN(ShipCondition + boost, 100)
-    }
+    ~ ShipCondition = MIN(ShipCondition + boost, 100)
 }
 { boost < 3:
     {MaintFatigued(task)}
@@ -505,18 +506,17 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ temp task = pop(overdue)
 ~ Backlog -= task
 ~ StaleBacklog -= task
-{ is_engine_maint(task):
+{
+- is_engine_maint(task):
     ~ EngineCondition = MAX(EngineCondition - 5, 0)
-- else:
-    { is_module_maint(task):
-        ~ temp mod = maint_task_module(task)
-        // Guard: skip if module was uninstalled since task was added
-        { InstalledModules ? mod:
-            ~ set_module_condition(mod, MAX(get_module_condition(mod) - 5, 1))
-        }
-    - else:
-        ~ ShipCondition = MAX(ShipCondition - 5, 0)
+- is_module_maint(task):
+    ~ temp module = maint_task_module(task)
+    // Guard: skip if module was uninstalled since task was added
+    { InstalledModules ? module:
+        ~ set_module_condition(module, MAX(get_module_condition(module) - 5, 1))
     }
+- else:
+    ~ ShipCondition = MAX(ShipCondition - 5, 0)
 }
 {MaintOverdue(task)}
 { LIST_COUNT(overdue) > 0:
