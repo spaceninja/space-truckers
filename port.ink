@@ -7,6 +7,7 @@ VAR PortCargo = ()
 */
 === arrive_in_port(port)
 ~ here = port
+~ Fatigue = 0
 -> settle_trip_penalties ->
 ~ PortCargo = get_available_cargo(port, 5)
 
