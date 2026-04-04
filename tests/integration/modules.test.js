@@ -1,7 +1,7 @@
 /**
  * Integration tests for the module system.
  *
- * Tests drone auto-complete behavior, diagnostic task,
+ * Tests drone auto-complete behavior, module maintenance tasks,
  * damage distribution, and backlog accumulation.
  */
 
@@ -74,10 +74,69 @@ function setupTransit(overrides = {}) {
   return story;
 }
 
+describe("task classification", () => {
+  it("is_engine_maint identifies engine tasks", () => {
+    expect(story.EvaluateFunction("is_engine_maint", [L(story, "EngineMaintTasks.EngTune")])).toBe(true);
+    expect(story.EvaluateFunction("is_engine_maint", [L(story, "EngineMaintTasks.FuelLine")])).toBe(true);
+    expect(story.EvaluateFunction("is_engine_maint", [L(story, "ShipMaintTasks.AirFilter")])).toBe(false);
+    expect(story.EvaluateFunction("is_engine_maint", [L(story, "ModuleMaintTasks.RepDroneServo")])).toBe(false);
+  });
+
+  it("is_ship_maint identifies ship tasks", () => {
+    expect(story.EvaluateFunction("is_ship_maint", [L(story, "ShipMaintTasks.AirFilter")])).toBe(true);
+    expect(story.EvaluateFunction("is_ship_maint", [L(story, "ShipMaintTasks.HullCheck")])).toBe(true);
+    expect(story.EvaluateFunction("is_ship_maint", [L(story, "EngineMaintTasks.EngTune")])).toBe(false);
+  });
+
+  it("is_module_maint identifies module tasks", () => {
+    expect(story.EvaluateFunction("is_module_maint", [L(story, "ModuleMaintTasks.RepDroneServo")])).toBe(true);
+    expect(story.EvaluateFunction("is_module_maint", [L(story, "ModuleMaintTasks.NavChipFlush")])).toBe(true);
+    expect(story.EvaluateFunction("is_module_maint", [L(story, "EngineMaintTasks.EngTune")])).toBe(false);
+  });
+
+  it("maint_task_module maps tasks to correct modules", () => {
+    const cases = [
+      ["ModuleMaintTasks.RepDroneServo", "ShipModules.RepairDrones"],
+      ["ModuleMaintTasks.RepDroneOptics", "ShipModules.RepairDrones"],
+      ["ModuleMaintTasks.ClnDroneBrush", "ShipModules.CleaningDrones"],
+      ["ModuleMaintTasks.NavChipFlush", "ShipModules.AutoNav"],
+      ["ModuleMaintTasks.CargoSensor", "ShipModules.CargoMgmt"],
+      ["ModuleMaintTasks.EntWiring", "ShipModules.Entertainment"],
+      ["ModuleMaintTasks.WellSanitize", "ShipModules.WellnessSuite"],
+    ];
+    for (const [task, mod] of cases) {
+      const result = story.EvaluateFunction("maint_task_module", [L(story, task)]);
+      expect(result.toString()).toContain(mod.split(".")[1]);
+    }
+  });
+});
+
+describe("available_module_tasks", () => {
+  it("returns empty when no modules installed", () => {
+    const result = story.EvaluateFunction("available_module_tasks");
+    expect(result.Count).toBe(0);
+  });
+
+  it("returns tasks only for installed modules", () => {
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.RepairDrones"), 100]);
+    const result = story.EvaluateFunction("available_module_tasks");
+    expect(result.Count).toBe(2);
+    expect(result.toString()).toContain("RepDroneServo");
+    expect(result.toString()).toContain("RepDroneOptics");
+    // Should NOT contain tasks from other modules
+    expect(result.toString()).not.toContain("NavChipFlush");
+  });
+
+  it("returns tasks for multiple installed modules", () => {
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.RepairDrones"), 100]);
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.AutoNav"), 100]);
+    const result = story.EvaluateFunction("available_module_tasks");
+    expect(result.Count).toBe(4);
+  });
+});
+
 describe("drone auto-complete", () => {
   it("repair drones complete engine tasks from backlog", () => {
-    // Test via unit functions — verify drone capacity and task matching
-    // then verify integration through the accessor functions
     const s = setupTransit();
     s.EvaluateFunction("install_module", [L(s, "ShipModules.RepairDrones"), 100]);
 
@@ -86,8 +145,8 @@ describe("drone auto-complete", () => {
     expect(s.EvaluateFunction("is_module_active", [L(s, "ShipModules.RepairDrones")])).toBe(true);
 
     // Verify engine task matching
-    expect(s.EvaluateFunction("is_engine_task", [L(s, "MaintTasks.EngTune")])).toBe(true);
-    expect(s.EvaluateFunction("is_engine_task", [L(s, "MaintTasks.AirFilter")])).toBe(false);
+    expect(s.EvaluateFunction("is_engine_maint", [L(s, "EngineMaintTasks.EngTune")])).toBe(true);
+    expect(s.EvaluateFunction("is_engine_maint", [L(s, "ShipMaintTasks.AirFilter")])).toBe(false);
   });
 
   it("cleaning drones are active and match ship tasks", () => {
@@ -98,8 +157,8 @@ describe("drone auto-complete", () => {
     expect(s.EvaluateFunction("is_module_active", [L(s, "ShipModules.CleaningDrones")])).toBe(true);
 
     // Ship tasks are NOT engine tasks
-    expect(s.EvaluateFunction("is_engine_task", [L(s, "MaintTasks.AirFilter")])).toBe(false);
-    expect(s.EvaluateFunction("is_engine_task", [L(s, "MaintTasks.HullCheck")])).toBe(false);
+    expect(s.EvaluateFunction("is_engine_maint", [L(s, "ShipMaintTasks.AirFilter")])).toBe(false);
+    expect(s.EvaluateFunction("is_engine_maint", [L(s, "ShipMaintTasks.HullCheck")])).toBe(false);
   });
 
   it("drones at reduced capacity (50-74%) have capacity 1", () => {
@@ -115,109 +174,251 @@ describe("drone auto-complete", () => {
     expect(s.EvaluateFunction("is_module_active", [L(s, "ShipModules.RepairDrones")])).toBe(false);
   });
 
-  it("complete_maintenance_task removes from both Backlog and StaleBacklog", () => {
+  it("drones skip module maintenance tasks", () => {
+    const s = setupTransit();
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.RepairDrones"), 100]);
+
+    // Put a module task and engine task in the backlog
+    s.variablesState["Backlog"] = cargo(
+      s,
+      "EngineMaintTasks.EngTune",
+      "ModuleMaintTasks.RepDroneServo"
+    );
+
+    // Run drones
+    s.EvaluateFunction("module_auto_tasks");
+
+    // Engine task should be completed, module task should remain
+    const backlog = s.variablesState["Backlog"];
+    expect(backlog.toString()).not.toContain("EngTune");
+    expect(backlog.toString()).toContain("RepDroneServo");
+  });
+
+  it("complete_maintenance_task removes from Backlog, StaleBacklog, and adds to CompletedToday", () => {
     const s = setupTransit();
     s.variablesState["Backlog"] = cargo(
       s,
-      "MaintTasks.EngTune",
-      "MaintTasks.FuelLine",
-      "MaintTasks.AirFilter"
+      "EngineMaintTasks.EngTune",
+      "EngineMaintTasks.FuelLine",
+      "ShipMaintTasks.AirFilter"
     );
-    s.variablesState["StaleBacklog"] = L(s, "MaintTasks.EngTune");
+    s.variablesState["StaleBacklog"] = L(s, "EngineMaintTasks.EngTune");
 
-    s.EvaluateFunction("complete_maintenance_task", [L(s, "MaintTasks.EngTune")]);
+    s.EvaluateFunction("complete_maintenance_task", [L(s, "EngineMaintTasks.EngTune")]);
 
     const backlog = s.variablesState["Backlog"];
     const stale = s.variablesState["StaleBacklog"];
+    const completed = s.variablesState["CompletedToday"];
     expect(backlog.toString()).not.toContain("EngTune");
     expect(stale.toString()).not.toContain("EngTune");
+    expect(completed.toString()).toContain("EngTune");
     expect(backlog.toString()).toContain("FuelLine");
   });
 });
 
 describe("backlog accumulation", () => {
-  it("add_daily_tasks adds 4 tasks to existing backlog", () => {
-    // Start with 2 tasks
-    story.variablesState["Backlog"] = cargo(
-      story,
-      "MaintTasks.EngTune",
-      "MaintTasks.FuelLine"
-    );
-    story.EvaluateFunction("add_daily_tasks");
-    const backlog = story.variablesState["Backlog"];
-    // Should now have 6 tasks (2 original + 4 new)
-    const count = backlog.Count;
-    expect(count).toBe(6);
+  it("add_daily_tasks adds 3-4 tasks from empty backlog", () => {
+    // Run multiple times to verify statistical properties
+    let saw3 = false;
+    let saw4 = false;
+    for (let i = 0; i < 30; i++) {
+      const s = createStory();
+      s.variablesState["Backlog"] = new InkList();
+      s.variablesState["StaleBacklog"] = new InkList();
+      s.variablesState["CompletedToday"] = new InkList();
+      s.variablesState["MaintCooldown"] = new InkList();
+      s.EvaluateFunction("add_daily_tasks");
+      const count = s.variablesState["Backlog"].Count;
+      expect(count).toBeGreaterThanOrEqual(3);
+      expect(count).toBeLessThanOrEqual(4);
+      if (count === 3) saw3 = true;
+      if (count === 4) saw4 = true;
+    }
+    // Should see both 3 and 4 over 30 trials (coin flip)
+    expect(saw3).toBe(true);
+    expect(saw4).toBe(true);
   });
 
-  it("add_daily_tasks caps at 8 (LIST size limit)", () => {
-    // Start with 6 tasks
-    story.variablesState["Backlog"] = cargo(
+  it("add_daily_tasks includes module tasks when modules are installed", () => {
+    let sawModuleTask = false;
+    for (let i = 0; i < 30; i++) {
+      const s = createStory();
+      s.EvaluateFunction("install_module", [L(s, "ShipModules.RepairDrones"), 100]);
+      s.variablesState["Backlog"] = new InkList();
+      s.variablesState["StaleBacklog"] = new InkList();
+      s.variablesState["CompletedToday"] = new InkList();
+      s.variablesState["MaintCooldown"] = new InkList();
+      s.EvaluateFunction("add_daily_tasks");
+      const backlog = s.variablesState["Backlog"].toString();
+      if (backlog.includes("RepDroneServo") || backlog.includes("RepDroneOptics")) {
+        sawModuleTask = true;
+        break;
+      }
+    }
+    expect(sawModuleTask).toBe(true);
+  });
+
+  it("add_daily_tasks excludes cooldown tasks", () => {
+    // Complete all 4 engine tasks, put them in cooldown
+    story.variablesState["MaintCooldown"] = cargo(
       story,
-      "MaintTasks.EngTune",
-      "MaintTasks.FuelLine",
-      "MaintTasks.Injector",
-      "MaintTasks.Coolant",
-      "MaintTasks.AirFilter",
-      "MaintTasks.HullCheck"
+      "EngineMaintTasks.EngTune",
+      "EngineMaintTasks.FuelLine",
+      "EngineMaintTasks.Injector",
+      "EngineMaintTasks.Coolant"
     );
+    story.variablesState["Backlog"] = new InkList();
+    story.variablesState["StaleBacklog"] = new InkList();
+    story.variablesState["CompletedToday"] = new InkList();
     story.EvaluateFunction("add_daily_tasks");
-    const backlog = story.variablesState["Backlog"];
-    // Should have all 8 (only 2 available slots)
-    expect(backlog.Count).toBe(8);
+    const backlog = story.variablesState["Backlog"].toString();
+    // None of the cooldown engine tasks should appear
+    expect(backlog).not.toContain("EngTune");
+    expect(backlog).not.toContain("FuelLine");
+    expect(backlog).not.toContain("Injector");
+    expect(backlog).not.toContain("Coolant");
+  });
+
+  it("add_daily_tasks does not include module tasks when no modules installed", () => {
+    // Run many times — no module tasks should ever appear
+    for (let i = 0; i < 20; i++) {
+      const s = createStory();
+      s.variablesState["Backlog"] = new InkList();
+      s.variablesState["StaleBacklog"] = new InkList();
+      s.variablesState["CompletedToday"] = new InkList();
+      s.variablesState["MaintCooldown"] = new InkList();
+      s.EvaluateFunction("add_daily_tasks");
+      const backlog = s.variablesState["Backlog"].toString();
+      expect(backlog).not.toContain("Drone");
+      expect(backlog).not.toContain("Nav");
+      expect(backlog).not.toContain("Cargo");
+      expect(backlog).not.toContain("Ent");
+      expect(backlog).not.toContain("Well");
+    }
   });
 });
 
-describe("diagnostic task", () => {
-  it("diagnostic choice appears when countdown reaches 0", () => {
-    const s = setupTransit({
-      DiagnosticCountdown: 0,
-    });
-    s.EvaluateFunction("install_module", [L(s, "ShipModules.RepairDrones"), 100]);
-    // Set backlog so P3 has tasks
-    s.variablesState["Backlog"] = cargo(
-      s,
-      "MaintTasks.EngTune",
-      "MaintTasks.AirFilter"
-    );
+describe("module maintenance effects", () => {
+  it("completing a module task boosts that module's condition by 3", () => {
+    const s = setupTransit();
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.RepairDrones"), 70]);
+    s.variablesState["Backlog"] = L(s, "ModuleMaintTasks.RepDroneServo");
 
     s.ChoosePathString("transit.ship_options");
     drainText(s);
+    pickChoice(s, "Ship maintenance");
+    pickChoice(s, "repair drone servo calibration");
 
-    expect(hasChoice(s, "module diagnostics")).toBe(true);
+    expect(s.EvaluateFunction("get_module_condition", [L(s, "ShipModules.RepairDrones")])).toBe(73);
   });
 
-  it("diagnostic choice does not appear when countdown is positive", () => {
-    const s = setupTransit({
-      DiagnosticCountdown: 3,
-    });
-    s.EvaluateFunction("install_module", [L(s, "ShipModules.RepairDrones"), 100]);
-    s.variablesState["Backlog"] = cargo(
-      s,
-      "MaintTasks.EngTune",
-      "MaintTasks.AirFilter"
-    );
+  it("completing a module task while fatigued boosts by 1", () => {
+    const s = setupTransit({ Fatigue: 95 });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.RepairDrones"), 70]);
+    s.variablesState["Backlog"] = L(s, "ModuleMaintTasks.RepDroneServo");
 
-    s.ChoosePathString("transit.ship_options");
-    drainText(s);
+    // At 95 fatigue, 70% failure chance — run multiple times
+    let sawFatigued = false;
+    for (let i = 0; i < 30; i++) {
+      const t = setupTransit({ Fatigue: 95 });
+      t.EvaluateFunction("install_module", [L(t, "ShipModules.RepairDrones"), 70]);
+      t.variablesState["Backlog"] = L(t, "ModuleMaintTasks.RepDroneServo");
 
-    expect(hasChoice(s, "module diagnostics")).toBe(false);
+      t.ChoosePathString("transit.ship_options");
+      drainText(t);
+      pickChoice(t, "Ship maintenance");
+      pickChoice(t, "repair drone servo calibration");
+
+      const cond = t.EvaluateFunction("get_module_condition", [L(t, "ShipModules.RepairDrones")]);
+      if (cond === 71) {
+        sawFatigued = true;
+        break;
+      }
+    }
+    expect(sawFatigued).toBe(true);
   });
 
-  it("diagnostic choice does not appear when no modules installed", () => {
-    const s = setupTransit({
-      DiagnosticCountdown: 0,
-    });
-    s.variablesState["Backlog"] = cargo(
-      s,
-      "MaintTasks.EngTune",
-      "MaintTasks.AirFilter"
-    );
+  it("overdue module task penalizes only that module by -5 (floor at 1)", () => {
+    // Set AP=1 and spend it on rations to trigger next_day → settle_stale_tasks
+    const s = setupTransit({ AP: 1 });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.RepairDrones"), 60]);
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.AutoNav"), 80]);
+
+    // Put a repair drone task in both Backlog and StaleBacklog (overdue)
+    s.variablesState["Backlog"] = L(s, "ModuleMaintTasks.RepDroneServo");
+    s.variablesState["StaleBacklog"] = L(s, "ModuleMaintTasks.RepDroneServo");
+    s.variablesState["ShipClock"] = 5;
+    s.variablesState["TripDay"] = 2;
 
     s.ChoosePathString("transit.ship_options");
     drainText(s);
+    pickChoice(s, "Take a break");
+    pickChoice(s, "Heat up some rations"); // costs 1 AP → AP=0 → next_day fires
 
-    expect(hasChoice(s, "module diagnostics")).toBe(false);
+    // RepairDrones should have lost 5 condition
+    expect(s.EvaluateFunction("get_module_condition", [L(s, "ShipModules.RepairDrones")])).toBe(55);
+    // AutoNav should be unchanged
+    expect(s.EvaluateFunction("get_module_condition", [L(s, "ShipModules.AutoNav")])).toBe(80);
+  });
+
+  it("overdue module task condition floors at 1", () => {
+    const s = setupTransit({ AP: 1 });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.RepairDrones"), 3]);
+
+    s.variablesState["Backlog"] = L(s, "ModuleMaintTasks.RepDroneServo");
+    s.variablesState["StaleBacklog"] = L(s, "ModuleMaintTasks.RepDroneServo");
+    s.variablesState["ShipClock"] = 5;
+    s.variablesState["TripDay"] = 2;
+
+    s.ChoosePathString("transit.ship_options");
+    drainText(s);
+    pickChoice(s, "Take a break");
+    pickChoice(s, "Heat up some rations");
+
+    expect(s.EvaluateFunction("get_module_condition", [L(s, "ShipModules.RepairDrones")])).toBe(1);
+  });
+});
+
+describe("narrative text functions", () => {
+  it("MaintName returns non-empty string for all engine tasks", () => {
+    const tasks = ["EngTune", "FuelLine", "Injector", "Coolant"];
+    for (const task of tasks) {
+      const name = story.EvaluateFunction("MaintName", [L(story, `EngineMaintTasks.${task}`)]);
+      expect(name).toBeTruthy();
+      expect(name.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("MaintName returns non-empty string for all ship tasks", () => {
+    const tasks = ["AirFilter", "HullCheck", "DrainLines", "Scrub"];
+    for (const task of tasks) {
+      const name = story.EvaluateFunction("MaintName", [L(story, `ShipMaintTasks.${task}`)]);
+      expect(name).toBeTruthy();
+      expect(name.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("MaintName returns non-empty string for all module tasks", () => {
+    const tasks = [
+      "RepDroneServo", "RepDroneOptics", "ClnDroneBrush", "ClnDroneFilter",
+      "NavChipFlush", "NavGyroCalib", "CargoSensor", "CargoSealCheck",
+      "EntWiring", "EntDisplayClean", "WellSanitize", "WellCalib",
+    ];
+    for (const task of tasks) {
+      const name = story.EvaluateFunction("MaintName", [L(story, `ModuleMaintTasks.${task}`)]);
+      expect(name).toBeTruthy();
+      expect(name.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("MaintComplete, MaintFatigued, MaintOverdue return non-empty strings", () => {
+    const fns = ["MaintComplete", "MaintFatigued", "MaintOverdue"];
+    const task = L(story, "EngineMaintTasks.EngTune");
+    for (const fn of fns) {
+      const text = story.EvaluateFunction(fn, [task]);
+      expect(text).toBeTruthy();
+      expect(text.length).toBeGreaterThan(0);
+    }
   });
 });
 

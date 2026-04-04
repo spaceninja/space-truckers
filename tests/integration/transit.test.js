@@ -61,10 +61,10 @@ function setupTransit(overrides = {}) {
   // but setupTransit jumps directly to ship_options)
   story.variablesState["Backlog"] = cargo(
     story,
-    "MaintTasks.EngTune",
-    "MaintTasks.AirFilter",
-    "MaintTasks.FuelLine",
-    "MaintTasks.HullCheck"
+    "EngineMaintTasks.EngTune",
+    "ShipMaintTasks.AirFilter",
+    "EngineMaintTasks.FuelLine",
+    "ShipMaintTasks.HullCheck"
   );
 
   const defaults = {
@@ -532,7 +532,7 @@ describe("Fatigue-based task failure", () => {
       expect(story.variablesState["EngineCondition"]).toBe(85);
     });
 
-    it("backlog maintenance gives +5 condition at fatigue 0", () => {
+    it("backlog maintenance gives +3 condition at fatigue 0", () => {
       const story = setupTransit({
         Fatigue: 0,
         ShipCondition: 80,
@@ -546,8 +546,8 @@ describe("Fatigue-based task failure", () => {
       story.ContinueMaximally();
       const condAfter = story.variablesState["ShipCondition"];
       const engAfter = story.variablesState["EngineCondition"];
-      // One of the two conditions should have increased by 5
-      expect(condAfter - condBefore + engAfter - engBefore).toBe(5);
+      // One of the two conditions should have increased by 3
+      expect(condAfter - condBefore + engAfter - engBefore).toBe(3);
     });
   });
 

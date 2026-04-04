@@ -234,12 +234,24 @@ Penalties come in two forms:
 
 ### Maintenance Backlog
 
-Ships maintain a persistent maintenance backlog during transit. 4 new tasks are added each day from the `MaintTasks` LIST (8 total: 4 engine, 4 ship). Tasks accumulate if neglected (max 8 due to LIST size). Tracked in two VARs:
+Ships maintain a persistent maintenance backlog during transit. 3-4 new tasks are drawn daily via two-stage selection across three systems: engine, ship, and modules. Tasks accumulate if neglected. Tracked in four VARs:
 
 - **`Backlog`** — current tasks (accumulates daily)
 - **`StaleBacklog`** — tasks that survived yesterday without completion
+- **`CompletedToday`** — tasks completed this day; becomes the cooldown exclusion for tomorrow
+- **`MaintCooldown`** — yesterday's completed tasks; excluded from today's draw so players don't see the same task two days running
 
-**Task categories:** Engine tasks (EngTune, FuelLine, Injector, Coolant) affect `EngineCondition`. Ship tasks (AirFilter, HullCheck, DrainLines, Scrub) affect `ShipCondition`. The `is_engine_task()` function categorizes them.
+**Task categories:**
+- Engine tasks (`EngineMaintTasks` LIST) affect `EngineCondition`. Classified by `is_engine_maint()`.
+- Ship tasks (`ShipMaintTasks` LIST) affect `ShipCondition`. Classified by `is_ship_maint()`.
+- Module tasks (`ModuleMaintTasks` LIST) affect the specific module they belong to. Classified by `is_module_maint()`. `maint_task_module(task)` maps each task to its parent module.
+
+**Two-stage daily selection (`add_daily_tasks()`):**
+1. **Stage 1:** Draw 3 random engine tasks + 3 random ship tasks + 1 random module task (only from installed modules) from their respective available pools, excluding current `Backlog` and `MaintCooldown`
+2. **Stage 2:** Coin flip for 3 or 4, then draw that many from the combined pool of 6-7
+3. **Cooldown rotation:** `MaintCooldown = CompletedToday`, then `CompletedToday = ()`
+
+The module pool only includes tasks for installed modules (`available_module_tasks()` → `module_tasks_for(mod)`). If no modules are installed, the pool is just engine + ship (6 candidates).
 
 **Task lifecycle (three stages):**
 
@@ -247,26 +259,25 @@ Ships maintain a persistent maintenance backlog during transit. 4 new tasks are 
 |-------|------------------|-------------|
 | **Fresh** | Just generated | None — player has today to do it |
 | **Stale** | Survived one day without completion | Shown with "overdue" marker |
-| **Auto-resolve** | In both `Backlog` and `StaleBacklog` at start of next day | Condition -5 to appropriate stat, task replaced |
+| **Auto-resolve** | In both `Backlog` and `StaleBacklog` at start of next day | Condition -5, task replaced |
 
 **In `next_day()` each morning:**
 1. **Settle stale tasks:** `Backlog ^ StaleBacklog` = tasks that survived 2 days → apply condition -5 penalty, print consequence, remove from backlog
-2. **Age today's tasks:** `StaleBacklog = Backlog` (current backlog becomes tomorrow's stale set)
-3. **Add daily tasks:** `add_daily_tasks()` adds 4 new random tasks (or as many as available from unused task types)
-4. **Drone auto-complete:** Active drone modules handle tasks from the backlog, preferring stale tasks
-5. **Diagnostic countdown:** If modules are installed, decrement `DiagnosticCountdown`. If overdue by 2+ days, degrade all module conditions
+2. **Age today's tasks:** `StaleBacklog = Backlog`
+3. **Add daily tasks:** `add_daily_tasks()` — two-stage selection with cooldown rotation
+4. **Drone auto-complete:** Active drone modules handle engine/ship tasks (not module tasks) from backlog, preferring stale tasks
 
-Tasks accumulate if the player doesn't stay on top of them. The `MaintTasks` LIST has 8 entries, so the maximum possible backlog is 8. When stale tasks are settled (penalties applied, tasks removed), those task types become available to be re-added. This creates a cycle where neglect feels overwhelming but drones and diligent play keep it manageable.
+When stale tasks are settled, those task types become available again for the next day's pool. This creates a cycle where neglect feels overwhelming but drones and diligent play keep it manageable.
 
-**When a player completes a task:** `complete_maintenance_task(task)` removes it from both `Backlog` and `StaleBacklog`. No replacement is generated until the next day.
+**When a player completes a task:** `complete_maintenance_task(task)` removes it from both `Backlog` and `StaleBacklog`, and adds it to `CompletedToday` for tomorrow's cooldown.
 
-**Trip initialization:** `generate_backlog()` is called in `transit()` to create the initial 4-task backlog using `list_random_subset_of_size()`. `StaleBacklog` starts empty.
+**Trip initialization:** `generate_backlog()` (called from `transit()`) clears all four VARs and calls `add_daily_tasks()` to populate the first day's backlog.
 
-**Conditions no longer degrade passively.** Engine and ship condition only change from:
+**Conditions no longer degrade passively.** Engine, ship, and module conditions only change from:
 - Skipped maintenance (auto-resolve penalty: -5 per task)
 - Event damage (`damage_random_system()`, micrometeorite cargo hits)
-- Completed maintenance (+5 on success, +3 on fatigue-degraded)
-- Port repair services (restore to 100%)
+- Completed maintenance (+3 on success, +1 if fatigued)
+- Port repair services (restore to max condition)
 
 ### Engine Degradation Fuel Penalty
 
@@ -401,7 +412,7 @@ When fatigue is 70 or above, work tasks are subject to a dice roll that can caus
 
 **Two failure modes:**
 
-- **Degraded** (ship flip, engine tune, backlog maintenance) — The task completes but with a reduced effect. Ship flip adds a fuel penalty. Engine tune restores +8 instead of +15. Backlog maintenance restores +3 instead of +5.
+- **Degraded** (ship flip, engine tune, backlog maintenance) — The task completes but with a reduced effect. Ship flip adds a fuel penalty. Engine tune restores +8 instead of +15. Backlog maintenance restores +1 instead of +3.
 - **Fail + retry** (nav check, paperwork) — The task doesn't count. The counter is not incremented, so the task remains available for retry. AP is still spent.
 
 Only "work" tasks use `fatigue_check()`. Sleep, recreation, eating, and rest are unaffected.
@@ -472,10 +483,10 @@ All module daily behavior runs via the `module_auto_tasks` tunnel, called from `
 
 - **Wellness Suite** (500€) — daily fatigue/morale benefit and medical emergency improvement. Full (75%+): -5 fatigue, +2 morale per day. Reduced (50-74%): -3 fatigue, +1 morale. Applied in `module_auto_tasks` with narrative flavor text (gym, autodoc, sunlight simulator, therapy, haircut). Also wires `has_medical_module()` → `is_module_active(WellnessSuite)` to improve medical emergency outcomes.
 
-### Module Maintenance (Three Layers)
+### Module Maintenance (Two Layers)
 
 1. **Random event damage:** `damage_random_system()` — 50% chance engine, 50% chance random installed module
-2. **Periodic diagnostic task:** P3 task every ~5 days (`DiagnosticCountdown`). Costs 1 AP. Skipping for 2+ days degrades all installed module conditions by 5
+2. **Backlog maintenance tasks:** Each installed module contributes 2 tasks to the `ModuleMaintTasks` pool. Completing a task boosts that specific module's condition by +3 (+1 if fatigued). Neglecting a task auto-resolves with -5 to that specific module (floor at 1). Module maintenance replaces the old periodic diagnostic system.
 3. **Port repair:** Pay to restore module conditions. Cost: `(max_condition - condition) × price / 100`
 
 ### Purchase UI
@@ -491,7 +502,10 @@ Port menu option `[Ship upgrades]` diverts to `ship_upgrades` in `modules.ink`. 
 2. Add a condition VAR (e.g., `VAR NewModuleCondition = 0`) in `space-truckers.ink`
 3. Add a row to `ModuleData()` in `modules.ink`
 4. Add cases to `get_module_condition()` and `set_module_condition()` in `modules.ink`
-5. Wire module-specific behavior:
+5. Add 2 new entries to `ModuleMaintTasks` LIST in `space-truckers.ink`
+6. Add mappings for those tasks in `maint_task_module()` and `module_tasks_for()` in `modules.ink`
+7. Add cases for those tasks in `MaintName()`, `MaintComplete()`, `MaintFatigued()`, `MaintOverdue()` in `ship.ink`
+8. Wire module-specific behavior:
    - For maintenance auto-complete or daily passive effects: add a stitch in `module_auto_tasks` (modules.ink)
    - For task list effects: gate tasks with `is_module_active(Module)` in `ship_options`
    - For event/combat effects: update the relevant function (e.g., `has_medical_module()`)

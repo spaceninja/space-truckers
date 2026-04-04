@@ -29,13 +29,16 @@ VAR Morale = 80           // 0–100 scale. Decays daily, boosted by recreation.
 VAR ShipCondition = 100   // 0–100%. Degrades from skipped maintenance. Affects morale.
 VAR EngineCondition = 100 // 0–100%. Degrades from skipped maintenance. Affects fuel cost.
 
-// Maintenance backlog — 4 new tasks added each day, accumulating if neglected.
+// Maintenance backlog — 3-4 new tasks drawn daily via two-stage selection.
+// Stage 1: 3 engine + 3 ship + 1 module (if installed) → Stage 2: draw 3-4.
 // Skipped tasks age: fresh → stale → auto-resolve with condition penalty.
-// EngineTasks is the subset that affects EngineCondition; the rest affect ShipCondition.
-LIST MaintTasks = EngTune, FuelLine, Injector, Coolant, AirFilter, HullCheck, DrainLines, Scrub
-VAR EngineTasks = (EngTune, FuelLine, Injector, Coolant)
+LIST EngineMaintTasks = EngTune, FuelLine, Injector, Coolant
+LIST ShipMaintTasks = AirFilter, HullCheck, DrainLines, Scrub
+LIST ModuleMaintTasks = RepDroneServo, RepDroneOptics, ClnDroneBrush, ClnDroneFilter, NavChipFlush, NavGyroCalib, CargoSensor, CargoSealCheck, EntWiring, EntDisplayClean, WellSanitize, WellCalib
 VAR Backlog = ()          // current maintenance tasks (accumulates daily)
 VAR StaleBacklog = ()     // tasks that survived yesterday without completion
+VAR CompletedToday = ()   // tasks completed this day, becomes tomorrow's cooldown
+VAR MaintCooldown = ()    // yesterday's completed tasks, excluded from today's draw
 
 VAR TripDay = 0           // Current day of trip (incremented in next_day)
 VAR TripDuration = 0      // Total trip length in days
@@ -67,7 +70,6 @@ VAR CargoMgmtCondition = 0
 VAR EntertainmentCondition = 0
 VAR WellnessSuiteCondition = 0
 
-VAR DiagnosticCountdown = 5    // days until next module diagnostic task
 
 LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, TurboSpeed, EngPrice
 
