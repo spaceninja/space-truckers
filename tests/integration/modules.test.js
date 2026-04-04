@@ -219,14 +219,12 @@ describe("drone auto-complete", () => {
 describe("backlog accumulation", () => {
   it("add_daily_tasks adds 3-4 tasks from empty backlog", () => {
     // Run multiple times to verify statistical properties
+    // Reuse one compiled story, resetting state each iteration
+    const s = createStory();
     let saw3 = false;
     let saw4 = false;
     for (let i = 0; i < 30; i++) {
-      const s = createStory();
-      s.variablesState["Backlog"] = new InkList();
-      s.variablesState["StaleBacklog"] = new InkList();
-      s.variablesState["CompletedToday"] = new InkList();
-      s.variablesState["MaintCooldown"] = new InkList();
+      s.ResetState();
       s.EvaluateFunction("add_daily_tasks");
       const count = s.variablesState["Backlog"].Count;
       expect(count).toBeGreaterThanOrEqual(3);
@@ -237,17 +235,14 @@ describe("backlog accumulation", () => {
     // Should see both 3 and 4 over 30 trials (coin flip)
     expect(saw3).toBe(true);
     expect(saw4).toBe(true);
-  }, 30000);
+  });
 
   it("add_daily_tasks includes module tasks when modules are installed", () => {
+    const s = createStory();
     let sawModuleTask = false;
     for (let i = 0; i < 30; i++) {
-      const s = createStory();
+      s.ResetState();
       s.EvaluateFunction("install_module", [L(s, "ShipModules.RepairDrones"), 100]);
-      s.variablesState["Backlog"] = new InkList();
-      s.variablesState["StaleBacklog"] = new InkList();
-      s.variablesState["CompletedToday"] = new InkList();
-      s.variablesState["MaintCooldown"] = new InkList();
       s.EvaluateFunction("add_daily_tasks");
       const backlog = s.variablesState["Backlog"].toString();
       if (backlog.includes("RepDroneServo") || backlog.includes("RepDroneOptics")) {
@@ -281,12 +276,10 @@ describe("backlog accumulation", () => {
 
   it("add_daily_tasks does not include module tasks when no modules installed", () => {
     // Run many times — no module tasks should ever appear
+    // Reuse one compiled story, resetting state each iteration
+    const s = createStory();
     for (let i = 0; i < 20; i++) {
-      const s = createStory();
-      s.variablesState["Backlog"] = new InkList();
-      s.variablesState["StaleBacklog"] = new InkList();
-      s.variablesState["CompletedToday"] = new InkList();
-      s.variablesState["MaintCooldown"] = new InkList();
+      s.ResetState();
       s.EvaluateFunction("add_daily_tasks");
       const backlog = s.variablesState["Backlog"].toString();
       expect(backlog).not.toContain("Drone");
@@ -295,7 +288,7 @@ describe("backlog accumulation", () => {
       expect(backlog).not.toContain("Ent");
       expect(backlog).not.toContain("Well");
     }
-  }, 30000);
+  });
 });
 
 describe("module maintenance effects", () => {
