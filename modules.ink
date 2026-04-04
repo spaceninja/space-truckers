@@ -163,6 +163,59 @@
 
 /*
 
+    Module Maintenance Classification
+    Functions for identifying and mapping module maintenance tasks.
+
+*/
+
+// Is this task a module maintenance task?
+=== function is_module_maint(task)
+~ return LIST_ALL(ModuleMaintTasks) ? task
+
+// Maps a module maintenance task to its parent module.
+=== function maint_task_module(task)
+{ task:
+- RepDroneServo:  ~ return RepairDrones
+- RepDroneOptics: ~ return RepairDrones
+- ClnDroneBrush:  ~ return CleaningDrones
+- ClnDroneFilter: ~ return CleaningDrones
+- NavChipFlush:   ~ return AutoNav
+- NavGyroCalib:   ~ return AutoNav
+- CargoSensor:    ~ return CargoMgmt
+- CargoSealCheck: ~ return CargoMgmt
+- EntWiring:      ~ return Entertainment
+- EntDisplayClean: ~ return Entertainment
+- WellSanitize:   ~ return WellnessSuite
+- WellCalib:      ~ return WellnessSuite
+}
+~ return ()
+
+// Returns the maintenance tasks belonging to a specific module.
+=== function module_tasks_for(mod)
+{ mod:
+- RepairDrones:   ~ return (RepDroneServo, RepDroneOptics)
+- CleaningDrones: ~ return (ClnDroneBrush, ClnDroneFilter)
+- AutoNav:        ~ return (NavChipFlush, NavGyroCalib)
+- CargoMgmt:      ~ return (CargoSensor, CargoSealCheck)
+- Entertainment:  ~ return (EntWiring, EntDisplayClean)
+- WellnessSuite:  ~ return (WellSanitize, WellCalib)
+}
+~ return ()
+
+// Returns the union of maintenance tasks for all installed modules.
+=== function available_module_tasks()
+~ temp _mods = InstalledModules
+~ return available_module_tasks_loop(_mods)
+
+=== function available_module_tasks_loop(ref _mods)
+{ LIST_COUNT(_mods) <= 0:
+    ~ return ()
+}
+~ temp mod = pop(_mods)
+~ return module_tasks_for(mod) + available_module_tasks_loop(_mods)
+
+/*
+
     Module Auto-Tasks
     Tunnel called from next_day() and transit start.
     All installed modules run their daily auto-complete logic here:
@@ -211,7 +264,11 @@
     ->->
 }
 ~ temp task = pop(candidates)
-{ is_engine_task(task) == engine_only:
+// Skip module tasks — drones only handle engine/ship tasks
+{ is_module_maint(task):
+    -> drone_loop
+}
+{ is_engine_maint(task) == engine_only:
     ~ complete_maintenance_task(task)
     ~ processed++
     -> drone_notify(task, engine_only) ->
@@ -221,15 +278,15 @@
 = drone_notify(task, engine_only)
 { engine_only:
     { shuffle:
-    -   The repair drone whirs to life, handling the {maint_task_name(task)} before you're even out of your bunk.
-    -   Your repair drone takes care of the {maint_task_name(task)} overnight.
-    -   You wake to find the repair drone has already finished the {maint_task_name(task)}.
+    -   The repair drone whirs to life, handling the {MaintName(task)} before you're even out of your bunk.
+    -   Your repair drone takes care of the {MaintName(task)} overnight.
+    -   You wake to find the repair drone has already finished the {MaintName(task)}.
     }
 - else:
     { shuffle:
-    -   The cleaning drone has already handled the {maint_task_name(task)}.
-    -   Your cleaning drone quietly takes care of the {maint_task_name(task)}.
-    -   You notice the cleaning drone has been busy — the {maint_task_name(task)} is done.
+    -   The cleaning drone has already handled the {MaintName(task)}.
+    -   Your cleaning drone quietly takes care of the {MaintName(task)}.
+    -   You notice the cleaning drone has been busy — the {MaintName(task)} is done.
     }
 }
 ->->
@@ -305,28 +362,6 @@
         }
     }
 }
-->->
-
-/*
-
-    Degrade All Modules
-    Tunnel called when the diagnostic task is skipped for too long.
-    Reduces all installed module conditions by 5 (floored at 1).
-
-*/
-=== degrade_all_modules
-~ temp _modules = InstalledModules
-{ LIST_COUNT(_modules) <= 0:
-    ->->
-}
-- (degrade_next)
-~ temp module = pop(_modules)
-~ temp cond = get_module_condition(module)
-~ set_module_condition(module, MAX(cond - 5, 1))
-{ LIST_COUNT(_modules) > 0:
-    -> degrade_next
-}
-Your modules are showing signs of neglect. All module conditions have degraded.
 ->->
 
 /*

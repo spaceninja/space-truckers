@@ -6,7 +6,7 @@ VAR ActionPointsMax = 6
 // Task registry lists — used only for LIST_COUNT() to keep shuffle loop
 // bounds in sync. Add an entry here when adding a task to a tier's shuffle.
 LIST P2Tasks = EngineMaintenance, UrgentSleep
-LIST P3Tasks = Paperwork, NavCheck, MaintBacklog, Diagnostic
+LIST P3Tasks = Paperwork, NavCheck, MaintBacklog
 LIST P4Tasks = Relax, SleepRest, VideoGames, ListenMusic
 
 /*
@@ -112,7 +112,6 @@ Flying to {LocationData(destination, Name)} for {duration} days…
     - { CHOICE_COUNT() < p3_cap and PaperworkDone < PaperworkTotal: <- task_paperwork }
     - { CHOICE_COUNT() < p3_cap and TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3: <- task_nav_check }
     - { CHOICE_COUNT() < p3_cap and LIST_COUNT(Backlog) > 0: <- task_maintenance }
-    - { CHOICE_COUNT() < p3_cap and DiagnosticCountdown <= 0 and LIST_COUNT(InstalledModules) > 0: <- task_diagnostic }
 }
 ~ p3_loops++
 { p3_loops < LIST_COUNT(LIST_ALL(P3Tasks)) and CHOICE_COUNT() < p3_cap: -> p3_shuffle }
@@ -160,9 +159,6 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 = task_nav_check
 + [Navigation check (1 AP)] -> do_nav_check
-
-= task_diagnostic
-+ [Run module diagnostics{DiagnosticCountdown < 0: — overdue!} (1 AP)] -> do_diagnostic
 
 // --- Group tasks (open sub-menus) ---
 
@@ -233,9 +229,9 @@ Engine: {EngineCondition}% / Ship: {ShipCondition}%
 = maint_choice(task)
 ~ temp stale = StaleBacklog ? task
 { stale:
-    + [{ maint_task_name(task) } — overdue (1 AP)] -> do_maintenance(task)
+    + [{ MaintName(task) } — overdue (1 AP)] -> do_maintenance(task)
 - else:
-    + [{ maint_task_name(task) } (1 AP)] -> do_maintenance(task)
+    + [{ MaintName(task) } (1 AP)] -> do_maintenance(task)
 }
 
 = relax_options
@@ -299,22 +295,6 @@ What sounds good right now?
 
 /*
 
-    Module Diagnostics
-    Run a diagnostic sweep on installed modules. Resets the diagnostic
-    countdown. Costs 1 AP.
-
-*/
-= do_diagnostic
-~ DiagnosticCountdown = 5
-{ fatigue_check():
-    You fumble through the module diagnostics. Not your most thorough work, but it'll do.
-- else:
-    You run a diagnostic sweep on your installed modules. Everything checks out.
-}
--> pass_time(1)
-
-/*
-
     Engine Tune (P2)
     Deep engine diagnostics when condition is critical. Costs 2 AP.
     Separate from the backlog — this is an urgent, targeted repair.
@@ -334,36 +314,32 @@ What sounds good right now?
 
     Backlog Maintenance
     Complete a maintenance task from the backlog. Costs 1 AP.
-    The task is removed from Backlog (and StaleBacklog if stale),
-    then a replacement task is generated to keep the backlog at 4.
+    Economy: +3 condition (rested), +1 condition (fatigued).
+    Engine tasks → EngineCondition, ship tasks → ShipCondition,
+    module tasks → that specific module's condition.
 
 */
 = do_maintenance(task)
 ~ complete_maintenance_task(task)
+~ temp boost = 3
 { fatigue_check():
-    { is_engine_task(task):
-        ~ EngineCondition = MIN(EngineCondition + 3, get_engine_max_condition())
-        You go through the motions on the {maint_task_name(task)} but your hands aren't steady. It's done, but not your best work.
-    - else:
-        ~ ShipCondition = MIN(ShipCondition + 3, 100)
-        You take a run at the {maint_task_name(task)} but you're too tired to do it properly. It'll have to do.
-    }
+    ~ boost = 1
+}
+{
+- is_engine_maint(task):
+    ~ EngineCondition = MIN(EngineCondition + boost, get_engine_max_condition())
+- is_module_maint(task):
+    ~ temp module = maint_task_module(task)
+    ~ temp condition = get_module_condition(module)
+    ~ temp max_condition = get_module_max_condition(module)
+    ~ set_module_condition(module, MIN(condition + boost, max_condition))
 - else:
-    { is_engine_task(task):
-        ~ EngineCondition = MIN(EngineCondition + 5, get_engine_max_condition())
-        { shuffle:
-        -   You work through the {maint_task_name(task)}. The engine sounds healthier already.
-        -   The {maint_task_name(task)} goes smoothly. Engine condition: {EngineCondition}%.
-        -   You finish the {maint_task_name(task)} and wipe your hands. Good as it's going to get.
-        }
-    - else:
-        ~ ShipCondition = MIN(ShipCondition + 5, 100)
-        { shuffle:
-        -   You handle the {maint_task_name(task)}. The ship feels a little more livable.
-        -   The {maint_task_name(task)} is done. Ship condition: {ShipCondition}%.
-        -   You knock out the {maint_task_name(task)}. One less thing to worry about.
-        }
-    }
+    ~ ShipCondition = MIN(ShipCondition + boost, 100)
+}
+{ boost < 3:
+    {MaintFatigued(task)}
+- else:
+    {MaintComplete(task)}
 }
 -> pass_time(1)
 
@@ -489,17 +465,10 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 -> settle_stale_tasks ->
 // Age today's backlog — current tasks become tomorrow's stale set
 ~ StaleBacklog = Backlog
-// Add 4 new daily tasks (tasks accumulate if neglected)
+// Add 3-4 new daily tasks via two-stage selection
 ~ add_daily_tasks()
 // Module auto-tasks — all modules run daily auto-complete logic
 -> module_auto_tasks ->
-// Module diagnostic countdown and degradation
-{ LIST_COUNT(InstalledModules) > 0:
-    ~ DiagnosticCountdown--
-}
-{ DiagnosticCountdown < -1 and LIST_COUNT(InstalledModules) > 0:
-    -> degrade_all_modules ->
-}
 // Morale decay: faster if ship is dirty
 { ShipCondition < 50:
     ~ Morale = MAX(Morale - 3, 0)
@@ -537,21 +506,19 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ temp task = pop(overdue)
 ~ Backlog -= task
 ~ StaleBacklog -= task
-{ is_engine_task(task):
+{
+- is_engine_maint(task):
     ~ EngineCondition = MAX(EngineCondition - 5, 0)
-    { shuffle:
-    -   That clicking in the engine has become a grinding noise. You should have handled the {maint_task_name(task)}. Engine: {EngineCondition}%.
-    -   The {maint_task_name(task)} you've been putting off? It's causing problems now. Engine: {EngineCondition}%.
-    -   The {maint_task_name(task)} went unattended. Engine: {EngineCondition}%.
+- is_module_maint(task):
+    ~ temp module = maint_task_module(task)
+    // Guard: skip if module was uninstalled since task was added
+    { InstalledModules ? module:
+        ~ set_module_condition(module, MAX(get_module_condition(module) - 5, 1))
     }
 - else:
     ~ ShipCondition = MAX(ShipCondition - 5, 0)
-    { shuffle:
-    -   The {maint_task_name(task)} you've been ignoring is now a real problem. Ship: {ShipCondition}%.
-    -   You should have dealt with the {maint_task_name(task)} yesterday. The ship's paying for it. Ship: {ShipCondition}%.
-    -   The {maint_task_name(task)} went unattended. Ship: {ShipCondition}%.
-    }
 }
+{MaintOverdue(task)}
 { LIST_COUNT(overdue) > 0:
     -> settle_next
 }
@@ -569,7 +536,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 { tier:
     - 1: ~ return (not FlipDone and TripDay >= TripDuration / 2)
     - 2: ~ return (EngineCondition < 80) or (Fatigue >= 70)
-    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3) or (LIST_COUNT(Backlog) > 0) or (DiagnosticCountdown <= 0 and LIST_COUNT(InstalledModules) > 0)
+    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3) or (LIST_COUNT(Backlog) > 0)
     - 4: ~ return true  // Relax is always available
 }
 ~ return false
@@ -621,30 +588,136 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 
 */
 
-// Is this task an engine task? Engine tasks affect EngineCondition,
-// ship tasks affect ShipCondition. Subset defined by EngineTasks VAR.
-=== function is_engine_task(task)
-~ return EngineTasks ? task
+// Classification: which system does this maintenance task belong to?
+=== function is_engine_maint(task)
+~ return LIST_ALL(EngineMaintTasks) ? task
+
+=== function is_ship_maint(task)
+~ return LIST_ALL(ShipMaintTasks) ? task
 
 // Human-readable name for a maintenance task.
-=== function maint_task_name(task)
+=== function MaintName(task)
 { task:
-- EngTune:    ~ return "engine tune-up"
-- FuelLine:   ~ return "fuel line cleaning"
-- Injector:   ~ return "injector calibration"
-- Coolant:    ~ return "coolant system check"
-- AirFilter:  ~ return "air filter swap"
-- HullCheck:  ~ return "hull inspection"
-- DrainLines: ~ return "drain line flush"
-- Scrub:      ~ return "common area scrub"
+// Engine tasks
+- EngTune:        ~ return "engine tune-up"
+- FuelLine:       ~ return "fuel line cleaning"
+- Injector:       ~ return "injector calibration"
+- Coolant:        ~ return "coolant system check"
+// Ship tasks
+- AirFilter:      ~ return "air filter swap"
+- HullCheck:      ~ return "hull inspection"
+- DrainLines:     ~ return "drain line flush"
+- Scrub:          ~ return "common area scrub"
+// Module tasks
+- RepDroneServo:  ~ return "repair drone servo calibration"
+- RepDroneOptics: ~ return "repair drone optics cleaning"
+- ClnDroneBrush:  ~ return "cleaning drone brush replacement"
+- ClnDroneFilter: ~ return "cleaning drone filter swap"
+- NavChipFlush:   ~ return "nav computer chip flush"
+- NavGyroCalib:   ~ return "nav gyroscope calibration"
+- CargoSensor:    ~ return "cargo sensor recalibration"
+- CargoSealCheck: ~ return "cargo bay seal check"
+- EntWiring:      ~ return "entertainment system wiring check"
+- EntDisplayClean: ~ return "display panel cleaning"
+- WellSanitize:   ~ return "wellness suite sanitization"
+- WellCalib:      ~ return "autodoc calibration"
 }
 ~ return "maintenance"
 
-// Generate the initial backlog of 4 random tasks at trip start.
+// Completion text for a maintenance task (rested).
+=== function MaintComplete(task)
+{ task:
+// Engine tasks
+- EngTune:        ~ return "You run through the engine tune-up. Sounds healthier already."
+- FuelLine:       ~ return "You flush the fuel lines clean. Flow rate's back to normal."
+- Injector:       ~ return "You recalibrate the injectors. The engine idles smoother now."
+- Coolant:        ~ return "You top off the coolant and bleed the air out. Temps look good."
+// Ship tasks
+- AirFilter:      ~ return "You pop the old filters out and slot in fresh ones. The air tastes better already."
+- HullCheck:      ~ return "You walk the hull sections checking for stress fractures. All clear."
+- DrainLines:     ~ return "You hook up the purge line and flush the residue. Disgusting, but necessary."
+- Scrub:          ~ return "You give the common areas a proper scrub. The ship feels livable again."
+// Module tasks
+- RepDroneServo:  ~ return "You recalibrate the repair drone's servos. Its movements are precise again."
+- RepDroneOptics: ~ return "You clean the repair drone's optical sensors. It can see what it's fixing now."
+- ClnDroneBrush:  ~ return "You swap the cleaning drone's worn brushes for fresh ones."
+- ClnDroneFilter: ~ return "You replace the cleaning drone's clogged filter. Much better airflow."
+- NavChipFlush:   ~ return "You flush the nav computer's cache. Response time is snappy again."
+- NavGyroCalib:   ~ return "You recalibrate the navigation gyroscopes. Heading data looks solid."
+- CargoSensor:    ~ return "You recalibrate the cargo bay sensors. Weight readings are accurate again."
+- CargoSealCheck: ~ return "You inspect the cargo bay seals and tighten the loose ones."
+- EntWiring:      ~ return "You trace the entertainment system wiring and fix a dodgy connection."
+- EntDisplayClean: ~ return "You clean the display panels. The picture's crisp again."
+- WellSanitize:   ~ return "You run the wellness suite through a full sanitization cycle."
+- WellCalib:      ~ return "You recalibrate the autodoc's sensors. Readings are precise again."
+}
+~ return "You finish the maintenance task."
+
+// Completion text for a maintenance task (fatigued — reduced effectiveness).
+=== function MaintFatigued(task)
+{ task:
+// Engine tasks
+- EngTune:        ~ return "Your hands shake through the tune-up. It's done, but not your best work."
+- FuelLine:       ~ return "You fumble with the fuel line fittings. Close enough."
+- Injector:       ~ return "You squint at the injector readings, too tired to be precise."
+- Coolant:        ~ return "You slosh coolant everywhere topping off the system. It'll do."
+// Ship tasks
+- AirFilter:      ~ return "You swap the filters but drop one in the process. Good enough."
+- HullCheck:      ~ return "You half-heartedly walk the hull. Probably fine."
+- DrainLines:     ~ return "You flush the drains but skip the secondary lines. Too tired."
+- Scrub:          ~ return "You push a mop around but your heart isn't in it."
+// Module tasks
+- RepDroneServo:  ~ return "You fumble the servo calibration. The drone wobbles a bit less, at least."
+- RepDroneOptics: ~ return "You wipe the drone's optics but can barely keep your own eyes open."
+- ClnDroneBrush:  ~ return "You swap the brushes but install one backwards. It'll work, mostly."
+- ClnDroneFilter: ~ return "You jam a new filter in place. Not a clean fit, but it'll run."
+- NavChipFlush:   ~ return "You start the cache flush but skip the verification step."
+- NavGyroCalib:   ~ return "You attempt the gyro calibration but the numbers swim. Close enough."
+- CargoSensor:    ~ return "You poke at the sensor calibration. The readings are... better."
+- CargoSealCheck: ~ return "You check a few seals but skip the hard-to-reach ones."
+- EntWiring:      ~ return "You jiggle a wire until the static clears. Engineering at its finest."
+- EntDisplayClean: ~ return "You smear the displays more than clean them."
+- WellSanitize:   ~ return "You run a quick sanitization cycle. Probably killed most of the germs."
+- WellCalib:      ~ return "You squint at the autodoc readings and call it calibrated."
+}
+~ return "You go through the motions on the maintenance task. Not your best work."
+
+// Consequence text for an overdue maintenance task (auto-resolved with penalty).
+=== function MaintOverdue(task)
+{ task:
+// Engine tasks
+- EngTune:        ~ return "The engine's been knocking all day. Should have done that tune-up."
+- FuelLine:       ~ return "Fuel flow is getting sluggish. The lines needed cleaning days ago."
+- Injector:       ~ return "The injectors are misfiring. You can hear it in the engine's stutter."
+- Coolant:        ~ return "The engine's running hot. The coolant system needed attention."
+// Ship tasks
+- AirFilter:      ~ return "The air smells stale and metallic. Those filters are long overdue."
+- HullCheck:      ~ return "You hear a creak you don't recognize. Should have checked the hull."
+- DrainLines:     ~ return "The drains are backing up. Should have flushed them when you had the chance."
+- Scrub:          ~ return "The common areas are getting grimy. Morale isn't the only thing suffering."
+// Module tasks
+- RepDroneServo:  ~ return "The repair drone's arm is jerking erratically. The servos needed attention."
+- RepDroneOptics: ~ return "The repair drone keeps bumping into things. Its optics are filthy."
+- ClnDroneBrush:  ~ return "The cleaning drone is just pushing dirt around. Its brushes are shot."
+- ClnDroneFilter: ~ return "The cleaning drone smells worse than what it's cleaning. Filter's clogged."
+- NavChipFlush:   ~ return "The nav computer is sluggish. Its cache is bloated."
+- NavGyroCalib:   ~ return "Course heading keeps drifting. The gyroscopes are way out of spec."
+- CargoSensor:    ~ return "The cargo sensors are giving bogus readings. Hope nothing shifted."
+- CargoSealCheck: ~ return "You hear a whistle near the cargo bay. The seals are loosening."
+- EntWiring:      ~ return "The entertainment system is glitching out. Wiring issue, probably."
+- EntDisplayClean: ~ return "The displays are so grimy you can barely read them."
+- WellSanitize:   ~ return "The wellness suite smells like a gym locker. Sanitization is overdue."
+- WellCalib:      ~ return "The autodoc's readings are drifting. Can't trust it like this."
+}
+~ return "A maintenance task went unattended."
+
+// Generate the initial backlog at trip start.
 === function generate_backlog()
-~ temp pool = LIST_ALL(MaintTasks)
-~ Backlog = list_random_subset_of_size(pool, 4)
+~ Backlog = ()
 ~ StaleBacklog = ()
+~ CompletedToday = ()
+~ MaintCooldown = ()
+~ add_daily_tasks()
 
 // Apply Entertainment System morale bonus to a base recreation boost.
 // At 75%+ condition: +50% bonus (base + base / 2, integer math).
@@ -656,30 +729,39 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 }
 ~ return base_boost + bonus
 
-// Complete a maintenance task: remove from backlog and stale.
+// Complete a maintenance task: remove from backlog/stale, add to cooldown.
 // Replacement tasks are generated at start of next day, not immediately.
 === function complete_maintenance_task(task)
 ~ Backlog -= task
 ~ StaleBacklog -= task
+~ CompletedToday += task
 
 // Are any backlog tasks overdue (survived two days without completion)?
 === function has_overdue_tasks()
 ~ return LIST_COUNT(Backlog ^ StaleBacklog) > 0
 
-// Add 4 new daily maintenance tasks. Tasks accumulate if neglected
-// (max 8 due to LIST size). Called at start of each day in next_day().
+// Two-stage daily task selection. Stage 1: draw 3 engine, 3 ship, 1 module
+// (from installed modules only). Stage 2: coin flip for 3 or 4 from combined pool.
+// Cooldown excludes yesterday's completed tasks from the draw.
 === function add_daily_tasks()
-~ temp available = LIST_ALL(MaintTasks) - Backlog
-~ temp to_add = 4
-{ LIST_COUNT(available) < to_add:
-    ~ to_add = LIST_COUNT(available)
+// Build per-system pools (exclude backlog + cooldown)
+~ temp eng_pool = LIST_ALL(EngineMaintTasks) - Backlog - MaintCooldown
+~ temp ship_pool = LIST_ALL(ShipMaintTasks) - Backlog - MaintCooldown
+~ temp mod_pool = available_module_tasks() - Backlog - MaintCooldown
+// Stage 1: draw candidates from each system
+~ temp combined = list_random_subset_of_size(eng_pool, 3) + list_random_subset_of_size(ship_pool, 3)
+{ LIST_COUNT(mod_pool) > 0:
+    ~ combined += list_random_subset_of_size(mod_pool, 1)
 }
-~ add_daily_tasks_loop(available, to_add)
-
-// Recursive helper for add_daily_tasks().
-=== function add_daily_tasks_loop(ref available, remaining)
-{ remaining <= 0 or LIST_COUNT(available) <= 0:
-    ~ return
+// Stage 2: coin flip for 3 or 4, then draw from combined pool
+~ temp draw_count = 3
+{ RANDOM(1, 2) == 1:
+    ~ draw_count = 4
 }
-~ Backlog += pop_random(available)
-~ add_daily_tasks_loop(available, remaining - 1)
+{ LIST_COUNT(combined) < draw_count:
+    ~ draw_count = LIST_COUNT(combined)
+}
+~ Backlog += list_random_subset_of_size(combined, draw_count)
+// Rotate cooldown: today's completions become tomorrow's exclusion
+~ MaintCooldown = CompletedToday
+~ CompletedToday = ()

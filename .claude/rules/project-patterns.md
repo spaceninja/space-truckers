@@ -50,7 +50,7 @@ Tasks are threaded (`<-`) into `ship_options` using `CHOICE_COUNT()` caps:
 | ---- | --------------------------------------------- | ------------------------------- |
 | P1   | Urgent (ship flip)                            | No cap                          |
 | P2   | Important (engine, urgent sleep)              | `TaskCap - p3_floor - p4_floor` |
-| P3   | Routine (paperwork, nav, maintenance backlog, module diagnostics) | `TaskCap - p4_floor`            |
+| P3   | Routine (paperwork, nav, maintenance backlog) | `TaskCap - p4_floor`            |
 | P4   | Recreation (relax, sleep)                     | `TaskCap`                       |
 | P5   | Rest (skip day)                               | Only when no P1-P3 active       |
 
@@ -58,11 +58,15 @@ Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes e
 
 ## Maintenance Backlog (ship.ink)
 
-- 4 new tasks added daily from `MaintTasks` LIST via `add_daily_tasks()`, tracked in `Backlog`/`StaleBacklog` VARs
-- Tasks accumulate if neglected (max 8 due to LIST size); settled stale tasks free those types for reuse
-- Two-day aging: fresh → stale (overdue marker) → auto-resolve with -5 condition penalty
-- `is_engine_task()` uses `EngineTasks ? task` to categorize; `has_overdue_tasks()` checks staleness
-- Drone modules auto-complete tasks after daily setup (settle → age → add → drones)
+- Three systems: `EngineMaintTasks`, `ShipMaintTasks`, `ModuleMaintTasks` LISTs
+- Two-stage daily selection via `add_daily_tasks()`: Stage 1 draws 3 engine + 3 ship + 1 module task (installed modules only) → Stage 2 coin flip for 3 or 4 from that combined pool
+- One-day cooldown: `CompletedToday` → `MaintCooldown` rotation excludes recently completed tasks from next day's draw
+- Economy: +3 condition on completion, +1 if fatigued, -5 on overdue auto-resolve
+- Two-day aging: fresh → stale (overdue marker) → auto-resolve with condition penalty
+- `is_engine_maint()` / `is_ship_maint()` / `is_module_maint()` categorize tasks; `maint_task_module(task)` maps module tasks to their parent module
+- `has_overdue_tasks()` checks staleness
+- Module tasks affect only their specific module (per-module both directions)
+- Drone modules auto-complete engine/ship tasks (not module tasks) after daily setup (settle → age → add → drones)
 
 ## Module System (modules.ink)
 
@@ -72,7 +76,8 @@ Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes e
 - `get_drone_capacity(module)` — 2 at 75%+, 1 at 50-74%, 0 below 50%
 - `module_auto_tasks` tunnel: runs in `next_day()` and at trip start; handles all modules — drones (engine/ship task split, stale-first), AutoNav, CargoMgmt, WellnessSuite
 - `RefurbishedModules` VAR tracks 80% max cap; `get_module_max_condition()` enforces it
-- Diagnostic P3 task: `DiagnosticCountdown` VAR, every ~5 days, -5 all modules if skipped 2+ days
+- Module maintenance tasks in `ModuleMaintTasks` LIST: 2 tasks per module; `module_tasks_for(mod)` returns a module's task pair; `available_module_tasks()` returns the union across installed modules
+- Narrative lookup: `MaintName(task)`, `MaintComplete(task)`, `MaintFatigued(task)`, `MaintOverdue(task)` — one function per text type, switch block covering all tasks from all three LISTs
 - Purchase UI: `ship_upgrades` knot with buy new/refurb/repair options for modules; `engine_upgrades` stitch for engine purchases (next tier only, manufacturer gated by location)
 - Engine upgrade system: `EngPrice` stat in `EngineStats`, `RefurbishedEngine` VAR (boolean), `get_engine_max_condition()` in functions.ink mirrors `get_module_max_condition()` pattern; manufacturer availability via `manufacturer_available_here(mfg)` checked against `here`
 - Entertainment System: `apply_recreation_bonus(base)` function in ship.ink — +50% morale at 75%+ condition; new P4 tasks `VideoGames`/`ListenMusic` gated by `is_module_active(Entertainment)`
@@ -95,3 +100,16 @@ Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes e
 - `drainText(story)` — advance to next choice point
 
 Tests jump to specific knots via `story.ChoosePathString()` and set state via `story.variablesState["VarName"]`.
+
+### Performance
+
+`createStory()` compiles the full Ink source and is expensive (~200ms). Never call it in a loop. For statistical or iteration-based tests, compile once and use `story.ResetState()` between iterations:
+
+```js
+const s = createStory();
+for (let i = 0; i < 30; i++) {
+  s.ResetState();
+  s.EvaluateFunction("some_function");
+  // ... assert ...
+}
+```
