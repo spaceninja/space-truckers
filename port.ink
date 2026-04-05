@@ -1,5 +1,7 @@
 VAR PortCargo = ()
 
+LIST FreshIngredientStats = IngName, IngDesc, IngPrice, IngPort
+
 /*
 
     Arrive in Port
@@ -12,6 +14,12 @@ VAR PortCargo = ()
 ~ PortCargo = get_available_cargo(port, 5)
 
 Welcome to {LocationData(port, Name)}!
+{ shuffle:
+-   The smell of real food hits you the moment you dock. Somewhere in this station, something is cooking on an actual stove.
+-   You're already thinking about what you can eat that isn't a ration packet.
+-   After days of reconstituted everything, the station smells like a restaurant. You stand in the docking bay for a moment, just breathing.
+-   Your first stop, before cargo, before fuel, is the station commissary. You need something fresh.
+}
 
 - (port_opts)
 + [Load cargo]
@@ -22,9 +30,10 @@ Welcome to {LocationData(port, Name)}!
 + [Buy fuel] -> fuel_station
 + { EngineCondition < get_engine_max_condition() or ShipCondition < 100 } [Ship repairs] -> repair_services
 + [Ship upgrades] -> ship_upgrades
++ [Go shopping] -> go_shopping
 + [Ship out!] -> ship_out
 + { DEBUG } [\[DEBUG\] Cheats] -> debug_cheats
-- -> port_opts
+- -> arrive_in_port.port_opts
 
 /*
 
@@ -65,7 +74,7 @@ Balance: {PlayerBankBalance} € / Engine: {ShipManufacturer} Tier {ShipEngineTi
     -> cheat_menu
 + { LIST_COUNT(InstalledModules) < LIST_COUNT(LIST_ALL(ShipModules)) } [\[DEBUG\] Install all modules]
     -> cheat_install_all_modules
-+ [Back] -> port_opts
++ [Back] -> arrive_in_port.port_opts
 - -> cheat_menu
 
 = cheat_install_all_modules
@@ -94,7 +103,7 @@ current mass = {total_mass(ShipCargo)}t
         -> top
     }
 -
-+ [Done] -> port_opts
++ [Done] -> arrive_in_port.port_opts
 
 /*
 
@@ -138,7 +147,7 @@ current mass = {total_mass(ShipCargo)}t
         -> top
     }
 -
-+ [Done] -> port_opts
++ [Done] -> arrive_in_port.port_opts
 
 /*
 
@@ -242,7 +251,7 @@ current mass = {total_mass(ShipCargo)}t
 - else:
     You have no cargo to deliver to {LocationData(here, Name)}.
 }
-+ [Done] -> port_opts
++ [Done] -> arrive_in_port.port_opts
 
 /*
 
@@ -273,7 +282,7 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
         [Quarter tank ({quarter_cost} €)]
         -> buy_fuel(quarter_tank)
 }
-+ [Done] -> port_opts
++ [Done] -> arrive_in_port.port_opts
 
 /*
 
@@ -328,7 +337,7 @@ Engine condition: {EngineCondition}%{RefurbishedEngine: /{engine_max}% max} / Sh
 + { ShipCondition < 100 and PlayerBankBalance < ship_cost }
     [Cleaning service — restore to 100% ({ship_cost} €) — can't afford #UNCLICKABLE]
     -> repair_services
-+ [Done] -> port_opts
++ [Done] -> arrive_in_port.port_opts
 
 /*
 
@@ -339,13 +348,13 @@ Engine condition: {EngineCondition}%{RefurbishedEngine: /{engine_max}% max} / Sh
 // Check 1: Hazardous mix
 { cargo_is_mixed_hazardous(ShipCargo):
     You can't depart with hazardous and non-hazardous cargo in the same hold. Remove the hazardous cargo or clear the hold first.
-    -> port_opts
+    -> arrive_in_port.port_opts
 }
 // Check 2: Express cargo for multiple destinations
 ~ temp express_dest = cargo_express_destination(ShipCargo)
 { cargo_has_express(ShipCargo) and express_dest == None:
     You have Express cargo bound for multiple destinations. Express contracts require a direct run — unload one before departing.
-    -> port_opts
+    -> arrive_in_port.port_opts
 }
 // Check 3: Express destination lock — only show the Express destination
 { express_dest != None:
@@ -359,7 +368,7 @@ Engine condition: {EngineCondition}%{RefurbishedEngine: /{engine_max}% max} / Sh
 + {here != Ceres}    [Go to {LocationData(Ceres, Name)}]    -> flight_options(Ceres)
 + {here != Ganymede} [Go to {LocationData(Ganymede, Name)}] -> flight_options(Ganymede)
 + {here != Titan}    [Go to {LocationData(Titan, Name)}]    -> flight_options(Titan)
-+ [Cancel] -> port_opts
++ [Cancel] -> arrive_in_port.port_opts
 
 /*
 
@@ -397,22 +406,22 @@ You have {ShipFuel} fuel, and a total mass of {total_mass(ShipCargo)}t.
 + {not can_use_flight_mode(has_express, ShipFuel, slow_cost)}
     [Economy Mode ({slow_cost} fuel, {slow_time} days) #UNCLICKABLE]
     { has_express: Express cargo requires Turbo mode. - else: You do not have enough fuel to use economy mode. }
-    -> port_opts
+    -> arrive_in_port.port_opts
 + {can_use_flight_mode(has_express, ShipFuel, norm_cost)}
     [Balance Mode ({norm_cost} fuel, {norm_time} days)]
     -> transit(to, norm_cost, norm_time, Bal)
 + {not can_use_flight_mode(has_express, ShipFuel, norm_cost)}
     [Balance Mode ({norm_cost} fuel, {norm_time} days) #UNCLICKABLE]
     { has_express: Express cargo requires Turbo mode. - else: You do not have enough fuel to use balance mode. }
-    -> port_opts
+    -> arrive_in_port.port_opts
 + {can_use_flight_mode(blocks_turbo, ShipFuel, fast_cost)}
     [Turbo Mode ({fast_cost} fuel, {fast_time} days)]
     -> transit(to, fast_cost, fast_time, Turbo)
 + {not can_use_flight_mode(blocks_turbo, ShipFuel, fast_cost)}
     [Turbo Mode ({fast_cost} fuel, {fast_time} days) #UNCLICKABLE]
     { blocks_turbo: Fragile or passenger cargo cannot use Turbo mode. - else: You do not have enough fuel to use turbo mode. }
-    -> port_opts
-+ [Cancel] -> port_opts
+    -> arrive_in_port.port_opts
++ [Cancel] -> arrive_in_port.port_opts
 
 /*
 
@@ -434,3 +443,108 @@ You have {ShipFuel} fuel, and a total mass of {total_mass(ShipCargo)}t.
 */
 === function get_fuel_purchase_cost(amount)
 ~ return FLOOR(amount * get_fuel_price(here))
+
+/*
+
+    Fresh Ingredient Data
+    Lookup table for ingredients available at port. Stats: IngName, IngDesc, IngPrice, IngPort.
+    IngPort is the AllLocations value where the item is sold.
+    Items map to fresh meal entries in ship.ink's do_cook() and recipe_name().
+
+*/
+=== function FreshIngredientData(item, stat)
+{ item == EarthStrawberries:
+    ~ return ing_row(stat, "Fresh strawberries", "Makes strawberry shortcake", 20, Earth)
+}
+{ item == EarthWagyu:
+    ~ return ing_row(stat, "Wagyu steak", "Makes pan-seared wagyu", 25, Earth)
+}
+{ item == LunaHerbs:
+    ~ return ing_row(stat, "Hydroponic herb bundle", "Makes herb-crusted fish", 15, Luna)
+}
+{ item == LunaCheese:
+    ~ return ing_row(stat, "Cave-aged cheese", "Makes cheese fondue", 20, Luna)
+}
+{ item == MarsPeppers:
+    ~ return ing_row(stat, "Greenhouse peppers", "Makes stuffed peppers", 15, Mars)
+}
+{ item == MarsHoney:
+    ~ return ing_row(stat, "Olympus honey", "Makes honey-glazed ribs", 20, Mars)
+}
+{ item == CeresTruffles:
+    ~ return ing_row(stat, "Asteroid truffles", "Makes truffle risotto", 25, Ceres)
+}
+{ item == CeresSake:
+    ~ return ing_row(stat, "Belt-brewed sake", "Makes sake-glazed salmon", 20, Ceres)
+}
+{ item == GanymedeIceCream:
+    ~ return ing_row(stat, "Ganymede dairy ice cream", "Makes ice cream sundae", 15, Ganymede)
+}
+{ item == GanymedeSalt:
+    ~ return ing_row(stat, "Europan sea salt", "Makes salt-crusted bread", 20, Ganymede)
+}
+{ item == TitanMeats:
+    ~ return ing_row(stat, "Titan-cured meats", "Makes charcuterie board", 25, Titan)
+}
+{ item == TitanBerries:
+    ~ return ing_row(stat, "Cryo-preserved berries", "Makes berry cobbler", 20, Titan)
+}
+~ return 0
+
+=== function ing_row(stat, name, desc, price, port)
+{ stat:
+- IngName:  ~ return name
+- IngDesc:  ~ return desc
+- IngPrice: ~ return price
+- IngPort:  ~ return port
+}
+~ return 0
+
+// Returns the set of fresh ingredients available at the given port.
+// Recursively filters sourceList, keeping items whose IngPort matches port.
+=== function ingredients_at(port, sourceList)
+~ temp item = pop(sourceList)
+{ item:
+    { FreshIngredientData(item, IngPort) == port:
+        ~ return item + ingredients_at(port, sourceList)
+    - else:
+        ~ return ingredients_at(port, sourceList)
+    }
+}
+~ return ()
+
+/*
+
+    Go Shopping
+    Browse and buy fresh ingredients available at the current port.
+    Purchased items appear as guaranteed cooking options during transit.
+
+*/
+=== go_shopping
+The station market has a small fresh section — real food, grown locally.
+- (shop_menu)
+~ temp stock = ingredients_at(here, LIST_ALL(FreshIngredients))
+- (shop_top)
+~ temp item = pop(stock)
+{ item:
+    <- shop_item_choice(item)
+    -> shop_top
+}
+-
++ [Back] -> arrive_in_port.port_opts
+- -> shop_menu
+
+= shop_item_choice(item)
+~ temp price = FreshIngredientData(item, IngPrice)
+~ temp name = FreshIngredientData(item, IngName)
+~ temp desc = FreshIngredientData(item, IngDesc)
++ { PurchasedIngredients ? item } [{ name } — already purchased]
+    You already have this in the galley.
+    -> shop_menu
++ { not (PurchasedIngredients ? item) and PlayerBankBalance >= price } [{ name } — {price} €]
+    ~ PlayerBankBalance -= price
+    ~ PurchasedIngredients += item
+    You pick up the {name}. {desc}. It goes in the galley cooler.
+    -> shop_menu
++ { not (PurchasedIngredients ? item) and PlayerBankBalance < price } [{ name } — {price} € #UNCLICKABLE]
+    -> shop_menu

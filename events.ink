@@ -23,7 +23,7 @@
 // Event registry — tracks which events are still available this trip.
 // Events are set active at trip start and deactivated after firing,
 // preventing repeats. Add new events here and in the dispatch block below.
-LIST Events = (Micrometeorite), (PowerSurge), (DistressSignal), (CargoShift), (Shortcut), (PassengerBirthday), (PassengerComplaint), (PassengerConversation), (MedicalEmergency)
+LIST Events = (Micrometeorite), (PowerSurge), (DistressSignal), (CargoShift), (Shortcut), (CoffeeMachine), (PassengerBirthday), (PassengerComplaint), (PassengerConversation), (MedicalEmergency)
 
 // Passenger event subset — removed from Events at trip start when no
 // passenger cargo is aboard. Keep in sync with the Events list above.
@@ -58,6 +58,7 @@ VAR PassengerEvents = (PassengerBirthday, PassengerComplaint, PassengerConversat
 { chosen == DistressSignal: -> event_distress_signal }
 { chosen == CargoShift: -> event_cargo_shift }
 { chosen == Shortcut: -> event_shortcut }
+{ chosen == CoffeeMachine: -> event_coffee_machine }
 { chosen == PassengerBirthday: -> event_passenger_birthday }
 { chosen == PassengerComplaint: -> event_passenger_complaint }
 { chosen == PassengerConversation: -> event_passenger_conversation }
@@ -265,6 +266,39 @@ Your nav computer flags an alternate route — a gravitational slingshot corrido
     // Backfire — add time
     ~ ShipClock = ShipClock + 1
     Turns out there's a reason nobody comes this way. The debris is denser than the charts suggested and you spend hours carefully threading through it. You've actually lost time.
+}
+-> transit.ship_options
+
+/*
+
+    Coffee Machine Breakdown
+    The coffee machine has stopped working. The player can spend 2 AP to fix it
+    or take a significant morale hit. If carrying passengers, an additional
+    morale penalty applies if it goes unrepaired.
+
+*/
+=== event_coffee_machine
+A grinding noise from the galley, then silence. You investigate. The coffee machine has died.
+{ has_passenger_cargo(ShipCargo):
+    One of your passengers pokes their head in to ask about morning coffee. You don't have good news.
+}
+
++ [Fix it — spend the time tracking down the problem (2 AP)]
+    -> coffee_fix
++ [Leave it broken — you'll manage]
+    -> coffee_ignore
+
+= coffee_fix
+You pull the machine apart, diagnose a clogged heating element, and spend two hours putting it back together right. The first cup it makes is mediocre. The second one is perfect.
+~ Morale = MIN(Morale + 5, 100)
+-> transit.pass_time(2)
+
+= coffee_ignore
+~ Morale = MAX(Morale - 15, 0)
+You try to convince yourself you don't need it. You absolutely need it. The rest of the day is worse for it.
+{ has_passenger_cargo(ShipCargo):
+    ~ Morale = MAX(Morale - 5, 0)
+    Your passengers are not happy about it either. You get three separate complaints before lunch.
 }
 -> transit.ship_options
 

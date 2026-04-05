@@ -58,6 +58,11 @@ VAR EventChance = 0        // Escalating probability for random events (0–100)
 VAR EventCooldownDay = -1  // TripDay of last event; prevents pile-ups same day
 VAR CargoDamagePct = 0     // Accumulated cargo damage % (reduces delivery pay)
 
+// Fresh ingredients — purchasable at port, unlock premium cooking options in transit.
+// Each item corresponds to a port-specific ingredient and a named meal in do_cook().
+LIST FreshIngredients = EarthStrawberries, EarthWagyu, LunaHerbs, LunaCheese, MarsPeppers, MarsHoney, CeresTruffles, CeresSake, GanymedeIceCream, GanymedeSalt, TitanMeats, TitanBerries
+VAR PurchasedIngredients = ()  // subset of FreshIngredients currently in the galley
+
 // Module system — ship modules that automate routine tasks.
 LIST ShipModules = RepairDrones, CleaningDrones, AutoNav, CargoMgmt, Entertainment, WellnessSuite
 LIST ModuleStats = ModName, ModPrice, ModDesc
