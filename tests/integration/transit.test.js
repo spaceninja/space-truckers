@@ -282,6 +282,8 @@ describe("Task priority system", () => {
     function setupRestTransit(overrides = {}) {
       const story = setupTransit(overrides);
       story.variablesState["Backlog"] = new InkList();
+      // Reset EventChance so the re-entry doesn't risk triggering a random event
+      story.variablesState["EventChance"] = 0;
       // Re-enter ship_options after clearing backlog
       story.ChoosePathString("transit.ship_options");
       drainText(story);
