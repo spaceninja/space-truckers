@@ -78,7 +78,10 @@ function setupTransit(overrides = {}) {
     PaperworkTotal: 1,
     TripFuelCost: 100,
     TripFuelPenalty: 0,
-    NavChecksCompleted: 0,
+    NavCheckDueDay: 99,
+    NavPenaltyPct: 0,
+    CargoCheckDueDay: 99,
+    CargoCheckPenaltyPct: 0,
     AP: 6,
     ActionPointsMax: 6,
     Fatigue: 0,
@@ -171,20 +174,20 @@ describe("Task priority system", () => {
       expect(hasChoice(story, "paperwork")).toBe(true);
     });
 
-    it("shows nav check on schedule (day divisible by 3)", () => {
-      const story = setupTransit({ TripDay: 6 });
+    it("shows nav check when due (TripDay >= NavCheckDueDay)", () => {
+      const story = setupTransit({ TripDay: 6, NavCheckDueDay: 6 });
       expect(hasChoice(story, "Navigation check")).toBe(true);
     });
 
-    it("does not show nav check off schedule", () => {
-      const story = setupTransit({ TripDay: 4 });
+    it("does not show nav check before it is due", () => {
+      const story = setupTransit({ TripDay: 4, NavCheckDueDay: 6 });
       expect(hasChoice(story, "Navigation check")).toBe(false);
     });
 
-    it("does not show nav check after completing it", () => {
+    it("does not show nav check after completing it (due day advanced)", () => {
       const story = setupTransit({
         TripDay: 6,
-        NavChecksCompleted: 2, // already done checks for day 3 and day 6
+        NavCheckDueDay: 9, // completed on day 6, next due day 9
       });
       expect(hasChoice(story, "Navigation check")).toBe(false);
     });
@@ -193,6 +196,24 @@ describe("Task priority system", () => {
       const story = setupTransit();
       // Backlog is always populated at trip start
       expect(hasChoice(story, "Ship maintenance")).toBe(true);
+    });
+
+    it("shows cargo inspection when due (TripDay >= CargoCheckDueDay)", () => {
+      const story = setupTransit({ TripDay: 2, CargoCheckDueDay: 2 });
+      expect(hasChoice(story, "Cargo inspection")).toBe(true);
+    });
+
+    it("does not show cargo inspection before it is due", () => {
+      const story = setupTransit({ TripDay: 1, CargoCheckDueDay: 2 });
+      expect(hasChoice(story, "Cargo inspection")).toBe(false);
+    });
+
+    it("does not show cargo inspection after completing it (due day advanced)", () => {
+      const story = setupTransit({
+        TripDay: 2,
+        CargoCheckDueDay: 5, // completed on day 2, next due day 5
+      });
+      expect(hasChoice(story, "Cargo inspection")).toBe(false);
     });
   });
 
@@ -222,6 +243,7 @@ describe("Task priority system", () => {
         FlipDone: false,
         TripDay: 6, // midpoint AND nav check day
         TripDuration: 10,
+        NavCheckDueDay: 6,
         EngineCondition: 70,
         Fatigue: 75,
         PaperworkDone: 0,
@@ -260,6 +282,8 @@ describe("Task priority system", () => {
     function setupRestTransit(overrides = {}) {
       const story = setupTransit(overrides);
       story.variablesState["Backlog"] = new InkList();
+      // Reset EventChance so the re-entry doesn't risk triggering a random event
+      story.variablesState["EventChance"] = 0;
       // Re-enter ship_options after clearing backlog
       story.ChoosePathString("transit.ship_options");
       drainText(story);
@@ -398,7 +422,8 @@ describe("Task priority system", () => {
         // Activate several tasks across tiers
         PaperworkDone: 0,
         PaperworkTotal: 2,
-        TripDay: 6, // nav check day
+        TripDay: 6,
+        NavCheckDueDay: 6, // nav check due
       });
       const choices = choiceTexts(story);
       // Should not exceed TaskCap + possible Rest
@@ -415,7 +440,8 @@ describe("Task priority system", () => {
         PaperworkDone: 0,
         PaperworkTotal: 2,
         ShipCondition: 70,
-        TripDay: 6, // nav check day — all 3 P3 tasks eligible
+        TripDay: 6,
+        NavCheckDueDay: 6, // nav check due — all 3 P3 tasks eligible
       });
 
       const p3Seen = new Set();
@@ -426,6 +452,7 @@ describe("Task priority system", () => {
         story.variablesState["PaperworkTotal"] = 2;
         story.variablesState["ShipCondition"] = 70;
         story.variablesState["TripDay"] = 6;
+        story.variablesState["NavCheckDueDay"] = 6;
         story.variablesState["TaskCap"] = 3;
         story.variablesState["EventChance"] = 0;
         story.variablesState["EventCooldownDay"] = -1;
@@ -506,10 +533,22 @@ describe("Fatigue-based task failure", () => {
       const story = setupTransit({
         Fatigue: 0,
         TripDay: 6,
-        NavChecksCompleted: 1,
+        NavCheckDueDay: 6,
       });
       pickChoice(story, "Navigation check");
-      expect(story.variablesState["NavChecksCompleted"]).toBe(2);
+      // Success advances NavCheckDueDay by 3
+      expect(story.variablesState["NavCheckDueDay"]).toBe(9);
+    });
+
+    it("cargo inspection succeeds at fatigue 0", () => {
+      const story = setupTransit({
+        Fatigue: 0,
+        TripDay: 2,
+        CargoCheckDueDay: 2,
+      });
+      pickChoice(story, "Cargo inspection");
+      // Success advances CargoCheckDueDay by 3 (no special cargo in default setup)
+      expect(story.variablesState["CargoCheckDueDay"]).toBe(5);
     });
 
     it("paperwork succeeds at fatigue 0", () => {
@@ -557,7 +596,7 @@ describe("Fatigue-based task failure", () => {
       const story = setupTransit({
         Fatigue: 90,
         TripDay: 6,
-        NavChecksCompleted: 0,
+        NavCheckDueDay: 6,
       });
 
       let successes = 0;
@@ -565,7 +604,7 @@ describe("Fatigue-based task failure", () => {
       for (let i = 0; i < iterations; i++) {
         story.variablesState["Fatigue"] = 90;
         story.variablesState["TripDay"] = 6;
-        story.variablesState["NavChecksCompleted"] = 0;
+        story.variablesState["NavCheckDueDay"] = 6;
         story.variablesState["AP"] = 6;
         story.variablesState["ShipClock"] = 5;
         story.variablesState["EventChance"] = 0;
@@ -573,7 +612,8 @@ describe("Fatigue-based task failure", () => {
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         pickChoice(story, "Navigation check");
-        if (story.variablesState["NavChecksCompleted"] === 1) successes++;
+        // Success: NavCheckDueDay advances to 9; failure: stays at 6
+        if (story.variablesState["NavCheckDueDay"] === 9) successes++;
         // Early exit: once we've seen both success and failure, variety is confirmed
         if (successes > 0 && successes < i + 1) break;
       }
@@ -680,14 +720,14 @@ describe("Fatigue-based task failure", () => {
       const story = setupTransit({
         Fatigue: 95,
         TripDay: 6,
-        NavChecksCompleted: 0,
+        NavCheckDueDay: 6,
       });
 
       let failureText = null;
       for (let i = 0; i < 50; i++) {
         story.variablesState["Fatigue"] = 95;
         story.variablesState["TripDay"] = 6;
-        story.variablesState["NavChecksCompleted"] = 0;
+        story.variablesState["NavCheckDueDay"] = 6;
         story.variablesState["AP"] = 6;
         story.variablesState["ShipClock"] = 5;
         story.variablesState["EventChance"] = 0;
@@ -695,7 +735,8 @@ describe("Fatigue-based task failure", () => {
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         const text = pickChoiceGetText(story, "Navigation check");
-        if (story.variablesState["NavChecksCompleted"] === 0) {
+        // Failure: NavCheckDueDay stays at 6 (not advanced)
+        if (story.variablesState["NavCheckDueDay"] === 6) {
           failureText = text;
           break;
         }

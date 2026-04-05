@@ -162,11 +162,11 @@ describe("ModuleData", () => {
   });
 
   it("returns correct price for AutoNav", () => {
-    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.AutoNav"), L(story, "ModuleStats.ModPrice")])).toBe(600);
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.AutoNav"), L(story, "ModuleStats.ModPrice")])).toBe(500);
   });
 
   it("returns correct price for CargoMgmt", () => {
-    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.CargoMgmt"), L(story, "ModuleStats.ModPrice")])).toBe(500);
+    expect(story.EvaluateFunction("ModuleData", [L(story, "ShipModules.CargoMgmt"), L(story, "ModuleStats.ModPrice")])).toBe(700);
   });
 
   it("returns correct price for Entertainment", () => {

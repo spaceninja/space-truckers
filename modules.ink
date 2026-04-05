@@ -9,8 +9,8 @@
 { module:
 - RepairDrones:   ~ return module_row(stat, "Repair Drones", 800, "Auto-complete engine maintenance tasks")
 - CleaningDrones: ~ return module_row(stat, "Cleaning Drones", 600, "Auto-complete ship maintenance tasks")
-- AutoNav:        ~ return module_row(stat, "Auto-Nav Computer", 600, "Auto-complete navigation checks")
-- CargoMgmt:      ~ return module_row(stat, "Cargo Management", 500, "Auto-file paperwork daily")
+- AutoNav:        ~ return module_row(stat, "Auto-Nav Computer", 500, "Auto-complete navigation checks")
+- CargoMgmt:      ~ return module_row(stat, "Cargo Management", 700, "Auto-complete cargo inspections and paperwork")
 - Entertainment:  ~ return module_row(stat, "Entertainment System", 400, "Improved recreation and morale boosts")
 - WellnessSuite:  ~ return module_row(stat, "Wellness Suite", 500, "Daily health benefits and emergency medical care")
 }
@@ -293,9 +293,9 @@
 
 = process_auto_nav
 ~ temp nav_cond = get_module_condition(AutoNav)
-{ TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3:
+{ TripDay >= NavCheckDueDay:
     { nav_cond >= 75:
-        ~ NavChecksCompleted++
+        ~ NavCheckDueDay = TripDay + 3
         { shuffle:
         -   The auto-nav computer completes the course correction while you eat breakfast.
         -   A soft chime — the nav computer has finished today's trajectory check.
@@ -303,8 +303,8 @@
         }
     - else:
         { nav_cond >= 50:
-            { NavChecksCompleted mod 2 == 0:
-                ~ NavChecksCompleted++
+            { TripDay mod 2 == 0:
+                ~ NavCheckDueDay = TripDay + 3
                 The auto-nav computer struggles through the course correction. It's running slow, but gets the job done.
             - else:
                 The auto-nav is acting up again. It wasn't able to handle today's nav check. You make a mental note to get it looked at next time you're in port.
@@ -316,7 +316,31 @@
 
 = process_cargo_mgmt
 ~ temp cargo_cond = get_module_condition(CargoMgmt)
-{ PaperworkDone < PaperworkTotal:
+~ temp did_task = false
+// Cargo inspections take priority — they expire, paperwork doesn't
+{ TripDay >= CargoCheckDueDay:
+    { cargo_cond >= 75:
+        ~ CargoCheckDueDay = TripDay + get_cargo_check_interval()
+        ~ did_task = true
+        { shuffle:
+        -   The cargo management system runs the daily hold inspection automatically. All clear.
+        -   A soft ping from cargo management — today's inspection is done. Seals and tie-downs checked.
+        -   The cargo system completes its inspection sweep. Everything in the hold is secure.
+        }
+    - else:
+        { cargo_cond >= 50:
+            { TripDay mod 2 == 0:
+                ~ CargoCheckDueDay = TripDay + get_cargo_check_interval()
+                ~ did_task = true
+                The cargo management system struggles through the hold inspection. It flags a few things but gets the job done.
+            - else:
+                The cargo management system tried to run an inspection but couldn't finish. It's running slow — you should get it looked at.
+            }
+        }
+    }
+}
+// If no inspection was done (or none was due), try paperwork
+{ not did_task and PaperworkDone < PaperworkTotal:
     { cargo_cond >= 75:
         ~ PaperworkDone = PaperworkDone + 1
         { PaperworkDone >= PaperworkTotal:

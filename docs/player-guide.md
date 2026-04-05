@@ -95,7 +95,13 @@ At the midpoint of every trip, your ship needs to rotate 180 degrees to begin de
 
 ### Navigation Checks
 
-Every few days, a navigation check will appear in your task list. These are quick (1 AP) and keep your course efficient. Skip them and you'll burn extra fuel compensating on arrival.
+Every few days, a navigation check will appear in your task list. These are quick (1 AP) and keep your course efficient. Skip them and you'll burn extra fuel compensating on arrival — the penalty accumulates for every day the check is overdue, so don't put it off.
+
+### Cargo Inspections
+
+Regulations require you to inspect your cargo every few days and sign off that everything is secure. These are 1 AP tasks that appear on a schedule throughout the trip. Miss the window and you'll face customs fines at delivery — the fine grows for every day you're overdue.
+
+If you're carrying fragile or hazardous cargo, inspections are required more frequently (every 2 days instead of 3). That's the trade-off for the higher pay those shipments offer.
 
 ### Paperwork
 
@@ -142,9 +148,9 @@ At any port, you can visit the **Ship upgrades** menu to buy modules that automa
 
 **Cleaning Drones** (600€) — Same as Repair Drones, but for ship maintenance tasks (air filters, hull inspections, scrubbing, drain lines).
 
-**Auto-Nav Computer** (600€) — Automatically handles the navigation check that comes due every three days. At full condition (75%+), it handles every check. At reduced condition (50-74%), it handles every other check — you'll need to cover the rest manually. Below 50%, it goes offline. When the auto-nav handles a check, the task won't appear in your task list that day.
+**Auto-Nav Computer** (500€) — Automatically handles the navigation check that comes due every three days. At full condition (75%+), it handles every check. At reduced condition (50-74%), it handles every other check — you'll need to cover the rest manually. Below 50%, it goes offline. When the auto-nav handles a check, the task won't appear in your task list that day.
 
-**Cargo Management System** (500€) — Automatically files one chunk of your trip paperwork each day. At full condition (75%+), it files every day. At reduced condition (50-74%), it only manages to file on odd-numbered trip days. Below 50%, it goes offline. If it handles the last chunk, the paperwork task disappears from your list.
+**Cargo Management System** (700€) — Automatically handles both cargo inspections and paperwork. It can only do one task per day, so it prioritizes inspections (which expire if you miss the window) and files paperwork on quieter days. At full condition (75%+), it handles everything it can. At reduced condition (50-74%), it only manages to act every other day. Below 50%, it goes offline.
 
 **Entertainment System** (400€) — Upgrades your recreation options and improves how rewarding downtime feels. At full condition (75%+), all recreation activities give a 50% morale bonus, and two new options unlock: "Play video games" (+10 morale) and "Listen to music" (+5 morale). At reduced condition (50-74%), the new options are available but there's no bonus to any recreation. Below 50%, it goes offline and everything reverts to baseline.
 
@@ -235,6 +241,8 @@ The repair screen will show the condition cap for a refurbished engine (e.g., "r
 
 **Do the flip on time.** Every day you delay the midpoint flip costs extra fuel. And don't do it exhausted — get some sleep first.
 
-**Don't skip paperwork.** The customs fines for missing documentation add up. Special cargo generates extra paperwork, so factor that into your planning when loading flagged cargo.
+**Don't skip paperwork or cargo inspections.** The fines for missing documentation add up. Special cargo (fragile or hazardous) requires more frequent inspections — factor that in when loading. The Cargo Management module handles both automatically if you can afford it.
+
+**Keep up with cargo inspections.** The fine grows for every day you're overdue, so don't wait. If you miss the window, do it as soon as you can.
 
 **Sleep is productive.** It's tempting to spend every AP on tasks, but working while exhausted leads to mistakes. A well-rested pilot wastes less fuel and gets more done.

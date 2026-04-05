@@ -1534,6 +1534,34 @@ LIST AllCargo =
 
 /*
 
+    Returns true if any cargo in the hold has the Fragile or Hazardous flag.
+    Used for cargo inspection frequency (every 2 days instead of every 3).
+
+*/
+=== function has_special_inspection_cargo(items)
+~ temp item = pop(items)
+{ item:
+    { CargoData(item, Fragile) or CargoData(item, Hazardous):
+        ~ return true
+    }
+    ~ return has_special_inspection_cargo(items)
+}
+~ return false
+
+/*
+
+    Returns the cargo inspection cooldown interval in days.
+    2 days for Fragile/Hazardous cargo, 3 days otherwise.
+
+*/
+=== function get_cargo_check_interval()
+{ has_special_inspection_cargo(ShipCargo):
+    ~ return 2
+}
+~ return 3
+
+/*
+
     Gets a randomized selection of cargo from the specified port.
     Express cargo is filtered out if the destination is unreachable in Turbo
     at the player's current engine tier.
@@ -1615,7 +1643,7 @@ LIST AllCargo =
 
     Get Paperwork Penalty Percentage
     Returns the delivery pay reduction for incomplete paperwork.
-    Each missing chunk costs 10% of pay, capped at 50%.
+    Each missing chunk costs 5% of pay.
 
 */
 === function get_paperwork_penalty_pct(done, total)
@@ -1623,4 +1651,4 @@ LIST AllCargo =
 { missing <= 0:
     ~ return 0
 }
-~ return MIN(missing * 10, 50)  // 10% per missing chunk, capped at 50%
+~ return missing * 5  // 5% per missing chunk

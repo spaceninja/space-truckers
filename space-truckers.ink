@@ -47,7 +47,10 @@ VAR PaperworkDone = 0     // Chunks completed
 VAR PaperworkTotal = 0    // Chunks required (calculated at departure)
 VAR TripFuelCost = 0      // Base fuel cost of current trip (for % penalty calcs)
 VAR TripFuelPenalty = 0   // Accumulated fuel penalty during transit
-VAR NavChecksCompleted = 0 // Nav checks completed this trip
+VAR NavCheckDueDay = 3    // Day next nav check is due
+VAR NavPenaltyPct = 0     // Accumulated fuel penalty % for overdue nav checks
+VAR CargoCheckDueDay = 2  // Day next cargo inspection is due
+VAR CargoCheckPenaltyPct = 0 // Accumulated pay penalty % for overdue cargo inspections
 VAR TaskCap = 7            // Max top-level tasks shown (excluding P5 Rest)
 VAR TasksCompletedToday = 0 // Tasks completed this transit day
 

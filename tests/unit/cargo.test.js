@@ -18,7 +18,7 @@
  * PayRate = 3 (default from space-truckers.ink)
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import { InkList } from "inkjs/full";
 import { createStory, L, cargo } from "../helpers/story.js";
 
@@ -287,8 +287,8 @@ describe("count_paperwork_chunks", () => {
 });
 
 describe("get_paperwork_penalty_pct", () => {
-  // Formula: MIN(missing × 10, 50) where missing = total - done
-  // 10% per missing chunk, capped at 50%
+  // Formula: missing × 5 where missing = total - done
+  // 5% per missing chunk, no separate cap (combined cap is at delivery)
 
   function penaltyPct(done, total) {
     return story.EvaluateFunction("get_paperwork_penalty_pct", [done, total]);
@@ -302,24 +302,81 @@ describe("get_paperwork_penalty_pct", () => {
     expect(penaltyPct(5, 3)).toBe(0);
   });
 
-  it("returns 10 for 1 missing chunk", () => {
-    expect(penaltyPct(2, 3)).toBe(10);
+  it("returns 5 for 1 missing chunk", () => {
+    expect(penaltyPct(2, 3)).toBe(5);
   });
 
-  it("returns 20 for 2 missing chunks", () => {
-    expect(penaltyPct(1, 3)).toBe(20);
+  it("returns 10 for 2 missing chunks", () => {
+    expect(penaltyPct(1, 3)).toBe(10);
   });
 
-  it("returns 30 for 3 missing chunks", () => {
-    expect(penaltyPct(0, 3)).toBe(30);
+  it("returns 15 for 3 missing chunks", () => {
+    expect(penaltyPct(0, 3)).toBe(15);
   });
 
-  it("caps at 50 for 5+ missing chunks", () => {
-    expect(penaltyPct(0, 6)).toBe(50);
+  it("returns 30 for 6 missing chunks (no cap)", () => {
+    expect(penaltyPct(0, 6)).toBe(30);
   });
 
   it("returns 0 when total is 0 (no paperwork)", () => {
     expect(penaltyPct(0, 0)).toBe(0);
+  });
+});
+
+describe("has_special_inspection_cargo", () => {
+  // Returns true if any cargo has Fragile or Hazardous flag
+
+  function hasSpecial(cargoList) {
+    return story.EvaluateFunction("has_special_inspection_cargo", [cargoList]);
+  }
+
+  it("returns false for empty cargo", () => {
+    expect(hasSpecial(cargo(story))).toBe(false);
+  });
+
+  it("returns false for plain cargo (no flags)", () => {
+    expect(hasSpecial(cargo(story, "003_Water"))).toBe(false);
+  });
+
+  it("returns true for Fragile cargo", () => {
+    expect(hasSpecial(cargo(story, "303_Samples"))).toBe(true);
+  });
+
+  it("returns true for Hazardous cargo", () => {
+    expect(hasSpecial(cargo(story, "501_Methane"))).toBe(true);
+  });
+
+  it("returns true for mixed hold with one Hazardous item", () => {
+    expect(hasSpecial(cargo(story, "003_Water", "501_Methane"))).toBe(true);
+  });
+});
+
+describe("get_cargo_check_interval", () => {
+  // Returns 2 with Fragile/Hazardous cargo, 3 otherwise
+  // Note: sets ShipCargo directly; restores to empty after each test
+
+  afterEach(() => {
+    story.variablesState["ShipCargo"] = cargo(story);
+  });
+
+  it("returns 3 for empty hold", () => {
+    story.variablesState["ShipCargo"] = cargo(story);
+    expect(story.EvaluateFunction("get_cargo_check_interval")).toBe(3);
+  });
+
+  it("returns 3 for plain cargo", () => {
+    story.variablesState["ShipCargo"] = cargo(story, "003_Water");
+    expect(story.EvaluateFunction("get_cargo_check_interval")).toBe(3);
+  });
+
+  it("returns 2 for Fragile cargo", () => {
+    story.variablesState["ShipCargo"] = cargo(story, "303_Samples");
+    expect(story.EvaluateFunction("get_cargo_check_interval")).toBe(2);
+  });
+
+  it("returns 2 for Hazardous cargo", () => {
+    story.variablesState["ShipCargo"] = cargo(story, "501_Methane");
+    expect(story.EvaluateFunction("get_cargo_check_interval")).toBe(2);
   });
 });
 

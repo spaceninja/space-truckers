@@ -159,18 +159,23 @@ current mass = {total_mass(ShipCargo)}t
 /*
 
     Settle Trip Penalties
-    Called on arrival. Calculates missed nav check fuel penalties,
-    applies accumulated fuel penalties, and handles the towing scenario.
-    Paperwork penalties are applied separately during delivery.
+    Called on arrival. Applies accumulated nav check fuel penalties
+    and handles the towing scenario.
+    Paperwork and cargo inspection penalties are applied separately during delivery.
 
 */
 = settle_trip_penalties
-// Nav check penalty: 10% of trip fuel per missed check
-// Checks appear every 3 days (TripDay mod 3 == 0, TripDay > 0)
-~ temp expected_checks = (TripDuration - 1) / 3
-~ temp missed_checks = expected_checks - NavChecksCompleted
-{ missed_checks > 0:
-    ~ TripFuelPenalty = TripFuelPenalty + missed_checks * (TripFuelCost / 10)  // +10% trip fuel per missed check
+// Nav check penalty: accumulated 1% per overdue day during transit
+// Final arrival day tick: if still overdue on arrival, add one more
+{ TripDay > NavCheckDueDay:
+    ~ NavPenaltyPct++
+}
+{ NavPenaltyPct > 0:
+    ~ TripFuelPenalty = TripFuelPenalty + TripFuelCost * NavPenaltyPct / 100
+}
+// Final arrival day tick for cargo inspection penalty
+{ TripDay > CargoCheckDueDay:
+    ~ CargoCheckPenaltyPct++
 }
 // Apply accumulated fuel penalty
 { TripFuelPenalty > 0:
@@ -191,7 +196,8 @@ current mass = {total_mass(ShipCargo)}t
 
     Deliver Cargo
     Delivers all cargo destined for the current port.
-    Incomplete paperwork reduces pay by 10% per missing chunk (capped at 50%).
+    Incomplete paperwork reduces pay by 5% per missing chunk.
+    Missed cargo inspections reduce pay by 1% per overdue day.
     Cargo damage from transit events reduces pay by CargoDamagePct.
     Total combined penalty is capped at 75%.
 
@@ -200,7 +206,7 @@ current mass = {total_mass(ShipCargo)}t
 ~ temp _items = ShipCargo
 ~ temp delivery_count = 0
 ~ temp paperwork_penalty_pct = get_paperwork_penalty_pct(PaperworkDone, PaperworkTotal)
-~ temp total_penalty_pct = MIN(paperwork_penalty_pct + CargoDamagePct, 75)
+~ temp total_penalty_pct = MIN(paperwork_penalty_pct + CargoCheckPenaltyPct + CargoDamagePct, 75)
 - (top)
 ~ temp cargo = pop(_items)
 { cargo:
@@ -225,6 +231,9 @@ current mass = {total_mass(ShipCargo)}t
 { delivery_count > 0:
     { paperwork_penalty_pct > 0:
         Incomplete paperwork cost you {paperwork_penalty_pct}% of your delivery pay.
+    }
+    { CargoCheckPenaltyPct > 0:
+        Missed cargo inspections cost you {CargoCheckPenaltyPct}% of your delivery pay.
     }
     { CargoDamagePct > 0:
         Damaged cargo cost you an additional {CargoDamagePct}% of your delivery pay.

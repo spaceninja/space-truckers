@@ -298,19 +298,31 @@ These accumulate in `TripFuelPenalty` during transit and are settled in `settle_
 |---|---|---|
 | Flip delay | Each day past midpoint without flipping | +5% of trip fuel cost per day |
 | Sloppy flip | Executing flip while overtired | +10% of trip fuel cost (one-time) |
-| Missed nav check | Not doing a nav check when offered | +10% of trip fuel cost per missed check |
+| Missed nav check | Each day past `NavCheckDueDay` without completing it | +1% of trip fuel cost per overdue day |
 
-Nav checks appear every 3 days (`TripDay mod 3 == 0, TripDay > 0`). Expected check count: `(TripDuration - 1) / 3`.
+Nav checks use a cooldown model: `NavCheckDueDay` starts at 3 and advances by 3 on each completion (`NavCheckDueDay = TripDay + 3`). A penalty tick fires in `next_day()` when `TripDay > NavCheckDueDay`, and a final tick fires in `settle_trip_penalties` on arrival if still overdue. The accumulated `NavPenaltyPct` is converted to fuel: `TripFuelCost × NavPenaltyPct / 100`.
 
 ### Paperwork Fines
 
 Incomplete paperwork reduces delivery pay. The penalty is calculated by `get_paperwork_penalty_pct()` (cargo.ink):
 
 ```
-penalty = MIN(missing_chunks × 10, 50)%
+penalty = missing_chunks × 5%
 ```
 
-Each missing chunk costs 10% of delivery pay, capped at 50%. This is applied per-item during `deliver_cargo` (port.ink).
+Each missing chunk costs 5% of delivery pay. This is applied per-item during `deliver_cargo` (port.ink) combined with cargo inspection fines and cargo damage, capped at 75% total.
+
+### Cargo Inspection Fines
+
+Missed cargo inspections reduce delivery pay. Inspections are a regulatory requirement: the player must inspect cargo every few days and sign off on it.
+
+- **Base schedule:** `CargoCheckDueDay` starts at 2 and advances by the interval on each completion
+- **Interval:** 3 days (base cargo), 2 days (Fragile or Hazardous cargo, via `get_cargo_check_interval()`)
+- **Penalty:** 1% of delivery pay per overdue day, accumulated in `CargoCheckPenaltyPct`
+- **Penalty ticks:** fire in `next_day()` when `TripDay > CargoCheckDueDay`, and a final tick in `settle_trip_penalties` if still overdue on arrival
+- **Applied at delivery:** combined with paperwork and cargo damage, capped at 75%
+
+`has_special_inspection_cargo()` (cargo.ink) returns true if any item in the hold has Fragile or Hazardous flags.
 
 ### Towing Scenario
 
@@ -413,7 +425,7 @@ When fatigue is 70 or above, work tasks are subject to a dice roll that can caus
 **Two failure modes:**
 
 - **Degraded** (ship flip, engine tune, backlog maintenance) — The task completes but with a reduced effect. Ship flip adds a fuel penalty. Engine tune restores +8 instead of +15. Backlog maintenance restores +1 instead of +3.
-- **Fail + retry** (nav check, paperwork) — The task doesn't count. The counter is not incremented, so the task remains available for retry. AP is still spent.
+- **Fail + retry** (nav check, cargo inspection, paperwork) — The task doesn't count. The due day is not advanced, so the task remains available for retry. AP is still spent.
 
 Only "work" tasks use `fatigue_check()`. Sleep, recreation, eating, and rest are unaffected.
 
@@ -434,7 +446,7 @@ Random events are P0 interruptions that fire during transit, bypassing the task 
 
 **`has_medical_module()`:** Returns `is_module_active(WellnessSuite)`. Used by the medical emergency event to improve patient outcomes — better recovery odds and no possibility of a fatal outcome when the suite is active (condition >= 50%).
 
-**Cargo damage:** `CargoDamagePct` accumulates cargo damage during transit (micrometeorite cargo hit, cargo shift with fatigue failure). It reduces delivery pay at port alongside paperwork penalties. Total combined penalty is capped at 75%. It only increases from event outcomes — normal transit never touches it.
+**Cargo damage:** `CargoDamagePct` accumulates cargo damage during transit (micrometeorite cargo hit, cargo shift with fatigue failure). It reduces delivery pay at port alongside paperwork and inspection penalties. Total combined penalty is capped at 75%. It only increases from event outcomes — normal transit never touches it.
 
 **`damage_random_system(amount)`:** Damages a random system — 50% chance engine, 50% chance a random installed module. If no modules are installed, always damages engine. Module condition floors at 1 (not 0, since 0 = not installed).
 
@@ -476,8 +488,8 @@ All module daily behavior runs via the `module_auto_tasks` tunnel, called from `
 
 - **Repair Drones** (800€) — auto-complete engine maintenance tasks from backlog. Prefer stale tasks. Capacity: 2 at 75%+, 1 at 50-74%.
 - **Cleaning Drones** (600€) — auto-complete ship maintenance tasks from backlog. Same capacity tiers as Repair Drones.
-- **Auto-Nav Computer** (600€) — auto-completes nav checks (due every 3 days). Full (75%+): every check. Reduced (50-74%): every other check (when `NavChecksCompleted mod 2 == 0`). The existing nav check task condition naturally suppresses the P3 task when already completed.
-- **Cargo Management System** (500€) — auto-files one paperwork chunk per day. Full (75%+): every day. Reduced (50-74%): odd-numbered trip days only. The paperwork task disappears from P3 once `PaperworkDone >= PaperworkTotal`.
+- **Auto-Nav Computer** (500€) — auto-completes nav checks. Full (75%+): completes every check. Reduced (50-74%): completes on even `TripDay` only. Advances `NavCheckDueDay = TripDay + 3` on completion.
+- **Cargo Management System** (700€) — handles both cargo inspections and paperwork (1 task/day, inspections prioritized). Full (75%+): completes every task due. Reduced (50-74%): completes on even `TripDay` only. Inspections take priority because they expire (day-of only); paperwork persists until delivery. Advances `CargoCheckDueDay = TripDay + get_cargo_check_interval()` on inspection completion.
 
 - **Entertainment System** (400€) — improves recreation. Full (75%+): all recreation (rations, workout, movie, video games, music) gets a +50% morale bonus via `apply_recreation_bonus(base)`. The bonus uses integer math: `base + base / 2`. Reduced (50-74%): new options (video games, music) available in the P4 shuffle, but no bonus. Below 50%: offline, no new options. New P4 tasks are gated by `is_module_active(Entertainment)` in the shuffle block.
 
