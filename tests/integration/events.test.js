@@ -176,8 +176,8 @@ describe("Event triggering", () => {
     story.variablesState["EventCooldownDay"] = -1;
     story.variablesState["CargoDamagePct"] = 0;
 
-    // Fire all 5 events
-    for (let i = 0; i < 5; i++) {
+    // Fire all 6 non-passenger events
+    for (let i = 0; i < 6; i++) {
       story.variablesState["AP"] = 6;
       story.variablesState["EngineCondition"] = 100;
       story.variablesState["TripFuelPenalty"] = 0;
@@ -187,7 +187,7 @@ describe("Event triggering", () => {
       drainText(story);
     }
 
-    // After 5 events, the Events list should be empty
+    // After 6 events, the Events list should be empty
     const eventsRemaining = story.variablesState["Events"];
     expect(eventsRemaining.Count).toBe(0);
   });

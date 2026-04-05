@@ -389,7 +389,7 @@ Shuffle blocks randomize which tasks within a tier get offered first, providing 
 Related tasks are collapsed into single top-level entries that expand into sub-menus with flavor text:
 
 - **Sleep** (P2 when fatigue ≥ 70, P4 when 30–69) → nap (1 AP), full sleep (2 AP)
-- **Relax** (P4, always) → heat rations (1 AP), workout (1 AP), movie (2 AP)
+- **Relax** (P4, always) → cook a special meal (2 AP), workout (1 AP), movie (2 AP), video games (1 AP, Entertainment active), listen to music (1 AP, Entertainment active)
 - **Ship maintenance** (P3, when backlog has tasks) → shows all backlog tasks (1 AP each), stale tasks marked "overdue"
 - **Engine care** (P2, when condition < 80) → run diagnostics (2 AP)
 
@@ -491,7 +491,7 @@ All module daily behavior runs via the `module_auto_tasks` tunnel, called from `
 - **Auto-Nav Computer** (500€) — auto-completes nav checks. Full (75%+): completes every check. Reduced (50-74%): completes on even `TripDay` only. Advances `NavCheckDueDay = TripDay + 3` on completion.
 - **Cargo Management System** (700€) — handles both cargo inspections and paperwork (1 task/day, inspections prioritized). Full (75%+): completes every task due. Reduced (50-74%): completes on even `TripDay` only. Inspections take priority because they expire (day-of only); paperwork persists until delivery. Advances `CargoCheckDueDay = TripDay + get_cargo_check_interval()` on inspection completion.
 
-- **Entertainment System** (400€) — improves recreation. Full (75%+): all recreation (rations, workout, movie, video games, music) gets a +50% morale bonus via `apply_recreation_bonus(base)`. The bonus uses integer math: `base + base / 2`. Reduced (50-74%): new options (video games, music) available in the P4 shuffle, but no bonus. Below 50%: offline, no new options. New P4 tasks are gated by `is_module_active(Entertainment)` in the shuffle block.
+- **Entertainment System** (400€) — improves recreation. Full (75%+): all recreation (cooking, workout, movie, video games, music) gets a +50% morale bonus via `apply_recreation_bonus(base)`. The bonus uses integer math: `base + base / 2`. Reduced (50-74%): video games and music are available (module is active), but no morale bonus. Below 50%: offline, no extra options. Video games and music appear inside the "Take a break" → `relax_options` sub-menu when Entertainment is active (not as standalone P4 choices). They are gated with `{ is_module_active(Entertainment) }` inline choice guards inside `relax_options`.
 
 - **Wellness Suite** (500€) — daily fatigue/morale benefit and medical emergency improvement. Full (75%+): -5 fatigue, +2 morale per day. Reduced (50-74%): -3 fatigue, +1 morale. Applied in `module_auto_tasks` with narrative flavor text (gym, autodoc, sunlight simulator, therapy, haircut). Also wires `has_medical_module()` → `is_module_active(WellnessSuite)` to improve medical emergency outcomes.
 

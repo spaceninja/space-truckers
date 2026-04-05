@@ -1,5 +1,7 @@
 VAR PortCargo = ()
 
+LIST FreshIngredientStats = IngName, IngDesc, IngPrice, IngPort
+
 /*
 
     Arrive in Port
@@ -12,6 +14,12 @@ VAR PortCargo = ()
 ~ PortCargo = get_available_cargo(port, 5)
 
 Welcome to {LocationData(port, Name)}!
+{ shuffle:
+-   The smell of real food hits you the moment you dock. Somewhere in this station, something is cooking on an actual stove.
+-   You're already thinking about what you can eat that isn't a ration packet.
+-   After days of reconstituted everything, the station smells like a restaurant. You stand in the docking bay for a moment, just breathing.
+-   Your first stop, before cargo, before fuel, is the station commissary. You need something fresh.
+}
 
 - (port_opts)
 + [Load cargo]
@@ -22,6 +30,7 @@ Welcome to {LocationData(port, Name)}!
 + [Buy fuel] -> fuel_station
 + { EngineCondition < get_engine_max_condition() or ShipCondition < 100 } [Ship repairs] -> repair_services
 + [Ship upgrades] -> ship_upgrades
++ [Go shopping] -> go_shopping
 + [Ship out!] -> ship_out
 + { DEBUG } [\[DEBUG\] Cheats] -> debug_cheats
 - -> port_opts
@@ -434,3 +443,83 @@ You have {ShipFuel} fuel, and a total mass of {total_mass(ShipCargo)}t.
 */
 === function get_fuel_purchase_cost(amount)
 ~ return FLOOR(amount * get_fuel_price(here))
+
+/*
+
+    Fresh Ingredient Data
+    Lookup table for ingredients available at port. Stats: IngName, IngDesc, IngPrice, IngPort.
+    IngPort is the AllLocations value where the item is sold.
+    Items map to fresh meal entries in ship.ink's do_cook() and recipe_name().
+
+*/
+=== function FreshIngredientData(item, stat)
+{ item:
+- EarthStrawberries: ~ return ing_row(stat, "Fresh strawberries",     "Makes strawberry shortcake", 20, Earth)
+- EarthWagyu:        ~ return ing_row(stat, "Wagyu steak",             "Makes pan-seared wagyu",     25, Earth)
+- LunaHerbs:         ~ return ing_row(stat, "Hydroponic herb bundle",  "Makes herb-crusted fish",    15, Luna)
+- LunaCheese:        ~ return ing_row(stat, "Cave-aged cheese",        "Makes cheese fondue",        20, Luna)
+- MarsPeppers:       ~ return ing_row(stat, "Greenhouse peppers",      "Makes stuffed peppers",      15, Mars)
+- MarsHoney:         ~ return ing_row(stat, "Olympus honey",           "Makes honey-glazed ribs",    20, Mars)
+- CeresTruffles:     ~ return ing_row(stat, "Asteroid truffles",       "Makes truffle risotto",      25, Ceres)
+- CeresSake:         ~ return ing_row(stat, "Belt-brewed sake",        "Makes sake-glazed salmon",   20, Ceres)
+- GanymedeIceCream:  ~ return ing_row(stat, "Ganymede dairy ice cream","Makes ice cream sundae",     15, Ganymede)
+- GanymedeSalt:      ~ return ing_row(stat, "Europan sea salt",        "Makes salt-crusted bread",   20, Ganymede)
+- TitanMeats:        ~ return ing_row(stat, "Titan-cured meats",       "Makes charcuterie board",    25, Titan)
+- TitanBerries:      ~ return ing_row(stat, "Cryo-preserved berries",  "Makes berry cobbler",        20, Titan)
+}
+~ return 0
+
+=== function ing_row(stat, name, desc, price, port)
+{ stat:
+- IngName:  ~ return name
+- IngDesc:  ~ return desc
+- IngPrice: ~ return price
+- IngPort:  ~ return port
+}
+~ return 0
+
+// Returns the set of fresh ingredients available at the given port.
+// Recursively filters sourceList, keeping items whose IngPort matches port.
+=== function ingredients_at(port, sourceList)
+~ temp item = pop(sourceList)
+{ item:
+    { FreshIngredientData(item, IngPort) == port:
+        ~ return item + ingredients_at(port, sourceList)
+    - else:
+        ~ return ingredients_at(port, sourceList)
+    }
+}
+~ return ()
+
+/*
+
+    Go Shopping
+    Browse and buy fresh ingredients available at the current port.
+    Purchased items appear as guaranteed cooking options during transit.
+
+*/
+=== go_shopping
+The station market has a small fresh section — real food, grown locally.
+- (shop_menu)
+~ temp stock = ingredients_at(here, LIST_ALL(FreshIngredients)) - PurchasedIngredients
+- (shop_top)
+~ temp item = pop(stock)
+{ item:
+    <- shop_item_choice(item)
+    -> shop_top
+}
+-
++ [Back] -> arrive_in_port.port_opts
+- -> shop_menu
+
+= shop_item_choice(item)
+~ temp price = FreshIngredientData(item, IngPrice)
+~ temp name = FreshIngredientData(item, IngName)
+~ temp desc = FreshIngredientData(item, IngDesc)
++ { PlayerBankBalance >= price } [{ name } — {price} €]
+    ~ PlayerBankBalance -= price
+    ~ PurchasedIngredients += item
+    You pick up the {name}. {desc}. It goes in the galley cooler.
+    -> shop_menu
++ { PlayerBankBalance < price } [{ name } — {price} € #UNCLICKABLE]
+    -> shop_menu

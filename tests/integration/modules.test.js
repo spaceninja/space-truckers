@@ -349,7 +349,7 @@ describe("module maintenance effects", () => {
     s.ChoosePathString("transit.ship_options");
     drainText(s);
     pickChoice(s, "Take a break");
-    pickChoice(s, "Heat up some rations"); // costs 1 AP → AP=0 → next_day fires
+    pickChoice(s, "Quick workout"); // costs 1 AP → AP=0 → next_day fires
 
     // RepairDrones should have lost 5 condition
     expect(s.EvaluateFunction("get_module_condition", [L(s, "ShipModules.RepairDrones")])).toBe(55);
@@ -369,7 +369,7 @@ describe("module maintenance effects", () => {
     s.ChoosePathString("transit.ship_options");
     drainText(s);
     pickChoice(s, "Take a break");
-    pickChoice(s, "Heat up some rations");
+    pickChoice(s, "Quick workout"); // costs 1 AP → AP=0 → next_day fires
 
     expect(s.EvaluateFunction("get_module_condition", [L(s, "ShipModules.RepairDrones")])).toBe(1);
   });
@@ -717,21 +717,23 @@ describe("Wellness Suite", () => {
 });
 
 describe("Entertainment System", () => {
-  it("video games choice appears when Entertainment is active", () => {
+  it("video games choice appears inside relax sub-menu when Entertainment is active", () => {
     const s = setupTransit();
     s.EvaluateFunction("install_module", [L(s, "ShipModules.Entertainment"), 100]);
 
     s.ChoosePathString("transit.ship_options");
     drainText(s);
+    pickChoice(s, "Take a break");
     expect(hasChoice(s, "Play video games")).toBe(true);
   });
 
-  it("listen to music choice appears when Entertainment is active", () => {
+  it("listen to music choice appears inside relax sub-menu when Entertainment is active", () => {
     const s = setupTransit();
     s.EvaluateFunction("install_module", [L(s, "ShipModules.Entertainment"), 100]);
 
     s.ChoosePathString("transit.ship_options");
     drainText(s);
+    pickChoice(s, "Take a break");
     expect(hasChoice(s, "Listen to music")).toBe(true);
   });
 
@@ -741,6 +743,7 @@ describe("Entertainment System", () => {
 
     s.ChoosePathString("transit.ship_options");
     drainText(s);
+    pickChoice(s, "Take a break");
     expect(hasChoice(s, "Play video games")).toBe(false);
     expect(hasChoice(s, "Listen to music")).toBe(false);
   });

@@ -366,10 +366,10 @@ describe("Task priority system", () => {
   });
 
   describe("Sub-menus", () => {
-    it("relax sub-menu shows rations, workout, and movie", () => {
+    it("relax sub-menu shows cooking, workout, and movie", () => {
       const story = setupTransit();
       pickChoice(story, "Take a break");
-      expect(hasChoice(story, "rations")).toBe(true);
+      expect(hasChoice(story, "Cook a special meal")).toBe(true);
       expect(hasChoice(story, "workout")).toBe(true);
       expect(hasChoice(story, "movie")).toBe(true);
       expect(hasChoice(story, "Never mind")).toBe(true);

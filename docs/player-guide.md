@@ -87,7 +87,7 @@ Flying between ports isn't just sitting around. You've got a ship to maintain an
 
 Your task list adapts to your ship's condition each day. Urgent matters appear first — a ship that needs flipping or an engine that's struggling will be at the top of your list. Routine work fills in below, and recreation options round out the bottom. On a quiet day with nothing pressing, you can call it a day and rest if you'd rather skip the busywork.
 
-Some tasks open into sub-options when you select them. Choosing "Take a break" lets you pick between heating up rations, exercising, or watching a movie. Choosing "Get some rest" offers a quick nap or a full sleep cycle. You can always back out without spending AP if you change your mind.
+Some tasks open into sub-options when you select them. Choosing "Take a break" lets you pick between cooking a special meal, exercising, watching a movie, or (if you have the Entertainment System) playing video games or listening to music. Choosing "Get some rest" offers a quick nap or a full sleep cycle. You can always back out without spending AP if you change your mind.
 
 ### The Ship Flip
 
@@ -136,6 +136,21 @@ When you're carrying passengers, you'll encounter additional events — birthday
 
 Being exhausted makes emergencies worse. A fatigued repair takes longer and may cause additional damage. Rest before you need it, not after something goes wrong.
 
+### Cooking
+
+When you choose "Take a break" during transit, one option is to **cook a special meal** (2 AP, +12 morale). Each time, you'll see a selection of four recipes drawn randomly from a diverse list — curry, pho, jollof rice, bibimbap, tamales, and more. Pick one and read a short scene about preparing it. It's the most morale-effective recreation option at 2 AP.
+
+At port, visit **Go shopping** to browse fresh local ingredients. Each port stocks two or three specialty items that aren't available elsewhere:
+
+- **Earth** — Fresh strawberries, wagyu steak
+- **Luna** — Hydroponic herb bundle, cave-aged cheese
+- **Mars** — Greenhouse peppers, Olympus honey
+- **Ceres** — Asteroid truffles, belt-brewed sake
+- **Ganymede** — Ganymede dairy ice cream, Europan sea salt
+- **Titan** — Titan-cured meats, cryo-preserved berries
+
+Ingredients cost 15–25 € each. When you have an ingredient in your galley, it appears as a guaranteed extra choice in the cooking menu during your next transit — with a higher morale boost (+15) than standard recipes. Once you cook with it, it's gone.
+
 ---
 
 ## Ship Modules
@@ -152,7 +167,7 @@ At any port, you can visit the **Ship upgrades** menu to buy modules that automa
 
 **Cargo Management System** (700€) — Automatically handles both cargo inspections and paperwork. It can only do one task per day, so it prioritizes inspections (which expire if you miss the window) and files paperwork on quieter days. At full condition (75%+), it handles everything it can. At reduced condition (50-74%), it only manages to act every other day. Below 50%, it goes offline.
 
-**Entertainment System** (400€) — Upgrades your recreation options and improves how rewarding downtime feels. At full condition (75%+), all recreation activities give a 50% morale bonus, and two new options unlock: "Play video games" (+10 morale) and "Listen to music" (+5 morale). At reduced condition (50-74%), the new options are available but there's no bonus to any recreation. Below 50%, it goes offline and everything reverts to baseline.
+**Entertainment System** (400€) — Upgrades your recreation options and improves how rewarding downtime feels. At full condition (75%+), all recreation activities give a 50% morale bonus, and two new options appear inside "Take a break": "Play video games" (+10 morale) and "Listen to music" (+5 morale). At reduced condition (50-74%), the new options are available but there's no bonus to any recreation. Below 50%, it goes offline and everything reverts to baseline.
 
 **Wellness Suite** (500€) — A combined gym, autodoc, drug printer (supplements, painkillers, stimulants), sunlight simulator, remote therapy service, and yes — a working hair trimmer. Each day the suite is active, it reduces your fatigue by 5 and boosts morale by 2 (at full condition, 75%+), or 3 fatigue / 1 morale at reduced condition (50-74%). It also improves outcomes when you're carrying a passenger who has a medical emergency — better odds of recovery, and no possibility of a fatal outcome. Below 50%, it goes offline.
 
