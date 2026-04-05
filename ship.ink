@@ -6,7 +6,7 @@ VAR ActionPointsMax = 6
 // Task registry lists — used only for LIST_COUNT() to keep shuffle loop
 // bounds in sync. Add an entry here when adding a task to a tier's shuffle.
 LIST P2Tasks = EngineMaintenance, UrgentSleep
-LIST P3Tasks = Paperwork, NavCheck, MaintBacklog
+LIST P3Tasks = Paperwork, NavCheck, CargoInspect, MaintBacklog
 LIST P4Tasks = Relax, SleepRest, VideoGames, ListenMusic
 
 /*
@@ -27,7 +27,10 @@ LIST P4Tasks = Relax, SleepRest, VideoGames, ListenMusic
 ~ PaperworkDone = 0
 ~ TripFuelCost = fuel_cost
 ~ TripFuelPenalty = 0
-~ NavChecksCompleted = 0
+~ NavCheckDueDay = 3
+~ NavPenaltyPct = 0
+~ CargoCheckDueDay = 2
+~ CargoCheckPenaltyPct = 0
 ~ TasksCompletedToday = 0
 ~ EventChance = 0
 ~ EventCooldownDay = -1
@@ -110,7 +113,8 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 - (p3_shuffle)
 { shuffle:
     - { CHOICE_COUNT() < p3_cap and PaperworkDone < PaperworkTotal: <- task_paperwork }
-    - { CHOICE_COUNT() < p3_cap and TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3: <- task_nav_check }
+    - { CHOICE_COUNT() < p3_cap and TripDay >= NavCheckDueDay: <- task_nav_check }
+    - { CHOICE_COUNT() < p3_cap and TripDay >= CargoCheckDueDay: <- task_cargo_inspect }
     - { CHOICE_COUNT() < p3_cap and LIST_COUNT(Backlog) > 0: <- task_maintenance }
 }
 ~ p3_loops++
@@ -159,6 +163,9 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 = task_nav_check
 + [Navigation check (1 AP)] -> do_nav_check
+
+= task_cargo_inspect
++ [Cargo inspection (1 AP)] -> do_cargo_inspect
 
 // --- Group tasks (open sub-menus) ---
 
@@ -288,8 +295,25 @@ What sounds good right now?
 { fatigue_check():
     You squint at the trajectory data, but the numbers swim in front of your eyes. You'll need to try this again when you're more alert.
 - else:
-    ~ NavChecksCompleted++
+    ~ NavCheckDueDay = TripDay + 3
     You review the flight trajectory and make minor course corrections. Everything's on track.
+}
+-> pass_time(1)
+
+/*
+
+    Cargo Inspection
+    Walk the hold, check tie-downs, container seals, and label integrity.
+    Required every 3 days (or 2 days with Fragile/Hazardous cargo).
+    Missing an inspection incurs a 1% pay fine per overdue day at delivery.
+
+*/
+= do_cargo_inspect
+{ fatigue_check():
+    You flip open the cargo manifest but can't focus on the inspection checklist. Everything blurs together. You'll have to try again after some rest.
+- else:
+    ~ CargoCheckDueDay = TripDay + get_cargo_check_interval()
+    You walk the hold, checking tie-downs, container seals, and label integrity. Everything looks secure.
 }
 -> pass_time(1)
 
@@ -456,6 +480,14 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ TripDay++
 ~ AP = ActionPointsMax + rollover
 ~ TasksCompletedToday = 0
+// Nav check overdue penalty: +1% trip fuel per day past due
+{ TripDay > NavCheckDueDay:
+    ~ NavPenaltyPct++
+}
+// Cargo inspection overdue penalty: +1% pay per day past due
+{ TripDay > CargoCheckDueDay:
+    ~ CargoCheckPenaltyPct++
+}
 // Flip delay penalty: +5% trip fuel for each day past midpoint without flipping
 { not FlipDone and TripDay > TripDuration / 2:
     ~ TripFuelPenalty = TripFuelPenalty + TripFuelCost / 20  // +5% trip fuel per day delayed
@@ -536,7 +568,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 { tier:
     - 1: ~ return (not FlipDone and TripDay >= TripDuration / 2)
     - 2: ~ return (EngineCondition < 80) or (Fatigue >= 70)
-    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay > 0 and TripDay mod 3 == 0 and NavChecksCompleted < TripDay / 3) or (LIST_COUNT(Backlog) > 0)
+    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay >= NavCheckDueDay) or (TripDay >= CargoCheckDueDay) or (LIST_COUNT(Backlog) > 0)
     - 4: ~ return true  // Relax is always available
 }
 ~ return false

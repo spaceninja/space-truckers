@@ -51,7 +51,10 @@ function setupTransit(overrides = {}) {
     PaperworkTotal: 1,
     TripFuelCost: 100,
     TripFuelPenalty: 0,
-    NavChecksCompleted: 10,
+    NavCheckDueDay: 99,
+    NavPenaltyPct: 0,
+    CargoCheckDueDay: 99,
+    CargoCheckPenaltyPct: 0,
     AP: 6,
     ActionPointsMax: 6,
     Fatigue: 0,
@@ -474,60 +477,60 @@ describe("Auto-Nav Computer", () => {
   it("suppresses nav check task when auto-completed at full condition (75%+)", () => {
     const s = setupTransit({
       TripDay: 3,
-      NavChecksCompleted: 0,  // check is due (0 < 3/3 = 1)
+      NavCheckDueDay: 3,  // check is due
     });
     s.EvaluateFunction("install_module", [L(s, "ShipModules.AutoNav"), 100]);
 
     // Run module_auto_tasks to simulate daily tick
     s.EvaluateFunction("module_auto_tasks");
 
-    // NavChecksCompleted should have been incremented
-    expect(s.variablesState["NavChecksCompleted"]).toBe(1);
+    // NavCheckDueDay should have advanced by 3
+    expect(s.variablesState["NavCheckDueDay"]).toBe(6);
 
-    // Nav check task should not appear (check satisfied)
+    // Nav check task should not appear (next due day is 6, TripDay is 3)
     s.ChoosePathString("transit.ship_options");
     drainText(s);
     expect(hasChoice(s, "Navigation check")).toBe(false);
   });
 
-  it("auto-completes every other check at reduced condition (50-74%)", () => {
+  it("auto-completes on even TripDay at reduced condition (50-74%)", () => {
     const s = setupTransit({
-      TripDay: 3,
-      NavChecksCompleted: 0,  // even — should auto-complete
+      TripDay: 4,  // even — should auto-complete
+      NavCheckDueDay: 4,
     });
     s.EvaluateFunction("install_module", [L(s, "ShipModules.AutoNav"), 60]);
     s.EvaluateFunction("module_auto_tasks");
-    expect(s.variablesState["NavChecksCompleted"]).toBe(1);
+    expect(s.variablesState["NavCheckDueDay"]).toBe(7);
   });
 
-  it("skips auto-complete on odd NavChecksCompleted at reduced condition", () => {
+  it("skips auto-complete on odd TripDay at reduced condition", () => {
     const s = setupTransit({
-      TripDay: 6,
-      NavChecksCompleted: 1,  // odd — should skip
+      TripDay: 3,  // odd — should skip
+      NavCheckDueDay: 3,
     });
     s.EvaluateFunction("install_module", [L(s, "ShipModules.AutoNav"), 60]);
     s.EvaluateFunction("module_auto_tasks");
-    expect(s.variablesState["NavChecksCompleted"]).toBe(1);  // unchanged
+    expect(s.variablesState["NavCheckDueDay"]).toBe(3);  // unchanged
   });
 
   it("does not auto-complete when offline (below 50%)", () => {
     const s = setupTransit({
       TripDay: 3,
-      NavChecksCompleted: 0,
+      NavCheckDueDay: 3,
     });
     s.EvaluateFunction("install_module", [L(s, "ShipModules.AutoNav"), 40]);
     s.EvaluateFunction("module_auto_tasks");
-    expect(s.variablesState["NavChecksCompleted"]).toBe(0);  // unchanged
+    expect(s.variablesState["NavCheckDueDay"]).toBe(3);  // unchanged
   });
 
-  it("does not fire on TripDay 0", () => {
+  it("does not fire when nav check is not yet due", () => {
     const s = setupTransit({
-      TripDay: 0,
-      NavChecksCompleted: 0,
+      TripDay: 3,
+      NavCheckDueDay: 6,  // not due until day 6
     });
     s.EvaluateFunction("install_module", [L(s, "ShipModules.AutoNav"), 100]);
     s.EvaluateFunction("module_auto_tasks");
-    expect(s.variablesState["NavChecksCompleted"]).toBe(0);
+    expect(s.variablesState["NavCheckDueDay"]).toBe(6);  // unchanged
   });
 });
 
@@ -599,6 +602,77 @@ describe("Cargo Management System", () => {
     s.ChoosePathString("transit.ship_options");
     drainText(s);
     expect(hasChoice(s, "File paperwork")).toBe(false);
+  });
+
+  it("auto-completes cargo inspection at full condition (75%+)", () => {
+    const s = setupTransit({
+      TripDay: 2,
+      CargoCheckDueDay: 2,  // inspection due
+      PaperworkDone: 0,
+      PaperworkTotal: 3,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 100]);
+    s.EvaluateFunction("module_auto_tasks");
+    // CargoCheckDueDay should have advanced (base interval = 3, no special cargo)
+    expect(s.variablesState["CargoCheckDueDay"]).toBe(5);
+  });
+
+  it("prioritizes inspection over paperwork (1 task per day)", () => {
+    const s = setupTransit({
+      TripDay: 2,
+      CargoCheckDueDay: 2,  // inspection due
+      PaperworkDone: 0,
+      PaperworkTotal: 3,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 100]);
+    s.EvaluateFunction("module_auto_tasks");
+    // Inspection was done, paperwork should NOT have been filed
+    expect(s.variablesState["PaperworkDone"]).toBe(0);
+  });
+
+  it("falls through to paperwork when no inspection is due", () => {
+    const s = setupTransit({
+      TripDay: 3,
+      CargoCheckDueDay: 99,  // no inspection due
+      PaperworkDone: 0,
+      PaperworkTotal: 3,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 100]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["PaperworkDone"]).toBe(1);
+  });
+
+  it("auto-completes on even TripDay at reduced condition (50-74%)", () => {
+    const s = setupTransit({
+      TripDay: 2,  // even
+      CargoCheckDueDay: 2,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 60]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["CargoCheckDueDay"]).toBe(5);
+  });
+
+  it("skips inspection on odd TripDay at reduced condition", () => {
+    const s = setupTransit({
+      TripDay: 3,  // odd
+      CargoCheckDueDay: 3,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 60]);
+    s.EvaluateFunction("module_auto_tasks");
+    expect(s.variablesState["CargoCheckDueDay"]).toBe(3);  // unchanged
+  });
+
+  it("suppresses cargo inspection task when auto-completed", () => {
+    const s = setupTransit({
+      TripDay: 2,
+      CargoCheckDueDay: 2,
+    });
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.CargoMgmt"), 100]);
+    s.EvaluateFunction("module_auto_tasks");
+
+    s.ChoosePathString("transit.ship_options");
+    drainText(s);
+    expect(hasChoice(s, "Cargo inspection")).toBe(false);
   });
 });
 

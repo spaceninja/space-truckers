@@ -50,11 +50,26 @@ Tasks are threaded (`<-`) into `ship_options` using `CHOICE_COUNT()` caps:
 | ---- | --------------------------------------------- | ------------------------------- |
 | P1   | Urgent (ship flip)                            | No cap                          |
 | P2   | Important (engine, urgent sleep)              | `TaskCap - p3_floor - p4_floor` |
-| P3   | Routine (paperwork, nav, maintenance backlog) | `TaskCap - p4_floor`            |
+| P3   | Routine (paperwork, nav, cargo inspect, maintenance backlog) | `TaskCap - p4_floor` |
 | P4   | Recreation (relax, sleep)                     | `TaskCap`                       |
 | P5   | Rest (skip day)                               | Only when no P1-P3 active       |
 
 Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes eligibility checks.
+
+## Cooldown-Based Periodic Tasks (ship.ink)
+
+Nav checks and cargo inspections use a cooldown model rather than a fixed calendar schedule:
+
+- A `DueDay` VAR tracks when the next instance is due
+- Eligibility: `TripDay >= DueDay`
+- On completion: `DueDay = TripDay + interval` (3 days for nav checks; 3 or 2 days for cargo inspections depending on cargo flags)
+- Overdue penalty ticks in `next_day()` when `TripDay > DueDay` (+1% per day)
+- A final tick fires in `settle_trip_penalties` on arrival if still overdue
+- Module auto-complete advances `DueDay` the same way as manual completion
+
+Nav checks: `NavCheckDueDay` (starts at 3), `NavPenaltyPct` → fuel penalty.
+Cargo inspections: `CargoCheckDueDay` (starts at 2), `CargoCheckPenaltyPct` → pay penalty.
+`get_cargo_check_interval()` returns 2 (Fragile/Hazardous cargo) or 3 (base).
 
 ## Maintenance Backlog (ship.ink)
 
@@ -82,6 +97,8 @@ Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes e
 - Engine upgrade system: `EngPrice` stat in `EngineStats`, `RefurbishedEngine` VAR (boolean), `get_engine_max_condition()` in functions.ink mirrors `get_module_max_condition()` pattern; manufacturer availability via `manufacturer_available_here(mfg)` checked against `here`
 - Entertainment System: `apply_recreation_bonus(base)` function in ship.ink — +50% morale at 75%+ condition; new P4 tasks `VideoGames`/`ListenMusic` gated by `is_module_active(Entertainment)`
 - WellnessSuite wires `has_medical_module()` in events.ink
+- AutoNav (500€): advances `NavCheckDueDay = TripDay + 3` on auto-complete; 75%+ every check, 50-74% even `TripDay` only
+- CargoMgmt (700€): handles inspections + paperwork with 1-task-per-day limit; inspections prioritized (expire same day), paperwork fills remaining days; advances `CargoCheckDueDay = TripDay + get_cargo_check_interval()` on inspection; 75%+ every due day, 50-74% even `TripDay` only
 
 ## Ink Gotchas
 
