@@ -2,3 +2,4 @@ node_modules/
 *.ink.json
 dist/
 .claude/worktrees
+docs/specs/
