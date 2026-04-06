@@ -1593,6 +1593,10 @@ LIST AllCargo =
 { CargoData(cargo, Express):
     ~ return can_turbo_to(CargoData(cargo, To))
 }
+// Passenger cargo requires the passenger module
+{ CargoData(cargo, Passengers):
+    ~ return InstalledModules ? PassengerModule
+}
 ~ return true
 
 /*

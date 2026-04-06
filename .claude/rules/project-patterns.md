@@ -99,6 +99,18 @@ Cargo inspections: `CargoCheckDueDay` (starts at 2), `CargoCheckPenaltyPct` → 
 - WellnessSuite wires `has_medical_module()` in events.ink
 - AutoNav (500€): advances `NavCheckDueDay = TripDay + 3` on auto-complete; 75%+ every check, 50-74% even `TripDay` only
 - CargoMgmt (700€): handles inspections + paperwork with 1-task-per-day limit; inspections prioritized (expire same day), paperwork fills remaining days; advances `CargoCheckDueDay = TripDay + get_cargo_check_interval()` on inspection; 75%+ every due day, 50-74% even `TripDay` only
+- PassengerModule (tiered, unique upgrade path): uses `PassengerModuleTier` VAR (0=not installed, 1-3) rather than a single condition gate; separate `passenger_module_upgrades` stitch excluded from `browse_module_list`; cargo gated by `InstalledModules ? PassengerModule` in `cargo_is_available`
+
+## Passenger Satisfaction System (ship.ink, port.ink)
+
+- `PassengerSatisfaction` (0-100, starts at 50 each trip): tracks passenger experience throughout transit
+- Daily task: `pick_passenger_task` tunnel picks one task per day using two-stage weighted selection (roll category first, then `LIST_RANDOM` within category); task pool: 12 tasks in `PassengerTasks` LIST across 3 tone VARs (`NegativePaxTasks`, `MixedPaxTasks`, `PositivePaxTasks`)
+- Tier weights: T1 50/30/20, T2 30/40/30, T3 20/50/30 (neg/mixed/pos)
+- Task completion: +5 satisfaction (or +7 at Tier 3), `PassengerTaskCompleted = true`
+- Daily skip penalty (in `next_day()`): -3 if `DailyPassengerTask != ()` and `not PassengerTaskCompleted`
+- Passive bonus (in `next_day()`): +1 (T2 active), +2 (T3 active); no bonus below 50% condition
+- Delivery modifier (in `deliver_cargo`, port.ink): +10% pay if ≥70, -10% if ≤30, 0 otherwise; applies only to passenger-flagged cargo items; **use two-step integer math**: `pax_modifier = pay * pax_bonus_pct` then `pax_modifier = pax_modifier / 100` (avoid `pay * pct / 100` which truncates early for negatives)
+- Satisfaction resets to 50 on delivery of last passengers; events also modify via guarded blocks `{ InstalledModules ? PassengerModule: }`
 
 ## Ink Gotchas
 

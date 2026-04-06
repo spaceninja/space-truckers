@@ -7,7 +7,15 @@ VAR ActionPointsMax = 6
 // bounds in sync. Add an entry here when adding a task to a tier's shuffle.
 LIST P2Tasks = EngineMaintenance, UrgentSleep
 LIST P3Tasks = Paperwork, NavCheck, CargoInspect, MaintBacklog
-LIST P4Tasks = Relax, SleepRest
+LIST P4Tasks = Relax, SleepRest, PassengerTask
+
+// Passenger task pool — 12 tasks in 3 tone categories.
+// Tone category VARs control weighted random selection in pick_passenger_task.
+// To add tasks: add to PassengerTasks LIST and the appropriate category VAR.
+LIST PassengerTasks = PaxShower, PaxQuarters, PaxAirQuality, PaxRations, PaxMovieNight, PaxMealService, PaxGameNight, PaxExercise, PaxObsDeck, PaxKaraoke, PaxStargazing, PaxCocktails
+VAR NegativePaxTasks = (PaxShower, PaxQuarters, PaxAirQuality, PaxRations)
+VAR MixedPaxTasks = (PaxMovieNight, PaxMealService, PaxGameNight, PaxExercise)
+VAR PositivePaxTasks = (PaxObsDeck, PaxKaraoke, PaxStargazing, PaxCocktails)
 LIST Recipes = Curry, Pho, JollofRice, Pupusas, Borscht, Bibimbap, Tamales, DimSum, Shakshuka, Pierogi, Feijoada, Bannock
 
 /*
@@ -46,6 +54,13 @@ LIST Recipes = Curry, Pho, JollofRice, Pupusas, Borscht, Bibimbap, Tamales, DimS
     ~ Events -= PassengerEvents
 }
 ~ CargoDamagePct = 0
+// Passenger satisfaction — reset each trip
+~ PassengerSatisfaction = 50
+~ DailyPassengerTask = ()
+~ PassengerTaskCompleted = false
+{ has_passenger_cargo(ShipCargo) and InstalledModules ? PassengerModule:
+    -> pick_passenger_task ->
+}
 Flying to {LocationData(destination, Name)} for {duration} days…
 -> ship_options
 
@@ -128,6 +143,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 { shuffle:
     - { CHOICE_COUNT() < p4_cap: <- task_relax }
     - { CHOICE_COUNT() < p4_cap and Fatigue >= 30 and Fatigue < 70: <- task_sleep_rest }
+    - { CHOICE_COUNT() < p4_cap and DailyPassengerTask != () and not PassengerTaskCompleted: <- task_passenger }
 }
 ~ p4_loops++
 { p4_loops < LIST_COUNT(LIST_ALL(P4Tasks)) and CHOICE_COUNT() < p4_cap: -> p4_shuffle }
@@ -139,6 +155,15 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 // DEBUG: Skip the rest of the trip and arrive at destination immediately
 + { DEBUG } [\[DEBUG\] Skip Trip]
     -> arrive_in_port(ShipDestination)
+// DEBUG: Install/upgrade Passenger Module to Tier 3
++ { DEBUG } [\[DEBUG\] Passenger Module → Tier 3]
+    { not (InstalledModules ? PassengerModule):
+        ~ install_module(PassengerModule, 100)
+    }
+    ~ PassengerModuleTier = 3
+    ~ set_module_condition(PassengerModule, 100)
+    Passenger Module upgraded to Luxury Suite (Tier 3), 100%.
+    -> ship_options
 
 // Flow pauses here; accumulated threaded choices are presented to the player
 - (await_choice)
@@ -471,6 +496,28 @@ What do you feel like making?
 
 /*
 
+    Passenger Task
+    One passenger interaction offered per day when carrying passenger cargo.
+    Completing gives a satisfaction boost; skipping applies a penalty at next_day.
+    Task tone is weighted by passenger module tier via pick_passenger_task.
+
+*/
+= task_passenger
++ [Check on passengers — {PassengerTaskName(DailyPassengerTask)} (1 AP)]
+    -> do_passenger_task
+
+= do_passenger_task
+~ PassengerTaskCompleted = true
+~ temp sat_boost = 5
+{ PassengerModuleTier >= 3:
+    ~ sat_boost = 7  // Luxury Suite: better facilities, better outcomes
+}
+~ PassengerSatisfaction = MIN(PassengerSatisfaction + sat_boost, 100)
+{PassengerTaskText(DailyPassengerTask)}
+-> pass_time(1)
+
+/*
+
     Sleep
     Full sleep (2 AP) resets fatigue to 0.
     Nap (1 AP) reduces fatigue by 25.
@@ -568,6 +615,25 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ add_daily_tasks()
 // Module auto-tasks — all modules run daily auto-complete logic
 -> module_auto_tasks ->
+// Passenger satisfaction: skip penalty, passive bonus, status update, new task
+{ has_passenger_cargo(ShipCargo) and InstalledModules ? PassengerModule:
+    // Skip penalty: -3 if yesterday's task was offered but not completed
+    { DailyPassengerTask != () and not PassengerTaskCompleted:
+        ~ PassengerSatisfaction = MAX(PassengerSatisfaction - 3, 0)
+    }
+    // Passive daily satisfaction from higher tiers (requires active module)
+    { is_module_active(PassengerModule):
+        { PassengerModuleTier >= 3:
+            ~ PassengerSatisfaction = MIN(PassengerSatisfaction + 2, 100)
+        - else:
+            { PassengerModuleTier >= 2:
+                ~ PassengerSatisfaction = MIN(PassengerSatisfaction + 1, 100)
+            }
+        }
+    }
+    -> passenger_satisfaction_check ->
+    -> pick_passenger_task ->
+}
 // Morale decay: faster if ship is dirty
 { ShipCondition < 50:
     ~ Morale = MAX(Morale - 3, 0)
@@ -726,6 +792,8 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 - EntDisplayClean: ~ return "display panel cleaning"
 - WellSanitize:   ~ return "wellness suite sanitization"
 - WellCalib:      ~ return "autodoc calibration"
+- PaxLifeSupp:    ~ return "passenger life support check"
+- PaxBerthClean:  ~ return "passenger berth cleaning"
 }
 ~ return "maintenance"
 
@@ -755,6 +823,8 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 - EntDisplayClean: ~ return "You clean the display panels. The picture's crisp again."
 - WellSanitize:   ~ return "You run the wellness suite through a full sanitization cycle."
 - WellCalib:      ~ return "You recalibrate the autodoc's sensors. Readings are precise again."
+- PaxLifeSupp:    ~ return "You run through the passenger life support diagnostics. Air and water systems nominal."
+- PaxBerthClean:  ~ return "You clean the passenger berths and restock the basics. Everything looks presentable."
 }
 ~ return "You finish the maintenance task."
 
@@ -784,6 +854,8 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 - EntDisplayClean: ~ return "You smear the displays more than clean them."
 - WellSanitize:   ~ return "You run a quick sanitization cycle. Probably killed most of the germs."
 - WellCalib:      ~ return "You squint at the autodoc readings and call it calibrated."
+- PaxLifeSupp:    ~ return "You half-check the passenger life support. Probably fine."
+- PaxBerthClean:  ~ return "You give the berths a quick once-over. It'll have to do."
 }
 ~ return "You go through the motions on the maintenance task. Not your best work."
 
@@ -813,6 +885,8 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 - EntDisplayClean: ~ return "The displays are so grimy you can barely read them."
 - WellSanitize:   ~ return "The wellness suite smells like a gym locker. Sanitization is overdue."
 - WellCalib:      ~ return "The autodoc's readings are drifting. Can't trust it like this."
+- PaxLifeSupp:    ~ return "The passenger section air smells recycled and stale. Life support needed attention."
+- PaxBerthClean:  ~ return "The passenger berths are getting grimy. Someone left a polite but firm note."
 }
 ~ return "A maintenance task went unattended."
 
@@ -902,3 +976,125 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 // Rotate cooldown: today's completions become tomorrow's exclusion
 ~ MaintCooldown = CompletedToday
 ~ CompletedToday = ()
+
+/*
+
+    Pick Passenger Task
+    Tunnel called from transit() and next_day(). Selects one random passenger
+    task using two-stage weighted selection: first pick tone category (weighted
+    by module tier), then pick randomly within that category.
+
+    Tier 1 weights: 50% negative / 30% mixed / 20% positive
+    Tier 2 weights: 30% negative / 40% mixed / 30% positive
+    Tier 3 weights: 20% negative / 50% mixed / 30% positive
+
+*/
+=== pick_passenger_task
+~ PassengerTaskCompleted = false
+~ temp roll = RANDOM(1, 100)
+{
+- PassengerModuleTier >= 3:
+    {
+    - roll <= 20: ~ DailyPassengerTask = LIST_RANDOM(NegativePaxTasks)
+    - roll <= 70: ~ DailyPassengerTask = LIST_RANDOM(MixedPaxTasks)
+    - else:       ~ DailyPassengerTask = LIST_RANDOM(PositivePaxTasks)
+    }
+- PassengerModuleTier >= 2:
+    {
+    - roll <= 30: ~ DailyPassengerTask = LIST_RANDOM(NegativePaxTasks)
+    - roll <= 70: ~ DailyPassengerTask = LIST_RANDOM(MixedPaxTasks)
+    - else:       ~ DailyPassengerTask = LIST_RANDOM(PositivePaxTasks)
+    }
+- else:
+    {
+    - roll <= 50: ~ DailyPassengerTask = LIST_RANDOM(NegativePaxTasks)
+    - roll <= 80: ~ DailyPassengerTask = LIST_RANDOM(MixedPaxTasks)
+    - else:       ~ DailyPassengerTask = LIST_RANDOM(PositivePaxTasks)
+    }
+}
+->->
+
+/*
+
+    Passenger Satisfaction Check
+    Tunnel called from next_day(). Prints a status line when passengers
+    are in bonus or penalty satisfaction zones.
+
+*/
+=== passenger_satisfaction_check
+{
+- PassengerSatisfaction >= 70:
+    { shuffle:
+    - The passengers seem genuinely content. You can hear laughter from the common area.
+    - Someone left a thank-you note on the galley counter. You pocket it.
+    - The mood aboard is warm. Even the quiet ones are smiling.
+    }
+- PassengerSatisfaction <= 30:
+    { shuffle:
+    - The passengers are not happy. You catch muttering as you pass the berths.
+    - Someone has scratched a complaint into the galley table. Charming.
+    - The atmosphere in the passenger section could curdle milk.
+    }
+}
+->->
+
+/*
+
+    Passenger Task Name
+    Short display name used in choice text.
+
+*/
+=== function PassengerTaskName(task)
+{ task:
+- PaxShower:      ~ return "fix the broken shower"
+- PaxQuarters:    ~ return "address cramped quarters"
+- PaxAirQuality:  ~ return "improve air quality"
+- PaxRations:     ~ return "sort out food complaints"
+- PaxMovieNight:  ~ return "set up movie night"
+- PaxMealService: ~ return "cook a group meal"
+- PaxGameNight:   ~ return "organize a game night"
+- PaxExercise:    ~ return "lead a group workout"
+- PaxObsDeck:     ~ return "open the observation deck"
+- PaxKaraoke:     ~ return "host karaoke night"
+- PaxStargazing:  ~ return "stargazing session"
+- PaxCocktails:   ~ return "mix cocktails"
+}
+~ return "check on passengers"
+
+/*
+
+    Passenger Task Text
+    Completion flavor text for each passenger task.
+
+*/
+=== function PassengerTaskText(task)
+{ task:
+// Negative tone — fixing problems
+- PaxShower:
+    ~ return "You trace the shower problem to a stuck mixing valve. Twenty minutes with a wrench and your passengers have hot water again. Someone thanks you like you've performed a miracle."
+- PaxQuarters:
+    ~ return "You rearrange the berth dividers and rig up a privacy curtain from cargo netting. It's not luxury, but the complaints stop."
+- PaxAirQuality:
+    ~ return "You swap the passenger section air filters and crank the circulation up a notch. The air smells almost fresh. Almost."
+- PaxRations:
+    ~ return "You dig through the galley stores and put together something that isn't a ration pack. It's basic, but the passengers eat every bite."
+// Mixed tone — small positive gestures
+- PaxMovieNight:
+    ~ return "You rig the common area screen and queue up a film. The passengers settle in with blankets and ration snacks. For a couple of hours, nobody's thinking about the void outside."
+- PaxMealService:
+    ~ return "You cook enough for everyone. The ship smells like real food for the first time this trip. A kid asks for seconds."
+- PaxGameNight:
+    ~ return "You sit down with the passengers for cards. The game gets competitive, then loud, then funny. You lose badly and nobody cares."
+- PaxExercise:
+    ~ return "You lead the group through a workout routine in the cargo hold. It's awkward at first, then everyone gets into it. You're all sore and smiling afterward."
+// Positive tone — genuine hospitality
+- PaxObsDeck:
+    ~ return "You open the observation blister and dim the interior lights. The passengers crowd in, faces lit by starlight. You point out Jupiter, the Belt, the distant Sun. Nobody speaks for a long time."
+- PaxKaraoke:
+    ~ return "The karaoke system fires up and your passengers take turns murdering classic songs. It's terrible and wonderful. Someone drags you up for a duet."
+- PaxStargazing:
+    ~ return "You set up in the observation deck with star charts and a thermos of coffee. The passengers listen as you trace constellations and tell stories about the places they connect. It's a good night."
+- PaxCocktails:
+    ~ return "You break out the good glasses and mix something from the ship's stores that passes for cocktails. The passengers toast each other, toast you, toast the ship. The mood is warm."
+}
+~ return "You spend some time with the passengers."

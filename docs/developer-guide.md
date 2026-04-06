@@ -446,6 +446,8 @@ Random events are P0 interruptions that fire during transit, bypassing the task 
 
 **`has_medical_module()`:** Returns `is_module_active(WellnessSuite)`. Used by the medical emergency event to improve patient outcomes — better recovery odds and no possibility of a fatal outcome when the suite is active (condition >= 50%).
 
+**Passenger satisfaction impacts:** All four passenger events and the coffee machine event modify `PassengerSatisfaction` (guarded by `InstalledModules ? PassengerModule`). See the event tables in `events.ink` for the specific values. The coffee machine event affects satisfaction if passengers are present (the lack of coffee hits harder with an audience).
+
 **Cargo damage:** `CargoDamagePct` accumulates cargo damage during transit (micrometeorite cargo hit, cargo shift with fatigue failure). It reduces delivery pay at port alongside paperwork and inspection penalties. Total combined penalty is capped at 75%. It only increases from event outcomes — normal transit never touches it.
 
 **`damage_random_system(amount)`:** Damages a random system — 50% chance engine, 50% chance a random installed module. If no modules are installed, always damages engine. Module condition floors at 1 (not 0, since 0 = not installed).
@@ -494,6 +496,8 @@ All module daily behavior runs via the `module_auto_tasks` tunnel, called from `
 - **Entertainment System** (400€) — improves recreation. Full (75%+): all recreation (cooking, workout, movie, video games, music) gets a +50% morale bonus via `apply_recreation_bonus(base)`. The bonus uses integer math: `base + base / 2`. Reduced (50-74%): video games and music are available (module is active), but no morale bonus. Below 50%: offline, no extra options. Video games and music appear inside the "Take a break" → `relax_options` sub-menu when Entertainment is active (not as standalone P4 choices). They are gated with `{ is_module_active(Entertainment) }` inline choice guards inside `relax_options`.
 
 - **Wellness Suite** (500€) — daily fatigue/morale benefit and medical emergency improvement. Full (75%+): -5 fatigue, +2 morale per day. Reduced (50-74%): -3 fatigue, +1 morale. Applied in `module_auto_tasks` with narrative flavor text (gym, autodoc, sunlight simulator, therapy, haircut). Also wires `has_medical_module()` → `is_module_active(WellnessSuite)` to improve medical emergency outcomes.
+
+- **Passenger Module** (tiered, separate upgrade path) — gates passenger cargo and drives the satisfaction system. Unlike other modules, this has a `PassengerModuleTier` VAR (0=not installed, 1-3=tier) and a separate purchase/upgrade UI stitch (`passenger_module_upgrades`) that is linked from `upgrade_menu` but excluded from the standard `browse_module_list`. Tier is upgraded sequentially (T0→T1→T2→T3); pricing is cumulative (200/400/800€ total, delta charged per upgrade). The refurbished option is only available at initial install (T0→T1). Passive satisfaction bonus activates at T2+.
 
 ### Module Maintenance (Two Layers)
 

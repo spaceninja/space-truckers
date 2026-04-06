@@ -34,7 +34,7 @@ VAR EngineCondition = 100 // 0–100%. Degrades from skipped maintenance. Affect
 // Skipped tasks age: fresh → stale → auto-resolve with condition penalty.
 LIST EngineMaintTasks = EngTune, FuelLine, Injector, Coolant
 LIST ShipMaintTasks = AirFilter, HullCheck, DrainLines, Scrub
-LIST ModuleMaintTasks = RepDroneServo, RepDroneOptics, ClnDroneBrush, ClnDroneFilter, NavChipFlush, NavGyroCalib, CargoSensor, CargoSealCheck, EntWiring, EntDisplayClean, WellSanitize, WellCalib
+LIST ModuleMaintTasks = RepDroneServo, RepDroneOptics, ClnDroneBrush, ClnDroneFilter, NavChipFlush, NavGyroCalib, CargoSensor, CargoSealCheck, EntWiring, EntDisplayClean, WellSanitize, WellCalib, PaxLifeSupp, PaxBerthClean
 VAR Backlog = ()          // current maintenance tasks (accumulates daily)
 VAR StaleBacklog = ()     // tasks that survived yesterday without completion
 VAR CompletedToday = ()   // tasks completed this day, becomes tomorrow's cooldown
@@ -64,7 +64,7 @@ LIST FreshIngredients = EarthStrawberries, EarthWagyu, LunaHerbs, LunaCheese, Ma
 VAR PurchasedIngredients = ()  // subset of FreshIngredients currently in the galley
 
 // Module system — ship modules that automate routine tasks.
-LIST ShipModules = RepairDrones, CleaningDrones, AutoNav, CargoMgmt, Entertainment, WellnessSuite
+LIST ShipModules = RepairDrones, CleaningDrones, AutoNav, CargoMgmt, Entertainment, WellnessSuite, PassengerModule
 LIST ModuleStats = ModName, ModPrice, ModDesc
 VAR InstalledModules = ()      // currently installed modules
 VAR RefurbishedModules = ()    // subset of InstalledModules bought refurbished (80% max cap)
@@ -77,6 +77,14 @@ VAR AutoNavCondition = 0
 VAR CargoMgmtCondition = 0
 VAR EntertainmentCondition = 0
 VAR WellnessSuiteCondition = 0
+VAR PassengerModuleCondition = 0
+VAR PassengerModuleTier = 0       // 0=not installed, 1=Basic Berths, 2=Standard Cabin, 3=Luxury Suite
+
+// Passenger satisfaction — 0-100, starts at 50 (neutral) each trip.
+// ≥70: pay bonus at delivery; ≤30: pay penalty. Status shown daily.
+VAR PassengerSatisfaction = 50
+VAR DailyPassengerTask = ()       // LIST value from PassengerTasks, () = no task today
+VAR PassengerTaskCompleted = false
 
 
 LIST EngineStats = FuelCap, EcoFuel, EcoSpeed, BalFuel, BalSpeed, TurboFuel, TurboSpeed, EngPrice

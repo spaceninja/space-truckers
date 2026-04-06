@@ -134,6 +134,8 @@ Most events require immediate action (patching the hull, securing cargo), but so
 
 When you're carrying passengers, you'll encounter additional events — birthdays to celebrate, complaints to handle, conversations to have, and the occasional medical emergency. Passengers make trips more interesting (and more stressful). That pay bonus exists for a reason.
 
+To carry passengers at all, you need a **Passenger Module** installed (see below). How you treat them during the trip determines whether you earn a bonus or take a cut on delivery.
+
 Being exhausted makes emergencies worse. A fatigued repair takes longer and may cause additional damage. Rest before you need it, not after something goes wrong.
 
 ### Cooking
@@ -170,6 +172,28 @@ At any port, you can visit the **Ship upgrades** menu to buy modules that automa
 **Entertainment System** (400€) — Upgrades your recreation options and improves how rewarding downtime feels. At full condition (75%+), all recreation activities give a 50% morale bonus, and two new options appear inside "Take a break": "Play video games" (+10 morale) and "Listen to music" (+5 morale). At reduced condition (50-74%), the new options are available but there's no bonus to any recreation. Below 50%, it goes offline and everything reverts to baseline.
 
 **Wellness Suite** (500€) — A combined gym, autodoc, drug printer (supplements, painkillers, stimulants), sunlight simulator, remote therapy service, and yes — a working hair trimmer. Each day the suite is active, it reduces your fatigue by 5 and boosts morale by 2 (at full condition, 75%+), or 3 fatigue / 1 morale at reduced condition (50-74%). It also improves outcomes when you're carrying a passenger who has a medical emergency — better odds of recovery, and no possibility of a fatal outcome. Below 50%, it goes offline.
+
+**Passenger Module** — Required to carry passengers. Comes in three tiers (installed sequentially):
+
+- **Tier 1 "Basic Berths" (200€)** — Unlocks passenger cargo. Daily tasks tend toward the unglamorous side: fix the broken shower, deal with complaints about rations, address air quality problems.
+- **Tier 2 "Standard Cabin" (400€ upgrade)** — Better facilities mean more balanced tasks. The module also passively improves passenger satisfaction by +1 per day when active.
+- **Tier 3 "Luxury Suite" (800€ upgrade)** — Premium passengers, premium experience. Tasks skew toward positive interactions. Passive satisfaction bonus increases to +2 per day, and task completion gives a larger satisfaction boost.
+
+Unlike other modules, the Passenger Module is not available through the standard module browser — it has its own entry in the Ship upgrades menu.
+
+### Passenger Satisfaction
+
+Each trip with passengers starts at satisfaction 50 (neutral). It shifts based on your actions:
+
+- **Complete the daily passenger task** (+5 satisfaction, or +7 at Tier 3)
+- **Skip the daily task** (the day ends without completing it): -3 satisfaction
+- **Tier 2/3 active module**: passive +1 or +2 per day automatically
+
+When satisfaction drops to 30 or below, you'll start hearing about it in your daily status. When it reaches 70 or above, passengers are visibly pleased.
+
+At delivery, satisfaction determines your pay modifier on passenger cargo: **+10% bonus at ≥70**, **-10% penalty at ≤30**, no change in between. Satisfaction resets to 50 when you deliver the last passengers.
+
+Random events involving passengers also affect satisfaction — how you handle a birthday, a complaint, or a medical emergency all shift the number up or down.
 
 ### New vs Refurbished
 
