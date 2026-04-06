@@ -6,8 +6,8 @@ VAR ActionPointsMax = 6
 // Task registry lists — used only for LIST_COUNT() to keep shuffle loop
 // bounds in sync. Add an entry here when adding a task to a tier's shuffle.
 LIST P2Tasks = EngineMaintenance, UrgentSleep
-LIST P3Tasks = Paperwork, NavCheck, CargoInspect, MaintBacklog
-LIST P4Tasks = Relax, SleepRest, PassengerTask
+LIST P3Tasks = Paperwork, NavCheck, CargoInspect, MaintBacklog, PassengerTask
+LIST P4Tasks = Relax, SleepRest
 
 // Passenger task pool — 12 tasks in 3 tone categories.
 // Tone category VARs control weighted random selection in pick_passenger_task.
@@ -132,6 +132,7 @@ Flying to {LocationData(destination, Name)} for {duration} days…
     - { CHOICE_COUNT() < p3_cap and TripDay >= NavCheckDueDay: <- task_nav_check }
     - { CHOICE_COUNT() < p3_cap and TripDay >= CargoCheckDueDay: <- task_cargo_inspect }
     - { CHOICE_COUNT() < p3_cap and LIST_COUNT(Backlog) > 0: <- task_maintenance }
+    - { CHOICE_COUNT() < p3_cap and DailyPassengerTask != () and not PassengerTaskCompleted: <- task_passenger }
 }
 ~ p3_loops++
 { p3_loops < LIST_COUNT(LIST_ALL(P3Tasks)) and CHOICE_COUNT() < p3_cap: -> p3_shuffle }
@@ -143,7 +144,6 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 { shuffle:
     - { CHOICE_COUNT() < p4_cap: <- task_relax }
     - { CHOICE_COUNT() < p4_cap and Fatigue >= 30 and Fatigue < 70: <- task_sleep_rest }
-    - { CHOICE_COUNT() < p4_cap and DailyPassengerTask != () and not PassengerTaskCompleted: <- task_passenger }
 }
 ~ p4_loops++
 { p4_loops < LIST_COUNT(LIST_ALL(P4Tasks)) and CHOICE_COUNT() < p4_cap: -> p4_shuffle }
@@ -705,7 +705,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 { tier:
     - 1: ~ return (not FlipDone and TripDay >= TripDuration / 2)
     - 2: ~ return (EngineCondition < 80) or (Fatigue >= 70)
-    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay >= NavCheckDueDay) or (TripDay >= CargoCheckDueDay) or (LIST_COUNT(Backlog) > 0)
+    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay >= NavCheckDueDay) or (TripDay >= CargoCheckDueDay) or (LIST_COUNT(Backlog) > 0) or (DailyPassengerTask != () and not PassengerTaskCompleted)
     - 4: ~ return true  // Relax is always available
 }
 ~ return false

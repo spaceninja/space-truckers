@@ -463,7 +463,7 @@ Engine: {manufacturer_name(ShipManufacturer)} Tier {ShipEngineTier}{RefurbishedE
 ~ temp cond = get_module_condition(module)
 ~ temp max_cond = get_module_max_condition(module)
 { module == PassengerModule:
-    {PassengerTierName(PassengerModuleTier)}: {cond}%{max_cond < 100: /{max_cond}% max (refurbished)}{ cond < 50: — OFFLINE}{ cond >= 50 and cond < 75: — reduced}
+    {PassengerTierName(PassengerModuleTier)}: {cond}%{max_cond < 100: /{max_cond}% max (refurbished)}{ cond < 50: — degraded}{ cond >= 50 and cond < 75: — reduced}
 - else:
     {module_name(module)}: {cond}%{max_cond < 100: /{max_cond}% max (refurbished)}{ cond < 50: — OFFLINE}{ cond >= 50 and cond < 75: — reduced}
 }
