@@ -108,7 +108,7 @@ Cargo inspections: `CargoCheckDueDay` (starts at 2), `CargoCheckPenaltyPct` → 
 - Tier weights: T1 50/30/20, T2 30/40/30, T3 20/50/30 (neg/mixed/pos)
 - Task completion: +5 satisfaction (or +7 at Tier 3), `PassengerTaskCompleted = true`
 - Daily skip penalty (in `next_day()`): -3 if `DailyPassengerTask != ()` and `not PassengerTaskCompleted`
-- Passive bonus (in `next_day()`): +1 (T2 active), +2 (T3 active); no bonus below 50% condition
+- Passive bonus (in `next_day()`): `passive = tier - 1`, shifted by condition (80%+: no shift, 50-79%: -1, <50%: -2); e.g. T1 at <50% gives -2, T3 at 80%+ gives +2, T2 at 50-79% gives 0
 - Delivery modifier (in `deliver_cargo`, port.ink): +10% pay if ≥70, -10% if ≤30, 0 otherwise; applies only to passenger-flagged cargo items; **use two-step integer math**: `pax_modifier = pay * pax_bonus_pct` then `pax_modifier = pax_modifier / 100` (avoid `pay * pct / 100` which truncates early for negatives)
 - Satisfaction resets to 50 on delivery of last passengers; events also modify via guarded blocks `{ InstalledModules ? PassengerModule: }`
 

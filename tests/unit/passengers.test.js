@@ -153,4 +153,24 @@ describe("pick_passenger_task — weighted category selection", () => {
     story.EvaluateFunction("pick_passenger_task");
     expect(story.variablesState["PassengerTaskCompleted"]).toBe(false);
   });
+
+  it("rarely draws the same task two days in a row", () => {
+    const s = createStory();
+    let repeats = 0;
+    const ITERATIONS = 100;
+
+    for (let i = 0; i < ITERATIONS; i++) {
+      s.ResetState();
+      s.variablesState["PassengerModuleTier"] = 1;
+      // Set a known previous task
+      s.variablesState["DailyPassengerTask"] = L(s, "PassengerTasks.PaxShower");
+      s.EvaluateFunction("pick_passenger_task");
+      if (s.variablesState["DailyPassengerTask"].Equals(L(s, "PassengerTasks.PaxShower"))) {
+        repeats++;
+      }
+    }
+    // With redraw, repeat rate should be ~6.25% (1/16), not ~25% (1/4)
+    // Allow up to 15% to avoid flaky tests
+    expect(repeats).toBeLessThan(ITERATIONS * 0.15);
+  });
 });

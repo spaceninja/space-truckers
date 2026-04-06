@@ -226,9 +226,9 @@ describe("Satisfaction — skip penalty and passive bonus from next_day", () => 
     expect(s.variablesState["PassengerSatisfaction"]).toBe(52);
   });
 
-  it("offline module (below 50%) provides no passive bonus", () => {
+  it("tier 3 at low condition (below 50%) provides no passive bonus", () => {
     const s = setupTransit(); // AP=1
-    s.EvaluateFunction("install_module", [L(s, "ShipModules.PassengerModule"), 40]); // offline
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.PassengerModule"), 40]);
     s.variablesState["PassengerModuleTier"] = 3;
     s.variablesState["PassengerSatisfaction"] = 50;
     s.variablesState["DailyPassengerTask"] = new InkList();
@@ -239,7 +239,41 @@ describe("Satisfaction — skip penalty and passive bonus from next_day", () => 
 
     triggerNextDay(s);
 
-    // No passive bonus (module offline), no skip penalty
+    // T3 base=2, below 50% → -2 → passive=0
+    expect(s.variablesState["PassengerSatisfaction"]).toBe(50);
+  });
+
+  it("tier 1 at low condition (below 50%) applies -2 passive penalty", () => {
+    const s = setupTransit(); // AP=1
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.PassengerModule"), 40]);
+    s.variablesState["PassengerModuleTier"] = 1;
+    s.variablesState["PassengerSatisfaction"] = 50;
+    s.variablesState["DailyPassengerTask"] = new InkList();
+    s.variablesState["PassengerTaskCompleted"] = true;
+    s.variablesState["ShipCargo"] = L(s, "AllCargo.052_Scientists");
+    s.variablesState["Backlog"] = new InkList();
+    s.variablesState["StaleBacklog"] = new InkList();
+
+    triggerNextDay(s);
+
+    // T1 base=0, below 50% → -2 → passive=-2
+    expect(s.variablesState["PassengerSatisfaction"]).toBe(48);
+  });
+
+  it("tier 2 at reduced condition (50-79%) provides no passive bonus", () => {
+    const s = setupTransit(); // AP=1
+    s.EvaluateFunction("install_module", [L(s, "ShipModules.PassengerModule"), 60]);
+    s.variablesState["PassengerModuleTier"] = 2;
+    s.variablesState["PassengerSatisfaction"] = 50;
+    s.variablesState["DailyPassengerTask"] = new InkList();
+    s.variablesState["PassengerTaskCompleted"] = true;
+    s.variablesState["ShipCargo"] = L(s, "AllCargo.052_Scientists");
+    s.variablesState["Backlog"] = new InkList();
+    s.variablesState["StaleBacklog"] = new InkList();
+
+    triggerNextDay(s);
+
+    // T2 base=1, 50-79% → -1 → passive=0
     expect(s.variablesState["PassengerSatisfaction"]).toBe(50);
   });
 });

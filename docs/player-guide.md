@@ -176,8 +176,8 @@ At any port, you can visit the **Ship upgrades** menu to buy modules that automa
 **Passenger Module** — Required to carry passengers. Comes in three tiers (installed sequentially):
 
 - **Tier 1 "Basic Berths" (200€)** — Unlocks passenger cargo. Daily tasks tend toward the unglamorous side: fix the broken shower, deal with complaints about rations, address air quality problems.
-- **Tier 2 "Standard Cabin" (400€ upgrade)** — Better facilities mean more balanced tasks. The module also passively improves passenger satisfaction by +1 per day when active.
-- **Tier 3 "Luxury Suite" (800€ upgrade)** — Premium passengers, premium experience. Tasks skew toward positive interactions. Passive satisfaction bonus increases to +2 per day, and task completion gives a larger satisfaction boost.
+- **Tier 2 "Standard Cabin" (400€ upgrade)** — Better facilities mean more balanced tasks. The module also passively improves passenger satisfaction by +1 per day at good condition (80%+).
+- **Tier 3 "Luxury Suite" (800€ upgrade)** — Premium passengers, premium experience. Tasks skew toward positive interactions. Passive satisfaction bonus of +2 per day at good condition, and task completion gives a larger satisfaction boost.
 
 Unlike other modules, the Passenger Module is not available through the standard module browser — it has its own entry in the Ship upgrades menu.
 
@@ -187,7 +187,7 @@ Each trip with passengers starts at satisfaction 50 (neutral). It shifts based o
 
 - **Complete the daily passenger task** (+5 satisfaction, or +7 at Tier 3)
 - **Skip the daily task** (the day ends without completing it): -3 satisfaction
-- **Tier 2/3 active module**: passive +1 or +2 per day automatically
+- **Module condition matters**: higher tiers and better condition give a passive daily bonus; low condition on any tier drains satisfaction slowly
 
 When satisfaction drops to 30 or below, you'll start hearing about it in your daily status. When it reaches 70 or above, passengers are visibly pleased.
 

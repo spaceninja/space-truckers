@@ -155,16 +155,6 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 // DEBUG: Skip the rest of the trip and arrive at destination immediately
 + { DEBUG } [\[DEBUG\] Skip Trip]
     -> arrive_in_port(ShipDestination)
-// DEBUG: Install/upgrade Passenger Module to Tier 3
-+ { DEBUG } [\[DEBUG\] Passenger Module → Tier 3]
-    { not (InstalledModules ? PassengerModule):
-        ~ install_module(PassengerModule, 100)
-    }
-    ~ PassengerModuleTier = 3
-    ~ set_module_condition(PassengerModule, 100)
-    Passenger Module upgraded to Luxury Suite (Tier 3), 100%.
-    -> ship_options
-
 // Flow pauses here; accumulated threaded choices are presented to the player
 - (await_choice)
 -> DONE
@@ -621,15 +611,23 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
     { DailyPassengerTask != () and not PassengerTaskCompleted:
         ~ PassengerSatisfaction = MAX(PassengerSatisfaction - 3, 0)
     }
-    // Passive daily satisfaction from higher tiers (requires active module)
-    { is_module_active(PassengerModule):
-        { PassengerModuleTier >= 3:
-            ~ PassengerSatisfaction = MIN(PassengerSatisfaction + 2, 100)
-        - else:
-            { PassengerModuleTier >= 2:
-                ~ PassengerSatisfaction = MIN(PassengerSatisfaction + 1, 100)
-            }
-        }
+    // Passive daily satisfaction: tier determines base, condition shifts it
+    // T1: +0/−1/−2, T2: +1/0/−1, T3: +2/+1/0 at 80%+/50%+/below 50%
+    ~ temp pax_cond = get_module_condition(PassengerModule)
+    ~ temp passive = PassengerModuleTier - 1 // base: T1=0, T2=1, T3=2
+    {
+    - pax_cond >= 80:
+        // full bonus — no adjustment
+    - pax_cond >= 50:
+        ~ passive = passive - 1
+    - else:
+        ~ passive = passive - 2
+    }
+    { passive > 0:
+        ~ PassengerSatisfaction = MIN(PassengerSatisfaction + passive, 100)
+    }
+    { passive < 0:
+        ~ PassengerSatisfaction = MAX(PassengerSatisfaction + passive, 0)
     }
     -> passenger_satisfaction_check ->
     -> pick_passenger_task ->
@@ -984,32 +982,52 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
     task using two-stage weighted selection: first pick tone category (weighted
     by module tier), then pick randomly within that category.
 
+    Avoids drawing the same task two days in a row by redrawing once if the
+    chosen task matches yesterday's. (6.25% residual repeat rate is acceptable.)
+
     Tier 1 weights: 50% negative / 30% mixed / 20% positive
     Tier 2 weights: 30% negative / 40% mixed / 30% positive
     Tier 3 weights: 20% negative / 50% mixed / 30% positive
 
 */
 === pick_passenger_task
+~ temp prev = DailyPassengerTask
 ~ PassengerTaskCompleted = false
 ~ temp roll = RANDOM(1, 100)
+// Stage 1: pick tone category (1=neg, 2=mixed, 3=pos)
+~ temp category = 0
 {
 - PassengerModuleTier >= 3:
     {
-    - roll <= 20: ~ DailyPassengerTask = LIST_RANDOM(NegativePaxTasks)
-    - roll <= 70: ~ DailyPassengerTask = LIST_RANDOM(MixedPaxTasks)
-    - else:       ~ DailyPassengerTask = LIST_RANDOM(PositivePaxTasks)
+    - roll <= 20: ~ category = 1
+    - roll <= 70: ~ category = 2
+    - else:       ~ category = 3
     }
 - PassengerModuleTier >= 2:
     {
-    - roll <= 30: ~ DailyPassengerTask = LIST_RANDOM(NegativePaxTasks)
-    - roll <= 70: ~ DailyPassengerTask = LIST_RANDOM(MixedPaxTasks)
-    - else:       ~ DailyPassengerTask = LIST_RANDOM(PositivePaxTasks)
+    - roll <= 30: ~ category = 1
+    - roll <= 70: ~ category = 2
+    - else:       ~ category = 3
     }
 - else:
     {
-    - roll <= 50: ~ DailyPassengerTask = LIST_RANDOM(NegativePaxTasks)
-    - roll <= 80: ~ DailyPassengerTask = LIST_RANDOM(MixedPaxTasks)
-    - else:       ~ DailyPassengerTask = LIST_RANDOM(PositivePaxTasks)
+    - roll <= 50: ~ category = 1
+    - roll <= 80: ~ category = 2
+    - else:       ~ category = 3
+    }
+}
+// Stage 2: pick random task within category
+{
+- category == 1: ~ DailyPassengerTask = LIST_RANDOM(NegativePaxTasks)
+- category == 2: ~ DailyPassengerTask = LIST_RANDOM(MixedPaxTasks)
+- else:          ~ DailyPassengerTask = LIST_RANDOM(PositivePaxTasks)
+}
+// Redraw once if same as yesterday
+{ DailyPassengerTask == prev:
+    {
+    - category == 1: ~ DailyPassengerTask = LIST_RANDOM(NegativePaxTasks)
+    - category == 2: ~ DailyPassengerTask = LIST_RANDOM(MixedPaxTasks)
+    - else:          ~ DailyPassengerTask = LIST_RANDOM(PositivePaxTasks)
     }
 }
 ->->
