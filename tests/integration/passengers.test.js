@@ -102,10 +102,10 @@ describe("Cargo gating", () => {
   });
 
   it("non-passenger cargo is available without the passenger module", () => {
-    // 033_Beef: Earth→Mars, no flags
+    // 003_Water: Earth→Mars, no flags
     const available = story.EvaluateFunction(
       "cargo_is_available",
-      [L(story, "AllCargo.033_Beef"), L(story, "AllLocations.Earth")]
+      [L(story, "AllCargo.003_Water"), L(story, "AllLocations.Earth")]
     );
     expect(available).toBe(true);
   });
@@ -400,4 +400,46 @@ describe("Passenger module — upgrade menu", () => {
     pickChoice(story, "Ship upgrades");
     expect(hasChoice(story, "Passenger module")).toBe(false);
   });
+});
+
+describe("Passenger cargo injection nudge", () => {
+  const ITERATIONS = 30;
+
+  it("with passenger module, passenger cargo appears in a statistically significant number of draws at Earth", () => {
+    // With ~14/99 Earth items being passengers plus the 50% injection nudge,
+    // passenger cargo should appear in well over 40% of draws.
+    // Early-exit once we have enough positive evidence.
+    const s = createStory();
+    let passengerDrawCount = 0;
+    const TARGET = Math.ceil(ITERATIONS * 0.4) + 1;
+
+    for (let i = 0; i < ITERATIONS; i++) {
+      s.ResetState();
+      s.variablesState["ShipFuelCapacity"] = 2000;
+      s.EvaluateFunction("install_module", [L(s, "ShipModules.PassengerModule"), 100]);
+      s.variablesState["PassengerModuleTier"] = 1;
+
+      const result = s.EvaluateFunction("get_available_cargo", [L(s, "AllLocations.Earth"), 5]);
+      const hasPassenger = s.EvaluateFunction("has_passenger_in_list", [result]);
+      if (hasPassenger) {
+        passengerDrawCount++;
+        if (passengerDrawCount >= TARGET) break; // early exit once condition met
+      }
+    }
+    expect(passengerDrawCount).toBeGreaterThanOrEqual(TARGET);
+  }, 30000);
+
+  it("without passenger module, no passenger cargo appears in draws", () => {
+    // Without module, cargo_is_available filters out all passenger cargo.
+    const s = createStory();
+
+    for (let i = 0; i < ITERATIONS; i++) {
+      s.ResetState();
+      s.variablesState["ShipFuelCapacity"] = 2000;
+
+      const result = s.EvaluateFunction("get_available_cargo", [L(s, "AllLocations.Earth"), 5]);
+      const hasPassenger = s.EvaluateFunction("has_passenger_in_list", [result]);
+      expect(hasPassenger).toBe(false);
+    }
+  }, 30000);
 });

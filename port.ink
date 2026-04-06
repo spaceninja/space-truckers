@@ -85,7 +85,8 @@ Balance: {PlayerBankBalance} € / Engine: {ShipManufacturer} Tier {ShipEngineTi
 { LIST_COUNT(_remaining) > 0:
     -> install_next
 }
-All modules installed at 100%.
+~ PassengerModuleTier = 3
+All modules installed at 100%. Passenger Module set to Tier 3.
 -> cheat_menu
 
 /*

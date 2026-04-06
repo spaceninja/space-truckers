@@ -541,6 +541,23 @@ Add a line to `CargoData` in `cargo.ink` using `cargo_db`:
 
 Pay is computed automatically from mass and distance. No manual payout calculation needed.
 
+If you set `isPassengers = 1`, also add the item to the `PassengerCargo` VAR at the top of `cargo.ink`. This VAR is a subset of `AllCargo` used by the injection nudge (see below) to avoid iterating all 600+ items on every port visit.
+
+### Passenger Cargo Availability and Injection Nudge
+
+Ports vary in how many passenger cargo items they offer. Earth and Mars have the most passenger options (~14 and ~11 items respectively), while remote outposts like Ganymede and Titan have fewer (~4 and ~5). This reflects the in-world reality that busy inner-system ports see heavier passenger traffic.
+
+**The injection nudge** further improves the odds that passenger cargo appears in a port draw when the player has the Passenger Module installed:
+
+- `get_available_cargo` draws 5 items via `validated_list_random_subset_of_size`
+- After the draw, if the Passenger Module is installed and no passenger item was drawn naturally, there is a **50% chance** one randomly selected item in the result is replaced with a random available passenger cargo item from that port
+- The replacement item is drawn from `PassengerCargo` filtered by `cargo_is_available` (i.e., it must originate at the current port and pass all standard availability checks)
+
+The nudge is implemented via three functions in `cargo.ink`:
+- `has_passenger_in_list(items)` — recursive check for any Passengers flag in a list
+- `get_random_passenger_cargo(port)` — builds the available pool from `PassengerCargo` and returns `LIST_RANDOM`
+- `_build_passenger_pool(items, port)` — recursive helper that filters the pool by `cargo_is_available`
+
 ### New Location
 
 1. Add the location to `AllLocations` in `locations.ink`

@@ -149,6 +149,9 @@ LIST AllCargo =
     (591_Crystals), (592_Pigment), (593_Dye), (594_Catalysts), (595_Reagents),
     (596_Isotopes), (597_Deuterium), (598_Graphene), (599_Silicone), (600_Solvents)
 
+// All cargo items with the Passengers flag (VAR subset for efficient filtering)
+VAR PassengerCargo = (011_Wheat, 016_Soybeans, 031_Diplomats, 032_Tourists, 033_Beef, 046_Apples, 052_Scientists, 053_Students, 063_Lumber, 070_Tulips, 075_Musicians, 078_Topsoil, 090_Athletes, 099_Pilgrims, 106_RegolithBricks, 112_CraterClay, 134_AnorthiteSlabs, 149_TranqSand, 162_Engineers, 163_Diplomats, 164_Geologists, 165_PressureValves, 189_MiningGear, 207_IronOre, 219_UtopiaWheat, 227_Fertilizer, 258_FreezedriedMeals, 264_ToolSets, 280_MuseumFossils, 282_Engineers, 283_Geologists, 284_DomeWorkers, 285_MedicalStaff, 290_ChiliPowder, 304_Colonists, 379_Soil, 383_Miners, 388_Meteorites, 389_Antiques, 391_Workers, 392_Engineers, 394_Rovers, 404_Team, 487_Interns, 488_Lecturers, 491_Archivists, 536_Settlers, 537_Miners, 538_Engineers, 539_Medics, 541_Welders)
+
 /*
 
     Port Economic Identities
@@ -197,7 +200,7 @@ LIST AllCargo =
 - 010_Linen:
     ~ return cargo_db(data, Earth, Luna,      10, "Irish linen",              0, 0, 0, 0)
 - 011_Wheat:
-    ~ return cargo_db(data, Earth, Luna,      30, "winter wheat",             0, 0, 0, 0)
+    ~ return cargo_db(data, Earth, Luna,      30, "agricultural exchange team",0, 0, 0, 1)
 - 012_Rice:
     ~ return cargo_db(data, Earth, Luna,      20, "jasmine rice",             0, 0, 0, 0)
 - 013_Barley:
@@ -207,7 +210,7 @@ LIST AllCargo =
 - 015_Corn:
     ~ return cargo_db(data, Earth, Luna,      20, "sweet corn",               0, 0, 0, 0)
 - 016_Soybeans:
-    ~ return cargo_db(data, Earth, Luna,      20, "organic soybeans",         0, 0, 0, 0)
+    ~ return cargo_db(data, Earth, Luna,      20, "farming consultants",      0, 0, 0, 1)
 - 017_Tea:
     ~ return cargo_db(data, Earth, Luna,      10, "Darjeeling tea",           1, 0, 0, 0)
 - 018_Coffee:
@@ -241,7 +244,7 @@ LIST AllCargo =
 - 032_Tourists:
     ~ return cargo_db(data, Earth, Luna,      20, "Luna tourists",            0, 0, 0, 1)
 - 033_Beef:
-    ~ return cargo_db(data, Earth, Mars,      30, "grass-fed beef",           0, 0, 0, 0)
+    ~ return cargo_db(data, Earth, Mars,      30, "ranching team and stock",  0, 0, 0, 1)
 - 034_Pork:
     ~ return cargo_db(data, Earth, Mars,      20, "cured pork",               0, 0, 0, 0)
 - 035_Lamb:
@@ -267,7 +270,7 @@ LIST AllCargo =
 - 045_Lemons:
     ~ return cargo_db(data, Earth, Mars,      15, "Meyer lemons",             0, 0, 0, 0)
 - 046_Apples:
-    ~ return cargo_db(data, Earth, Mars,      30, "Fuji apples",              0, 0, 0, 0)
+    ~ return cargo_db(data, Earth, Mars,      30, "horticulture delegation",  0, 0, 0, 1)
 - 047_Grapes:
     ~ return cargo_db(data, Earth, Mars,      15, "table grapes",             0, 0, 0, 0)
 - 048_Mangoes:
@@ -301,7 +304,7 @@ LIST AllCargo =
 - 062_Rum:
     ~ return cargo_db(data, Earth, Ceres,     15, "Caribbean rum",            0, 0, 0, 0)
 - 063_Lumber:
-    ~ return cargo_db(data, Earth, Ceres,     50, "hardwood lumber",          0, 0, 0, 0)
+    ~ return cargo_db(data, Earth, Ceres,     50, "construction crew and timber",0, 0, 0, 1)
 - 064_Bamboo:
     ~ return cargo_db(data, Earth, Ceres,     40, "bamboo poles",             0, 0, 0, 0)
 - 065_Cork:
@@ -315,7 +318,7 @@ LIST AllCargo =
 - 069_Orchids:
     ~ return cargo_db(data, Earth, Ceres,     15, "orchid specimens",         0, 0, 0, 0)
 - 070_Tulips:
-    ~ return cargo_db(data, Earth, Ceres,     15, "Dutch tulip bulbs",        0, 0, 0, 0)
+    ~ return cargo_db(data, Earth, Ceres,     15, "botanical expedition",     0, 0, 0, 1)
 - 071_Coral:
     ~ return cargo_db(data, Earth, Ceres,     40, "live coral",               0, 1, 1, 0)
 - 072_Pearls:
@@ -331,7 +334,7 @@ LIST AllCargo =
 - 077_Sand:
     ~ return cargo_db(data, Earth, Ganymede,  50, "silica sand",              0, 0, 0, 0)
 - 078_Topsoil:
-    ~ return cargo_db(data, Earth, Ganymede,  40, "enriched topsoil",         0, 0, 0, 0)
+    ~ return cargo_db(data, Earth, Ganymede,  40, "terraforming crew and soil",0, 0, 0, 1)
 - 079_Peat:
     ~ return cargo_db(data, Earth, Ganymede,  30, "sphagnum peat",            0, 0, 0, 0)
 - 080_Leather:
@@ -373,7 +376,7 @@ LIST AllCargo =
 - 098_Vaccines:
     ~ return cargo_db(data, Earth, Titan,     20, "vaccine shipment",         1, 0, 1, 0)
 - 099_Pilgrims:
-    ~ return cargo_db(data, Earth, Titan,     40, "pilgrims",                 0, 0, 0, 0)
+    ~ return cargo_db(data, Earth, Titan,     40, "pilgrims",                 0, 0, 0, 1)
 
 // ── Luna (101–199) ────────────────────────────────────────────────────────────
 - 101_Helium:
@@ -387,7 +390,7 @@ LIST AllCargo =
 - 105_He3Canisters:
     ~ return cargo_db(data, Luna,  Earth,     15, "helium-3 canisters",       1, 0, 0, 0)
 - 106_RegolithBricks:
-    ~ return cargo_db(data, Luna,  Earth,     30, "sintered regolith",        0, 0, 0, 0)
+    ~ return cargo_db(data, Luna,  Earth,     30, "construction crew and materials",0, 0, 0, 1)
 - 107_SinteredTiles:
     ~ return cargo_db(data, Luna,  Earth,     10, "sintered tiles",           0, 0, 0, 0)
 - 108_TychoGlass:
@@ -399,7 +402,7 @@ LIST AllCargo =
 - 111_BasaltFiber:
     ~ return cargo_db(data, Luna,  Earth,     20, "basalt fiber",             0, 0, 0, 0)
 - 112_CraterClay:
-    ~ return cargo_db(data, Luna,  Earth,     10, "crater clay",              0, 0, 0, 0)
+    ~ return cargo_db(data, Luna,  Earth,     10, "geology team and samples", 0, 0, 0, 1)
 - 113_TitaniumSlugs:
     ~ return cargo_db(data, Luna,  Earth,     30, "titanium slugs",           0, 0, 0, 0)
 - 114_VacuumSteel:
@@ -443,7 +446,7 @@ LIST AllCargo =
 - 133_MagnesiumBars:
     ~ return cargo_db(data, Luna,  Mars,      30, "magnesium bars",           0, 0, 0, 0)
 - 134_AnorthiteSlabs:
-    ~ return cargo_db(data, Luna,  Mars,      40, "anorthosite slabs",        0, 0, 0, 0)
+    ~ return cargo_db(data, Luna,  Mars,      40, "mining crew and ore",      0, 0, 0, 1)
 - 135_IlmeniteOre:
     ~ return cargo_db(data, Luna,  Mars,      20, "ilmenite ore",             0, 0, 0, 0)
 - 136_Bearings:
@@ -473,7 +476,7 @@ LIST AllCargo =
 - 148_FusionPellets:
     ~ return cargo_db(data, Luna,  Mars,       5, "fusion pellets",           0, 0, 1, 0)
 - 149_TranqSand:
-    ~ return cargo_db(data, Luna,  Mars,      30, "Tranquility sand",         0, 0, 0, 0)
+    ~ return cargo_db(data, Luna,  Mars,      30, "Tranquility tour group",   0, 0, 0, 1)
 - 150_Botanicals:
     ~ return cargo_db(data, Luna,  Mars,      15, "dome botanicals",          0, 1, 0, 0)
 - 151_FiberOptics:
@@ -505,7 +508,7 @@ LIST AllCargo =
 - 164_Geologists:
     ~ return cargo_db(data, Luna,  Ceres,     10, "field geologists",         0, 0, 0, 1)
 - 165_PressureValves:
-    ~ return cargo_db(data, Luna,  Ceres,     20, "pressure valves",          0, 0, 0, 0)
+    ~ return cargo_db(data, Luna,  Ceres,     20, "engineering team",         0, 0, 0, 1)
 - 166_TungstenWire:
     ~ return cargo_db(data, Luna,  Ceres,     10, "tungsten wire",            0, 0, 0, 0)
 - 167_HullPlates:
@@ -553,7 +556,7 @@ LIST AllCargo =
 - 188_InsulationBatt:
     ~ return cargo_db(data, Luna,  Ganymede,  20, "insulation batts",         0, 0, 0, 0)
 - 189_MiningGear:
-    ~ return cargo_db(data, Luna,  Ganymede,  40, "mining equipment",         0, 0, 0, 0)
+    ~ return cargo_db(data, Luna,  Ganymede,  40, "mining crew and equipment",0, 0, 0, 1)
 - 190_RegolithBlock:
     ~ return cargo_db(data, Luna,  Ganymede,  30, "regolith blocks",          0, 0, 0, 0)
 - 191_ChromiumDust:
@@ -589,7 +592,7 @@ LIST AllCargo =
 - 206_Mushrooms:
     ~ return cargo_db(data, Mars,  Luna,       5, "dried mushrooms",          0, 0, 0, 0)
 - 207_IronOre:
-    ~ return cargo_db(data, Mars,  Luna,      30, "iron ore",                 0, 0, 0, 0)
+    ~ return cargo_db(data, Mars,  Luna,      30, "mining team and ore",      0, 0, 0, 1)
 - 208_Basalt:
     ~ return cargo_db(data, Mars,  Luna,      20, "basalt gravel",            0, 0, 0, 0)
 - 209_AlgaePaste:
@@ -613,7 +616,7 @@ LIST AllCargo =
 - 218_OlympusHoney:
     ~ return cargo_db(data, Mars,  Luna,      30, "Olympus honey",            0, 1, 0, 0)
 - 219_UtopiaWheat:
-    ~ return cargo_db(data, Mars,  Luna,      20, "Utopia Planitia wheat",    0, 0, 0, 0)
+    ~ return cargo_db(data, Mars,  Luna,      20, "agricultural workers",     0, 0, 0, 1)
 - 220_HellasRice:
     ~ return cargo_db(data, Mars,  Luna,      10, "Hellas rice",              0, 0, 0, 0)
 - 221_TerraformEnzymes:
@@ -629,7 +632,7 @@ LIST AllCargo =
 - 226_SoilBacteria:
     ~ return cargo_db(data, Mars,  Luna,      10, "soil bacteria cultures",   0, 1, 0, 0)
 - 227_Fertilizer:
-    ~ return cargo_db(data, Mars,  Luna,      20, "fertilizer",               0, 0, 0, 0)
+    ~ return cargo_db(data, Mars,  Luna,      20, "terraforming crew",        0, 0, 0, 1)
 - 228_SeedStock:
     ~ return cargo_db(data, Mars,  Luna,      10, "seed stock",               0, 0, 0, 0)
 - 229_HeatShields:
@@ -691,7 +694,7 @@ LIST AllCargo =
 - 257_ProteinBars:
     ~ return cargo_db(data, Mars,  Earth,     10, "protein bars",             0, 0, 0, 0)
 - 258_FreezedriedMeals:
-    ~ return cargo_db(data, Mars,  Earth,     15, "freeze-dried meals",       0, 0, 0, 0)
+    ~ return cargo_db(data, Mars,  Earth,     15, "returning colonists",      0, 0, 0, 1)
 - 259_CannedGoods:
     ~ return cargo_db(data, Mars,  Earth,     20, "canned goods",             0, 0, 0, 0)
 - 260_RecycledPlastics:
@@ -703,7 +706,7 @@ LIST AllCargo =
 - 263_InsulationFoam:
     ~ return cargo_db(data, Mars,  Earth,     10, "insulation foam",          0, 0, 0, 0)
 - 264_ToolSets:
-    ~ return cargo_db(data, Mars,  Earth,     20, "precision tool sets",      0, 0, 0, 0)
+    ~ return cargo_db(data, Mars,  Earth,     20, "rotating technicians",     0, 0, 0, 1)
 - 265_SpareParts:
     ~ return cargo_db(data, Mars,  Earth,     30, "spare parts",              0, 0, 0, 0)
 - 266_PipeSegments:
@@ -735,7 +738,7 @@ LIST AllCargo =
 - 279_CoralFragments:
     ~ return cargo_db(data, Mars,  Ganymede,   5, "coral fragments",          0, 0, 0, 0)
 - 280_MuseumFossils:
-    ~ return cargo_db(data, Mars,  Ganymede,  15, "museum fossils",           0, 0, 0, 0)
+    ~ return cargo_db(data, Mars,  Ganymede,  15, "paleontology expedition",  0, 0, 0, 1)
 - 281_GeologySamples:
     ~ return cargo_db(data, Mars,  Ganymede,  10, "geology samples",          0, 0, 0, 0)
 - 282_Engineers:
@@ -755,7 +758,7 @@ LIST AllCargo =
 - 289_VatLamb:
     ~ return cargo_db(data, Mars,  Ganymede,  20, "vat-grown lamb",           1, 0, 0, 0)
 - 290_ChiliPowder:
-    ~ return cargo_db(data, Mars,  Titan,      5, "chili powder",             0, 0, 0, 0)
+    ~ return cargo_db(data, Mars,  Titan,      5, "outpost supply crew",      0, 0, 0, 1)
 - 291_ReducedIron:
     ~ return cargo_db(data, Mars,  Titan,     40, "reduced iron",             0, 0, 0, 0)
 - 292_ManganeseOre:
@@ -933,7 +936,7 @@ LIST AllCargo =
 - 378_Seeds:
     ~ return cargo_db(data, Ceres, Earth,      5, "heirloom seeds",           0, 1, 0, 0)
 - 379_Soil:
-    ~ return cargo_db(data, Ceres, Earth,     30, "asteroid soil",            0, 0, 0, 0)
+    ~ return cargo_db(data, Ceres, Earth,     30, "geological survey crew",   0, 0, 0, 1)
 - 380_Fertilizer:
     ~ return cargo_db(data, Ceres, Earth,     20, "nitrogen fertilizer",      0, 0, 0, 0)
 - 381_Compost:
@@ -951,9 +954,9 @@ LIST AllCargo =
 - 387_Artifacts:
     ~ return cargo_db(data, Ceres, Earth,     15, "belt artifacts",           0, 1, 1, 0)
 - 388_Meteorites:
-    ~ return cargo_db(data, Ceres, Earth,     30, "meteorite chunks",         0, 0, 0, 0)
+    ~ return cargo_db(data, Ceres, Earth,     30, "expedition team and samples",0, 0, 0, 1)
 - 389_Antiques:
-    ~ return cargo_db(data, Ceres, Earth,     20, "mining antiques",          0, 0, 0, 0)
+    ~ return cargo_db(data, Ceres, Earth,     20, "collectors and acquisitions",0, 0, 0, 1)
 - 390_Specimens:
     ~ return cargo_db(data, Ceres, Earth,     10, "pressed specimens",        0, 1, 0, 0)
 - 391_Workers:
@@ -963,7 +966,7 @@ LIST AllCargo =
 - 393_MiningDrones:
     ~ return cargo_db(data, Ceres, Titan,     30, "mining drones",            0, 0, 0, 0)
 - 394_Rovers:
-    ~ return cargo_db(data, Ceres, Titan,     50, "survey rovers",            0, 0, 0, 0)
+    ~ return cargo_db(data, Ceres, Titan,     50, "survey crew and equipment",0, 0, 0, 1)
 - 395_Scanners:
     ~ return cargo_db(data, Ceres, Titan,     20, "deep scanners",            0, 0, 0, 0)
 - 396_CoreProbes:
@@ -1159,7 +1162,7 @@ LIST AllCargo =
 - 490_Silkworms:
     ~ return cargo_db(data, Ganymede, Luna,   15, "silkworm cocoons",         1, 0, 0, 0)
 - 491_Archivists:
-    ~ return cargo_db(data, Ganymede, Earth,   5, "data archivists",          0, 0, 0, 0)
+    ~ return cargo_db(data, Ganymede, Earth,   5, "data archivists",          0, 0, 0, 1)
 - 492_Journals:
     ~ return cargo_db(data, Ganymede, Earth,   5, "research journals",        0, 0, 0, 0)
 - 493_Fossils:
@@ -1185,7 +1188,7 @@ LIST AllCargo =
 - 503_Samples:
     ~ return cargo_db(data, Titan, Mars,      10, "atmosphere samples",       0, 1, 0, 0)
 - 504_Survey:
-    ~ return cargo_db(data, Titan, Ganymede,  10, "survey team",              0, 0, 0, 1) // TODO: transit events
+    ~ return cargo_db(data, Titan, Ganymede,  10, "survey data",              0, 0, 0, 0) // TODO: transit events
 - 505_Ethane:
     ~ return cargo_db(data, Titan, Ganymede,  30, "ethane drums",             0, 0, 1, 0)
 - 506_Propane:
@@ -1257,7 +1260,7 @@ LIST AllCargo =
 - 539_Medics:
     ~ return cargo_db(data, Titan, Ceres,     10, "field medics",             0, 0, 0, 1)
 - 540_Geologists:
-    ~ return cargo_db(data, Titan, Ceres,     20, "geologists with samples",  0, 0, 0, 1)
+    ~ return cargo_db(data, Titan, Ceres,     20, "geological core samples",  0, 0, 0, 0)
 - 541_Welders:
     ~ return cargo_db(data, Titan, Ceres,     15, "orbital welders",          0, 0, 0, 1)
 - 542_Techs:
@@ -1565,11 +1568,72 @@ LIST AllCargo =
     Gets a randomized selection of cargo from the specified port.
     Express cargo is filtered out if the destination is unreachable in Turbo
     at the player's current engine tier.
+    If the passenger module is installed and no passenger cargo was drawn,
+    there is a 50% chance one random item is replaced with passenger cargo.
 
 */
 === function get_available_cargo(port, count)
 ~ temp _cargo = AllCargo
-~ return validated_list_random_subset_of_size(_cargo, -> cargo_is_available, port, count)
+~ temp result = validated_list_random_subset_of_size(_cargo, -> cargo_is_available, port, count)
+{ InstalledModules ? PassengerModule:
+    { not has_passenger_in_list(result):
+        { RANDOM(1, 2) == 1:
+            ~ temp pax = get_random_passenger_cargo(port)
+            { pax:
+                ~ temp swap = pop_random(result)
+                ~ result -= swap
+                ~ result += pax
+            }
+        }
+    }
+}
+~ return result
+
+/*
+
+    Returns true if the given cargo list contains at least one passenger item.
+
+*/
+=== function has_passenger_in_list(items)
+~ temp item = pop(items)
+{ item:
+    { CargoData(item, Passengers):
+        ~ return true
+    }
+    ~ return has_passenger_in_list(items)
+}
+~ return false
+
+/*
+
+    Returns a random available passenger cargo item from the given port,
+    or () if none is available.
+
+*/
+=== function get_random_passenger_cargo(port)
+~ temp pool = PassengerCargo
+~ temp available = _build_passenger_pool(pool, port)
+{ available:
+    ~ return LIST_RANDOM(available)
+}
+~ return ()
+
+/*
+
+    Internal recursive helper for get_random_passenger_cargo.
+    Builds a list of passenger cargo items available at the given port.
+
+*/
+=== function _build_passenger_pool(items, port)
+~ temp item = pop(items)
+{ item:
+    { cargo_is_available(item, port):
+        ~ return item + _build_passenger_pool(items, port)
+    - else:
+        ~ return _build_passenger_pool(items, port)
+    }
+}
+~ return ()
 
 /*
 

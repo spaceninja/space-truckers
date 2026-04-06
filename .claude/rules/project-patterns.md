@@ -112,6 +112,17 @@ Cargo inspections: `CargoCheckDueDay` (starts at 2), `CargoCheckPenaltyPct` → 
 - Delivery modifier (in `deliver_cargo`, port.ink): +10% pay if ≥70, -10% if ≤30, 0 otherwise; applies only to passenger-flagged cargo items; **use two-step integer math**: `pax_modifier = pay * pax_bonus_pct` then `pax_modifier = pax_modifier / 100` (avoid `pay * pct / 100` which truncates early for negatives)
 - Satisfaction resets to 50 on delivery of last passengers; events also modify via guarded blocks `{ InstalledModules ? PassengerModule: }`
 
+## Passenger Cargo Pool (cargo.ink)
+
+Passenger cargo is distributed unevenly by port to reflect in-world traffic: Earth ~14 items, Mars ~11, Luna ~9, Ceres ~7, Ganymede ~4, Titan ~5.
+
+**`PassengerCargo` VAR** — a subset of `AllCargo` holding all items where `isPassengers = 1`. This avoids iterating all 600+ items in the cargo injection nudge. When adding a new passenger cargo item, add it to this VAR in addition to `CargoData`.
+
+**Injection nudge** (in `get_available_cargo`): if the Passenger Module is installed and no passenger item was drawn naturally, there is a 50% chance one item in the result is swapped for a random available passenger cargo item from that port. The pool is built by filtering `PassengerCargo` through `cargo_is_available`. Key functions:
+- `has_passenger_in_list(items)` — recursive pop-and-check; returns true if any item has Passengers flag
+- `get_random_passenger_cargo(port)` — builds available pool from `PassengerCargo`, returns `LIST_RANDOM` or `()`
+- `_build_passenger_pool(items, port)` — recursive helper; filters by `cargo_is_available`
+
 ## Ink Gotchas
 
 - **Functions can't print text or use diverts.** Use knots/stitches/tunnels for narrative output.

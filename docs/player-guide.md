@@ -67,6 +67,8 @@ Some contracts come with extra conditions, marked in the loading screen:
 
 **Passengers** — Humans have limits. No Turbo mode. Same deal as Fragile, essentially — slower trip, better pay.
 
+Passenger contracts are more common at busy ports — Earth and Mars see heavy traffic, while remote outposts like Ganymede and Titan have fewer travellers passing through. You'll also only see passenger contracts if you have a **Passenger Module** installed.
+
 ---
 
 ## Fuel
