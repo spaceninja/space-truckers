@@ -99,6 +99,29 @@ Cargo inspections: `CargoCheckDueDay` (starts at 2), `CargoCheckPenaltyPct` → 
 - WellnessSuite wires `has_medical_module()` in events.ink
 - AutoNav (500€): advances `NavCheckDueDay = TripDay + 3` on auto-complete; 75%+ every check, 50-74% even `TripDay` only
 - CargoMgmt (700€): handles inspections + paperwork with 1-task-per-day limit; inspections prioritized (expire same day), paperwork fills remaining days; advances `CargoCheckDueDay = TripDay + get_cargo_check_interval()` on inspection; 75%+ every due day, 50-74% even `TripDay` only
+- PassengerModule (tiered, unique upgrade path): uses `PassengerModuleTier` VAR (0=not installed, 1-3) rather than a single condition gate; separate `passenger_module_upgrades` stitch excluded from `browse_module_list`; cargo gated by `InstalledModules ? PassengerModule` in `cargo_is_available`
+
+## Passenger Satisfaction System (ship.ink, port.ink)
+
+- `PassengerSatisfaction` (0-100, starts at 50 each trip): tracks passenger experience throughout transit
+- Daily task: `pick_passenger_task` tunnel picks one task per day using two-stage weighted selection (roll category first, then `LIST_RANDOM` within category); task pool: 12 tasks in `PassengerTasks` LIST across 3 tone VARs (`NegativePaxTasks`, `MixedPaxTasks`, `PositivePaxTasks`)
+- Tier weights: T1 50/30/20, T2 30/40/30, T3 20/50/30 (neg/mixed/pos)
+- Task completion: +5 satisfaction (or +7 at Tier 3), `PassengerTaskCompleted = true`
+- Daily skip penalty (in `next_day()`): -3 if `DailyPassengerTask != ()` and `not PassengerTaskCompleted`
+- Passive bonus (in `next_day()`): `passive = tier - 1`, shifted by condition (80%+: no shift, 50-79%: -1, <50%: -2); e.g. T1 at <50% gives -2, T3 at 80%+ gives +2, T2 at 50-79% gives 0
+- Delivery modifier (in `deliver_cargo`, port.ink): +10% pay if ≥70, -10% if ≤30, 0 otherwise; applies only to passenger-flagged cargo items; **use two-step integer math**: `pax_modifier = pay * pax_bonus_pct` then `pax_modifier = pax_modifier / 100` (avoid `pay * pct / 100` which truncates early for negatives)
+- Satisfaction resets to 50 on delivery of last passengers; events also modify via guarded blocks `{ InstalledModules ? PassengerModule: }`
+
+## Passenger Cargo Pool (cargo.ink)
+
+Passenger cargo is distributed unevenly by port to reflect in-world traffic: Earth ~14 items, Mars ~11, Luna ~9, Ceres ~7, Ganymede ~4, Titan ~5.
+
+**`PassengerCargo` VAR** — a subset of `AllCargo` holding all items where `isPassengers = 1`. This avoids iterating all 600+ items in the cargo injection nudge. When adding a new passenger cargo item, add it to this VAR in addition to `CargoData`.
+
+**Injection nudge** (in `get_available_cargo`): if the Passenger Module is installed and no passenger item was drawn naturally, there is a 50% chance one item in the result is swapped for a random available passenger cargo item from that port. The pool is built by filtering `PassengerCargo` through `cargo_is_available`. Key functions:
+- `has_passenger_in_list(items)` — recursive pop-and-check; returns true if any item has Passengers flag
+- `get_random_passenger_cargo(port)` — builds available pool from `PassengerCargo`, returns `LIST_RANDOM` or `()`
+- `_build_passenger_pool(items, port)` — recursive helper; filters by `cargo_is_available`
 
 ## Ink Gotchas
 

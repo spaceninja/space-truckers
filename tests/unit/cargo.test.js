@@ -18,7 +18,7 @@
  * PayRate = 3 (default from space-truckers.ink)
  */
 
-import { describe, it, expect, beforeAll, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { InkList } from "inkjs/full";
 import { createStory, L, cargo } from "../helpers/story.js";
 
@@ -377,6 +377,77 @@ describe("get_cargo_check_interval", () => {
   it("returns 2 for Hazardous cargo", () => {
     story.variablesState["ShipCargo"] = cargo(story, "501_Methane");
     expect(story.EvaluateFunction("get_cargo_check_interval")).toBe(2);
+  });
+});
+
+describe("has_passenger_in_list", () => {
+  it("returns true when list contains a passenger cargo item", () => {
+    // 031_Diplomats: Earth→Luna, Passengers=1
+    const result = story.EvaluateFunction("has_passenger_in_list", [L(story, "AllCargo.031_Diplomats")]);
+    expect(result).toBe(true);
+  });
+
+  it("returns true when list contains a converted passenger item (011_Wheat)", () => {
+    // 011_Wheat was converted to passengers=1
+    const result = story.EvaluateFunction("has_passenger_in_list", [L(story, "AllCargo.011_Wheat")]);
+    expect(result).toBe(true);
+  });
+
+  it("returns false when list contains only non-passenger cargo", () => {
+    // 003_Water: Earth→Mars, no flags
+    const result = story.EvaluateFunction("has_passenger_in_list", [L(story, "AllCargo.003_Water")]);
+    expect(result).toBe(false);
+  });
+
+  it("returns true when mixed list contains at least one passenger item", () => {
+    const items = cargo(story, "AllCargo.003_Water", "AllCargo.031_Diplomats");
+    const result = story.EvaluateFunction("has_passenger_in_list", [items]);
+    expect(result).toBe(true);
+  });
+
+  it("returns false for empty list", () => {
+    const result = story.EvaluateFunction("has_passenger_in_list", [new InkList()]);
+    expect(result).toBe(false);
+  });
+});
+
+describe("get_random_passenger_cargo", () => {
+  // Requires passenger module installed and large fuel capacity for range checks
+  beforeAll(() => {
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.PassengerModule"), 100]);
+    story.variablesState["PassengerModuleTier"] = 1;
+    story.variablesState["ShipFuelCapacity"] = 2000;
+  });
+
+  afterAll(() => {
+    // Restore defaults so subsequent describe blocks are unaffected
+    story.variablesState["ShipFuelCapacity"] = 300;
+  });
+
+  it("returns a passenger cargo item for Earth", () => {
+    const result = story.EvaluateFunction("get_random_passenger_cargo", [L(story, "AllLocations.Earth")]);
+    // Result should be non-empty (passenger cargo exists at Earth)
+    expect(result.Count).toBeGreaterThan(0);
+    // The returned item should have Passengers flag
+    const isPassenger = story.EvaluateFunction("CargoData", [
+      result,
+      L(story, "CargoStats.Passengers"),
+    ]);
+    expect(isPassenger).toBe(1);
+  });
+
+  it("returns a passenger cargo item that originates from Earth", () => {
+    const result = story.EvaluateFunction("get_random_passenger_cargo", [L(story, "AllLocations.Earth")]);
+    expect(result.Count).toBeGreaterThan(0);
+    const from = story.EvaluateFunction("CargoData", [result, L(story, "CargoStats.From")]);
+    expect(from.Equals(L(story, "AllLocations.Earth"))).toBe(true);
+  });
+
+  it("returns a passenger cargo item for Luna", () => {
+    const result = story.EvaluateFunction("get_random_passenger_cargo", [L(story, "AllLocations.Luna")]);
+    expect(result.Count).toBeGreaterThan(0);
+    const isPassenger = story.EvaluateFunction("CargoData", [result, L(story, "CargoStats.Passengers")]);
+    expect(isPassenger).toBe(1);
   });
 });
 

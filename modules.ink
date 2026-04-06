@@ -13,6 +13,7 @@
 - CargoMgmt:      ~ return module_row(stat, "Cargo Management", 700, "Auto-complete cargo inspections and paperwork")
 - Entertainment:  ~ return module_row(stat, "Entertainment System", 400, "Improved recreation and morale boosts")
 - WellnessSuite:  ~ return module_row(stat, "Wellness Suite", 500, "Daily health benefits and emergency medical care")
+- PassengerModule: ~ return module_row(stat, "Passenger Module", 200, "Passenger berths and facilities")
 }
 ~ return 0
 
@@ -44,6 +45,7 @@
 - CargoMgmt:      ~ return CargoMgmtCondition
 - Entertainment:  ~ return EntertainmentCondition
 - WellnessSuite:  ~ return WellnessSuiteCondition
+- PassengerModule: ~ return PassengerModuleCondition
 }
 ~ return 0
 
@@ -61,6 +63,7 @@
 - CargoMgmt:      ~ CargoMgmtCondition = value
 - Entertainment:  ~ EntertainmentCondition = value
 - WellnessSuite:  ~ WellnessSuiteCondition = value
+- PassengerModule: ~ PassengerModuleCondition = value
 }
 
 /*
@@ -137,6 +140,35 @@
 
 /*
 
+    Passenger Module Tier Helpers
+    Price for fresh install at each tier (cumulative — used for upgrade delta math).
+    Upgrade cost = PassengerTierPrice(next) - PassengerTierPrice(current).
+
+*/
+=== function PassengerTierPrice(tier)
+{ tier:
+- 1: ~ return 200
+- 2: ~ return 400
+- 3: ~ return 800
+}
+~ return 0
+
+/*
+
+    Passenger Tier Name
+    Display name for each tier of the passenger module.
+
+*/
+=== function PassengerTierName(tier)
+{ tier:
+- 1: ~ return "Basic Berths"
+- 2: ~ return "Standard Cabin"
+- 3: ~ return "Luxury Suite"
+}
+~ return "None"
+
+/*
+
     Has Damaged Modules
     Returns true if any installed module is below max condition.
 
@@ -187,6 +219,8 @@
 - EntDisplayClean: ~ return Entertainment
 - WellSanitize:   ~ return WellnessSuite
 - WellCalib:      ~ return WellnessSuite
+- PaxLifeSupp:    ~ return PassengerModule
+- PaxBerthClean:  ~ return PassengerModule
 }
 ~ return ()
 
@@ -199,6 +233,7 @@
 - CargoMgmt:      ~ return (CargoSensor, CargoSealCheck)
 - Entertainment:  ~ return (EntWiring, EntDisplayClean)
 - WellnessSuite:  ~ return (WellSanitize, WellCalib)
+- PassengerModule: ~ return (PaxLifeSupp, PaxBerthClean)
 }
 ~ return ()
 
@@ -401,11 +436,12 @@ Engine: {manufacturer_name(ShipManufacturer)} Tier {ShipEngineTier}{RefurbishedE
     -> show_module_status ->
 }
 - (upgrade_menu)
-~ temp available = LIST_ALL(ShipModules) - InstalledModules
+~ temp available = LIST_ALL(ShipModules) - InstalledModules - PassengerModule
 { LIST_COUNT(available) > 0:
     + [Browse available modules] -> browse_modules
 }
 + { has_damaged_modules() } [Repair modules] -> repair_modules
++ { PassengerModuleTier < 3 } [Passenger module — {PassengerModuleTier == 0: install|upgrade}] -> passenger_module_upgrades
 + { ShipEngineTier < 4 and (manufacturer_available_here(Kepler) or manufacturer_available_here(Olympus) or manufacturer_available_here(Huygens)) }
     [Browse engine upgrades] -> engine_upgrades
 + [Back] -> arrive_in_port.port_opts
@@ -426,7 +462,11 @@ Engine: {manufacturer_name(ShipManufacturer)} Tier {ShipEngineTier}{RefurbishedE
 ~ temp module = pop(_modules)
 ~ temp cond = get_module_condition(module)
 ~ temp max_cond = get_module_max_condition(module)
-{module_name(module)}: {cond}%{max_cond < 100: /{max_cond}% max (refurbished)}{ cond < 50: — OFFLINE}{ cond >= 50 and cond < 75: — reduced}
+{ module == PassengerModule:
+    {PassengerTierName(PassengerModuleTier)}: {cond}%{max_cond < 100: /{max_cond}% max (refurbished)}{ cond < 50: — degraded}{ cond >= 50 and cond < 75: — reduced}
+- else:
+    {module_name(module)}: {cond}%{max_cond < 100: /{max_cond}% max (refurbished)}{ cond < 50: — OFFLINE}{ cond >= 50 and cond < 75: — reduced}
+}
 { LIST_COUNT(_modules) > 0:
     -> status_next
 }
@@ -450,7 +490,7 @@ Available modules:
 - -> upgrade_menu
 
 = browse_module_list
-~ temp _avail = LIST_ALL(ShipModules) - InstalledModules
+~ temp _avail = LIST_ALL(ShipModules) - InstalledModules - PassengerModule
 { LIST_COUNT(_avail) <= 0:
     ->->
 }
@@ -574,4 +614,64 @@ Available Tier {next_tier} engines at this port:
     -> upgrade_menu
 + { avail and PlayerBankBalance < half_price }
     [{manufacturer_name(mfg)} Tier {tier} — refurbished ({half_price} €) — can't afford #UNCLICKABLE]
+    -> upgrade_menu
+
+/*
+
+    Passenger Module Upgrades
+    Tiered install/upgrade menu for the passenger module.
+    Tier 1 (Basic Berths): 200€ fresh install or 100€ refurbished.
+    Tier 2 (Standard Cabin): 200€ upgrade delta (400 total).
+    Tier 3 (Luxury Suite): 400€ upgrade delta (800 total).
+    Refurbished option only available for initial Tier 1 install.
+
+*/
+= passenger_module_upgrades
+{ PassengerModuleTier == 0:
+    No passenger facilities aboard. Installing passenger berths lets you take on passenger cargo.
+- else:
+    Current: {PassengerTierName(PassengerModuleTier)}{RefurbishedModules ? PassengerModule: (refurbished — {get_module_max_condition(PassengerModule)}% max)}, condition {get_module_condition(PassengerModule)}%.
+}
+~ temp next_tier = PassengerModuleTier + 1
+{ next_tier <= 3:
+    ~ temp next_price = PassengerTierPrice(next_tier)
+    ~ temp upgrade_cost = next_price - PassengerTierPrice(PassengerModuleTier)
+    ~ temp half_cost = upgrade_cost / 2
+    <- passenger_buy_choice(next_tier, upgrade_cost, half_cost)
+}
++ [Back] -> upgrade_menu
+- -> upgrade_menu
+
+= passenger_buy_choice(tier, price, half_price)
+// New install/upgrade
++ { PlayerBankBalance >= price }
+    [Install {PassengerTierName(tier)} — new ({price} €)]
+    ~ PlayerBankBalance -= price
+    { PassengerModuleTier == 0:
+        ~ install_module(PassengerModule, 100)
+    }
+    ~ PassengerModuleTier = tier
+    {
+    - tier == 1:
+        Basic berths installed at 100% condition. You can now take on passenger cargo.
+    - tier == 2:
+        Standard cabins fitted out. Passengers will be comfortable enough. Small daily satisfaction bonus active when module is above 50%.
+    - tier == 3:
+        Luxury suites installed. Your ship is practically a cruise liner. Enhanced daily satisfaction bonus active when module is above 50%.
+    }
+    -> upgrade_menu
++ { PlayerBankBalance < price }
+    [Install {PassengerTierName(tier)} — new ({price} €) — can't afford #UNCLICKABLE]
+    -> upgrade_menu
+// Refurbished option — only for initial Tier 1 install
++ { PassengerModuleTier == 0 and PlayerBankBalance >= half_price }
+    [Install {PassengerTierName(tier)} — refurbished ({half_price} €)]
+    ~ PlayerBankBalance -= half_price
+    ~ install_module(PassengerModule, 60)
+    ~ RefurbishedModules += PassengerModule
+    ~ PassengerModuleTier = tier
+    Basic Berths installed at 60% condition (refurbished — 80% max). You can now take on passenger cargo.
+    -> upgrade_menu
++ { PassengerModuleTier == 0 and PlayerBankBalance < half_price }
+    [Install {PassengerTierName(tier)} — refurbished ({half_price} €) — can't afford #UNCLICKABLE]
     -> upgrade_menu

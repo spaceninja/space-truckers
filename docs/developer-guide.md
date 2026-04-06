@@ -446,6 +446,8 @@ Random events are P0 interruptions that fire during transit, bypassing the task 
 
 **`has_medical_module()`:** Returns `is_module_active(WellnessSuite)`. Used by the medical emergency event to improve patient outcomes — better recovery odds and no possibility of a fatal outcome when the suite is active (condition >= 50%).
 
+**Passenger satisfaction impacts:** All four passenger events and the coffee machine event modify `PassengerSatisfaction` (guarded by `InstalledModules ? PassengerModule`). See the event tables in `events.ink` for the specific values. The coffee machine event affects satisfaction if passengers are present (the lack of coffee hits harder with an audience).
+
 **Cargo damage:** `CargoDamagePct` accumulates cargo damage during transit (micrometeorite cargo hit, cargo shift with fatigue failure). It reduces delivery pay at port alongside paperwork and inspection penalties. Total combined penalty is capped at 75%. It only increases from event outcomes — normal transit never touches it.
 
 **`damage_random_system(amount)`:** Damages a random system — 50% chance engine, 50% chance a random installed module. If no modules are installed, always damages engine. Module condition floors at 1 (not 0, since 0 = not installed).
@@ -495,6 +497,8 @@ All module daily behavior runs via the `module_auto_tasks` tunnel, called from `
 
 - **Wellness Suite** (500€) — daily fatigue/morale benefit and medical emergency improvement. Full (75%+): -5 fatigue, +2 morale per day. Reduced (50-74%): -3 fatigue, +1 morale. Applied in `module_auto_tasks` with narrative flavor text (gym, autodoc, sunlight simulator, therapy, haircut). Also wires `has_medical_module()` → `is_module_active(WellnessSuite)` to improve medical emergency outcomes.
 
+- **Passenger Module** (tiered, separate upgrade path) — gates passenger cargo and drives the satisfaction system. Unlike other modules, this has a `PassengerModuleTier` VAR (0=not installed, 1-3=tier) and a separate purchase/upgrade UI stitch (`passenger_module_upgrades`) that is linked from `upgrade_menu` but excluded from the standard `browse_module_list`. Tier is upgraded sequentially (T0→T1→T2→T3); pricing is cumulative (200/400/800€ total, delta charged per upgrade). The refurbished option is only available at initial install (T0→T1). Passive satisfaction bonus activates at T2+.
+
 ### Module Maintenance (Two Layers)
 
 1. **Random event damage:** `damage_random_system()` — 50% chance engine, 50% chance random installed module
@@ -536,6 +540,23 @@ Add a line to `CargoData` in `cargo.ink` using `cargo_db`:
 ```
 
 Pay is computed automatically from mass and distance. No manual payout calculation needed.
+
+If you set `isPassengers = 1`, also add the item to the `PassengerCargo` VAR at the top of `cargo.ink`. This VAR is a subset of `AllCargo` used by the injection nudge (see below) to avoid iterating all 600+ items on every port visit.
+
+### Passenger Cargo Availability and Injection Nudge
+
+Ports vary in how many passenger cargo items they offer. Earth and Mars have the most passenger options (~14 and ~11 items respectively), while remote outposts like Ganymede and Titan have fewer (~4 and ~5). This reflects the in-world reality that busy inner-system ports see heavier passenger traffic.
+
+**The injection nudge** further improves the odds that passenger cargo appears in a port draw when the player has the Passenger Module installed:
+
+- `get_available_cargo` draws 5 items via `validated_list_random_subset_of_size`
+- After the draw, if the Passenger Module is installed and no passenger item was drawn naturally, there is a **50% chance** one randomly selected item in the result is replaced with a random available passenger cargo item from that port
+- The replacement item is drawn from `PassengerCargo` filtered by `cargo_is_available` (i.e., it must originate at the current port and pass all standard availability checks)
+
+The nudge is implemented via three functions in `cargo.ink`:
+- `has_passenger_in_list(items)` — recursive check for any Passengers flag in a list
+- `get_random_passenger_cargo(port)` — builds the available pool from `PassengerCargo` and returns `LIST_RANDOM`
+- `_build_passenger_pool(items, port)` — recursive helper that filters the pool by `cargo_is_available`
 
 ### New Location
 

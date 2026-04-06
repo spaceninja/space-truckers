@@ -85,7 +85,8 @@ Balance: {PlayerBankBalance} € / Engine: {ShipManufacturer} Tier {ShipEngineTi
 { LIST_COUNT(_remaining) > 0:
     -> install_next
 }
-All modules installed at 100%.
+~ PassengerModuleTier = 3
+All modules installed at 100%. Passenger Module set to Tier 3.
 -> cheat_menu
 
 /*
@@ -216,6 +217,17 @@ current mass = {total_mass(ShipCargo)}t
 ~ temp delivery_count = 0
 ~ temp paperwork_penalty_pct = get_paperwork_penalty_pct(PaperworkDone, PaperworkTotal)
 ~ temp total_penalty_pct = MIN(paperwork_penalty_pct + CargoCheckPenaltyPct + CargoDamagePct, 75)
+// Passenger satisfaction pay modifier: +10% if satisfied (≥70), -10% if unhappy (≤30)
+~ temp pax_bonus_pct = 0
+{ InstalledModules ? PassengerModule:
+    { PassengerSatisfaction >= 70:
+        ~ pax_bonus_pct = 10
+    }
+    { PassengerSatisfaction <= 30:
+        ~ pax_bonus_pct = -10
+    }
+}
+~ temp delivered_passengers = false
 - (top)
 ~ temp cargo = pop(_items)
 { cargo:
@@ -227,6 +239,15 @@ current mass = {total_mass(ShipCargo)}t
         ~ temp pay = get_cargo_pay(cargo, dist)
         ~ temp penalty = pay * total_penalty_pct / 100
         ~ pay = pay - penalty
+        // Passenger satisfaction modifier applies to passenger cargo only
+        { CargoData(cargo, Passengers):
+            ~ delivered_passengers = true
+            { pax_bonus_pct != 0:
+                ~ temp pax_modifier = pay * pax_bonus_pct
+                ~ pax_modifier = pax_modifier / 100
+                ~ pay = pay + pax_modifier
+            }
+        }
         ~ PlayerBankBalance += pay
         ~ temp fromName = LocationData(CargoData(cargo, From), Name)
         { penalty > 0:
@@ -247,7 +268,25 @@ current mass = {total_mass(ShipCargo)}t
     { CargoDamagePct > 0:
         Damaged cargo cost you an additional {CargoDamagePct}% of your delivery pay.
     }
+    { delivered_passengers:
+        {
+        - pax_bonus_pct > 0:
+            Your passengers file off with warm handshakes and genuine smiles. A few press tips into your hand. Word gets around when you treat people right.
+            Passenger satisfaction bonus: +{pax_bonus_pct}% on passenger cargo pay.
+        - pax_bonus_pct < 0:
+            Your passengers disembark in near silence. One stops at the airlock to tell you exactly what they think of the accommodations. You'll be hearing about this.
+            Passenger satisfaction penalty: {pax_bonus_pct}% on passenger cargo pay.
+        - else:
+            Your passengers collect their things and head out. A few nod politely. Nobody complains, nobody raves. You did the job.
+        }
+    }
     All cargo for {LocationData(here, Name)} delivered! Your bank account balance is {PlayerBankBalance} €.
+    // Reset satisfaction when no passengers remain aboard
+    { not has_passenger_cargo(ShipCargo):
+        ~ PassengerSatisfaction = 50
+        ~ DailyPassengerTask = ()
+        ~ PassengerTaskCompleted = false
+    }
 - else:
     You have no cargo to deliver to {LocationData(here, Name)}.
 }
