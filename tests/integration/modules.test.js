@@ -58,7 +58,6 @@ function setupTransit(overrides = {}) {
     AP: 6,
     ActionPointsMax: 6,
     Fatigue: 0,
-    Morale: 80,
     ShipCondition: 100,
     EngineCondition: 100,
     ShipFuel: 200,
@@ -104,8 +103,6 @@ describe("task classification", () => {
       ["ModuleMaintTasks.ClnDroneBrush", "ShipModules.CleaningDrones"],
       ["ModuleMaintTasks.NavChipFlush", "ShipModules.AutoNav"],
       ["ModuleMaintTasks.CargoSensor", "ShipModules.CargoMgmt"],
-      ["ModuleMaintTasks.EntWiring", "ShipModules.Entertainment"],
-      ["ModuleMaintTasks.WellSanitize", "ShipModules.WellnessSuite"],
     ];
     for (const [task, mod] of cases) {
       const result = story.EvaluateFunction("maint_task_module", [L(story, task)]);
@@ -288,8 +285,6 @@ describe("backlog accumulation", () => {
       expect(backlog).not.toContain("Drone");
       expect(backlog).not.toContain("Nav");
       expect(backlog).not.toContain("Cargo");
-      expect(backlog).not.toContain("Ent");
-      expect(backlog).not.toContain("Well");
     }
   });
 });
@@ -345,11 +340,12 @@ describe("module maintenance effects", () => {
     s.variablesState["StaleBacklog"] = L(s, "ModuleMaintTasks.RepDroneServo");
     s.variablesState["ShipClock"] = 5;
     s.variablesState["TripDay"] = 2;
+    s.variablesState["NavCheckDueDay"] = 2; // make nav check available to burn AP
 
     s.ChoosePathString("transit.ship_options");
     drainText(s);
-    pickChoice(s, "Take a break");
-    pickChoice(s, "Quick workout"); // costs 1 AP → AP=0 → next_day fires
+    pickChoice(s, "Navigation check"); // costs 1 AP → AP=0 → next_day fires; backlog untouched
+    drainText(s);
 
     // RepairDrones should have lost 5 condition
     expect(s.EvaluateFunction("get_module_condition", [L(s, "ShipModules.RepairDrones")])).toBe(55);
@@ -365,11 +361,12 @@ describe("module maintenance effects", () => {
     s.variablesState["StaleBacklog"] = L(s, "ModuleMaintTasks.RepDroneServo");
     s.variablesState["ShipClock"] = 5;
     s.variablesState["TripDay"] = 2;
+    s.variablesState["NavCheckDueDay"] = 2; // make nav check available to burn AP
 
     s.ChoosePathString("transit.ship_options");
     drainText(s);
-    pickChoice(s, "Take a break");
-    pickChoice(s, "Quick workout"); // costs 1 AP → AP=0 → next_day fires
+    pickChoice(s, "Navigation check"); // costs 1 AP → AP=0 → next_day fires; backlog untouched
+    drainText(s);
 
     expect(s.EvaluateFunction("get_module_condition", [L(s, "ShipModules.RepairDrones")])).toBe(1);
   });
@@ -398,7 +395,6 @@ describe("narrative text functions", () => {
     const tasks = [
       "RepDroneServo", "RepDroneOptics", "ClnDroneBrush", "ClnDroneFilter",
       "NavChipFlush", "NavGyroCalib", "CargoSensor", "CargoSealCheck",
-      "EntWiring", "EntDisplayClean", "WellSanitize", "WellCalib",
     ];
     for (const task of tasks) {
       const name = story.EvaluateFunction("MaintName", [L(story, `ModuleMaintTasks.${task}`)]);
@@ -676,75 +672,3 @@ describe("Cargo Management System", () => {
   });
 });
 
-describe("Wellness Suite", () => {
-  it("reduces fatigue and boosts morale at full condition (75%+)", () => {
-    const s = setupTransit({ Fatigue: 40, Morale: 70 });
-    s.EvaluateFunction("install_module", [L(s, "ShipModules.WellnessSuite"), 100]);
-    s.EvaluateFunction("module_auto_tasks");
-    expect(s.variablesState["Fatigue"]).toBe(35);
-    expect(s.variablesState["Morale"]).toBe(72);
-  });
-
-  it("reduces fatigue and boosts morale at reduced condition (50-74%)", () => {
-    const s = setupTransit({ Fatigue: 40, Morale: 70 });
-    s.EvaluateFunction("install_module", [L(s, "ShipModules.WellnessSuite"), 60]);
-    s.EvaluateFunction("module_auto_tasks");
-    expect(s.variablesState["Fatigue"]).toBe(37);
-    expect(s.variablesState["Morale"]).toBe(71);
-  });
-
-  it("does nothing when offline (below 50%)", () => {
-    const s = setupTransit({ Fatigue: 40, Morale: 70 });
-    s.EvaluateFunction("install_module", [L(s, "ShipModules.WellnessSuite"), 40]);
-    s.EvaluateFunction("module_auto_tasks");
-    expect(s.variablesState["Fatigue"]).toBe(40);
-    expect(s.variablesState["Morale"]).toBe(70);
-  });
-
-  it("floors fatigue at 0, not negative", () => {
-    const s = setupTransit({ Fatigue: 3, Morale: 50 });
-    s.EvaluateFunction("install_module", [L(s, "ShipModules.WellnessSuite"), 100]);
-    s.EvaluateFunction("module_auto_tasks");
-    expect(s.variablesState["Fatigue"]).toBe(0);
-  });
-
-  it("caps morale at 100, not above", () => {
-    const s = setupTransit({ Fatigue: 20, Morale: 99 });
-    s.EvaluateFunction("install_module", [L(s, "ShipModules.WellnessSuite"), 100]);
-    s.EvaluateFunction("module_auto_tasks");
-    expect(s.variablesState["Morale"]).toBe(100);
-  });
-});
-
-describe("Entertainment System", () => {
-  it("video games choice appears inside relax sub-menu when Entertainment is active", () => {
-    const s = setupTransit();
-    s.EvaluateFunction("install_module", [L(s, "ShipModules.Entertainment"), 100]);
-
-    s.ChoosePathString("transit.ship_options");
-    drainText(s);
-    pickChoice(s, "Take a break");
-    expect(hasChoice(s, "Play video games")).toBe(true);
-  });
-
-  it("listen to music choice appears inside relax sub-menu when Entertainment is active", () => {
-    const s = setupTransit();
-    s.EvaluateFunction("install_module", [L(s, "ShipModules.Entertainment"), 100]);
-
-    s.ChoosePathString("transit.ship_options");
-    drainText(s);
-    pickChoice(s, "Take a break");
-    expect(hasChoice(s, "Listen to music")).toBe(true);
-  });
-
-  it("entertainment choices do not appear when module is offline (below 50%)", () => {
-    const s = setupTransit();
-    s.EvaluateFunction("install_module", [L(s, "ShipModules.Entertainment"), 40]);
-
-    s.ChoosePathString("transit.ship_options");
-    drainText(s);
-    pickChoice(s, "Take a break");
-    expect(hasChoice(s, "Play video games")).toBe(false);
-    expect(hasChoice(s, "Listen to music")).toBe(false);
-  });
-});

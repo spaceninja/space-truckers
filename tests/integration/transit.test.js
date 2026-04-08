@@ -85,7 +85,6 @@ function setupTransit(overrides = {}) {
     AP: 6,
     ActionPointsMax: 6,
     Fatigue: 0,
-    Morale: 80,
     ShipCondition: 100,
     EngineCondition: 100,
     ShipFuel: 200,
@@ -217,12 +216,7 @@ describe("Task priority system", () => {
     });
   });
 
-  describe("P4: Recreation", () => {
-    it("shows relax option on a quiet day", () => {
-      const story = setupTransit();
-      expect(hasChoice(story, "Take a break")).toBe(true);
-    });
-
+  describe("P4: Rest", () => {
     it("shows sleep rest when fatigue is moderate (30-69)", () => {
       const story = setupTransit({ Fatigue: 50 });
       expect(hasChoice(story, "Get some rest")).toBe(true);
@@ -234,24 +228,6 @@ describe("Task priority system", () => {
       const story = setupTransit({ Fatigue: 20 });
       // "Get some rest" should not appear at all (neither P2 nor P4)
       expect(hasChoice(story, "Get some rest")).toBe(false);
-    });
-  });
-
-  describe("P4 floor guarantee", () => {
-    it("shows at least 1 P4 task even when many P1-P3 are active", () => {
-      const story = setupTransit({
-        FlipDone: false,
-        TripDay: 6, // midpoint AND nav check day
-        TripDuration: 10,
-        NavCheckDueDay: 6,
-        EngineCondition: 70,
-        Fatigue: 75,
-        PaperworkDone: 0,
-        PaperworkTotal: 3,
-        ShipCondition: 70,
-      });
-      // With 6 P1-P3 tasks, P4 should still have at least 1 slot
-      expect(hasChoice(story, "Take a break")).toBe(true);
     });
   });
 
@@ -366,24 +342,6 @@ describe("Task priority system", () => {
   });
 
   describe("Sub-menus", () => {
-    it("relax sub-menu shows cooking, workout, and movie", () => {
-      const story = setupTransit();
-      pickChoice(story, "Take a break");
-      expect(hasChoice(story, "Cook a special meal")).toBe(true);
-      expect(hasChoice(story, "workout")).toBe(true);
-      expect(hasChoice(story, "movie")).toBe(true);
-      expect(hasChoice(story, "Never mind")).toBe(true);
-    });
-
-    it("relax Never mind returns to top-level without spending AP", () => {
-      const story = setupTransit({ AP: 6 });
-      pickChoice(story, "Take a break");
-      pickChoice(story, "Never mind");
-      expect(story.variablesState["AP"]).toBe(6);
-      // Should be back at ship_options with choices available
-      expect(story.currentChoices.length).toBeGreaterThan(0);
-    });
-
     it("sleep sub-menu shows nap when fatigue >= 30", () => {
       const story = setupTransit({ Fatigue: 50 });
       pickChoice(story, "Get some rest");

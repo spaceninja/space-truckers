@@ -91,15 +91,6 @@ VAR PassengerEvents = (PassengerBirthday, PassengerComplaint, PassengerConversat
 
 /*
 
-    Medical Module Check
-    Returns true if the Wellness Suite is installed and active (condition >= 50).
-
-*/
-=== function has_medical_module()
-~ return is_module_active(WellnessSuite)
-
-/*
-
     Micrometeorite Strike
     A micrometeorite impacts the hull. Must be repaired immediately.
     Fatigue check: failure costs extra AP and adds a fuel penalty.
@@ -222,7 +213,6 @@ They press {reward} € into your hand before you undock. "You saved us weeks ou
 = distress_help_partial
 You pass over a kit of spare parts and a few canisters of fuel through the airlock. Not a full fix, but enough to get them moving.
 ~ PlayerBankBalance += 150
-~ Morale = MIN(Morale + 10, 100)
 They thank you warmly. {150} € and the knowledge you did something good.
 -> transit.pass_time(2)
 
@@ -290,17 +280,14 @@ A grinding noise from the galley, then silence. You investigate. The coffee mach
 
 = coffee_fix
 You pull the machine apart, diagnose a clogged heating element, and spend two hours putting it back together right. The first cup it makes is mediocre. The second one is perfect.
-~ Morale = MIN(Morale + 5, 100)
 { has_passenger_cargo(ShipCargo) and InstalledModules ? PassengerModule:
     ~ PassengerSatisfaction = MIN(PassengerSatisfaction + 3, 100)
 }
 -> transit.pass_time(2)
 
 = coffee_ignore
-~ Morale = MAX(Morale - 15, 0)
 You try to convince yourself you don't need it. You absolutely need it. The rest of the day is worse for it.
 { has_passenger_cargo(ShipCargo):
-    ~ Morale = MAX(Morale - 5, 0)
     Your passengers are not happy about it either. You get three separate complaints before lunch.
     { InstalledModules ? PassengerModule:
         ~ PassengerSatisfaction = MAX(PassengerSatisfaction - 3, 0)
@@ -321,7 +308,6 @@ One of your passengers flags you down in the corridor. Turns out it's their birt
 + [Throw a small celebration — break out some rations and make it festive]
     -> birthday_celebrate
 + [Wish them a happy birthday and get back to work]
-    ~ Morale = MIN(Morale + 5, 100)
     You wish them well with a genuine smile. They seem touched that you remembered. Small gestures count for something out here.
     { InstalledModules ? PassengerModule:
         ~ PassengerSatisfaction = MIN(PassengerSatisfaction + 3, 100)
@@ -332,13 +318,11 @@ One of your passengers flags you down in the corridor. Turns out it's their birt
 You clear a table in the common area, dig out something that passes for cake mix, and round up the other passengers.
 { fatigue_check():
     You're running on fumes and it shows. The "celebration" is half-hearted — you burn the cake and can barely keep your eyes open through the singing. It's the thought that counts, but only just.
-    ~ Morale = MIN(Morale + 5, 100)
     { InstalledModules ? PassengerModule:
         ~ PassengerSatisfaction = MIN(PassengerSatisfaction + 3, 100)
     }
 - else:
     It's nothing fancy, but the passengers are laughing and trading stories, and for a little while the ship feels less like a cargo hauler and more like somewhere people actually want to be.
-    ~ Morale = MIN(Morale + 10, 100)
     { InstalledModules ? PassengerModule:
         ~ PassengerSatisfaction = MIN(PassengerSatisfaction + 8, 100)
     }
@@ -358,7 +342,6 @@ A passenger corners you outside the cockpit. The air recycler is making a noise 
 + [See what you can do to fix their complaints]
     -> complaint_accommodate
 + [Apologise but explain this is a cargo ship, not a cruise liner]
-    ~ Morale = MIN(MAX(Morale - 5, 0), 100)
     You're sympathetic but honest — this is a working freighter, not a passenger vessel. They're not happy, but they accept it. The mood aboard drops a little.
     { InstalledModules ? PassengerModule:
         ~ PassengerSatisfaction = MAX(PassengerSatisfaction - 5, 0)
@@ -373,7 +356,6 @@ You head down to check the recycler and tweak the heating.
         ~ PassengerSatisfaction = MIN(PassengerSatisfaction + 2, 100)
     }
 - else:
-    ~ Morale = MIN(Morale + 5, 100)
     The recycler had a loose panel — easy fix once you found it. You adjust the heating and throw in an extra blanket for good measure. The passenger seems genuinely grateful.
     { InstalledModules ? PassengerModule:
         ~ PassengerSatisfaction = MIN(PassengerSatisfaction + 5, 100)
@@ -393,7 +375,6 @@ You head down to check the recycler and tweak the heating.
 You're running through a systems check when one of your passengers drifts into the cockpit. They're not complaining — they're just curious. They ask about the ship, the route, what it's like out here.
 
 + [Chat with them for a while]
-    ~ Morale = MIN(Morale + 5, 100)
     ~ Fatigue = MAX(Fatigue - 5, 0)
     You lean back and talk. They're good company — asking questions, listening to the answers, sharing their own stories. By the time they head back to their berth, you feel lighter than you have in days.
     { InstalledModules ? PassengerModule:
@@ -435,7 +416,6 @@ You look at the shuttle ETA on your console, then at the family huddled in the d
 
 = medical_call_shuttle
 You make the call. The passenger argues, then pleads, but you hold firm. When the shuttle docks, the medics transfer them quickly and professionally. The family watches from the airlock window as the shuttle pulls away.
-~ Morale = MIN(MAX(Morale - 10, 0), 100)
 ~ ShipClock = ShipClock + 1
 { InstalledModules ? PassengerModule:
     ~ PassengerSatisfaction = MAX(PassengerSatisfaction - 10, 0)
@@ -445,7 +425,6 @@ The ship is quiet afterward. You did the right thing — you know that. But the 
 
 = medical_stay_aboard
 You tell the shuttle to stand by and turn back to the passenger. "Alright. You're staying. But you do exactly what I tell you."
-~ Morale = MIN(Morale + 5, 100)
 The family crowds in, grateful and terrified in equal measure. You dig out the first aid kit and do everything you can.
 -> medical_stay_outcome
 
@@ -453,10 +432,6 @@ The family crowds in, grateful and terrified in equal measure. You dig out the f
 ~ temp outcome_roll = RANDOM(1, 100)
 ~ temp improve_chance = 50
 ~ temp worsen_chance = 90
-{ has_medical_module():
-    ~ improve_chance = 75
-    ~ worsen_chance = 100  // no death possible with medical module
-}
 {
 - outcome_roll <= improve_chance:
     Over the next few hours, colour returns to their face. Their breathing steadies. By evening they're sitting up, sipping water, and arguing with their spouse about whether they should have taken the shuttle. You take that as a good sign.
@@ -464,14 +439,12 @@ The family crowds in, grateful and terrified in equal measure. You dig out the f
         ~ PassengerSatisfaction = MIN(PassengerSatisfaction + 10, 100)
     }
 - outcome_roll <= worsen_chance:
-    ~ Morale = MIN(MAX(Morale - 10, 0), 100)
     They don't improve. If anything, they get worse — fever spikes, breathing goes shallow. You do what you can, but you're a pilot, not a doctor. They're stable enough to make it to port, but it's going to be a rough ride. You can't shake the feeling you made the wrong call.
     { InstalledModules ? PassengerModule:
         ~ PassengerSatisfaction = MAX(PassengerSatisfaction - 5, 0)
     }
 - else:
-    // 10% chance without medical module — the worst outcome
-    ~ Morale = MIN(MAX(Morale - 20, 0), 100)
+    // 10% chance — the worst outcome
     You do everything right. You follow every step in the emergency manual. It's not enough.
     They pass quietly in the small hours, family around them. You sit in the cockpit afterward, staring at the stars, wondering if you'd made a different choice whether it would have mattered.
     The family doesn't blame you. That almost makes it worse.
