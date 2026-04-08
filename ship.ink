@@ -7,7 +7,7 @@ VAR ActionPointsMax = 6
 // bounds in sync. Add an entry here when adding a task to a tier's shuffle.
 LIST P2Tasks = EngineMaintenance, UrgentSleep
 LIST P3Tasks = Paperwork, NavCheck, CargoInspect, MaintBacklog, PassengerTask
-LIST P4Tasks = Relax, SleepRest
+LIST P4Tasks = SleepRest
 
 // Passenger task pool — 12 tasks in 3 tone categories.
 // Tone category VARs control weighted random selection in pick_passenger_task.
@@ -16,7 +16,6 @@ LIST PassengerTasks = PaxShower, PaxQuarters, PaxAirQuality, PaxRations, PaxMovi
 VAR NegativePaxTasks = (PaxShower, PaxQuarters, PaxAirQuality, PaxRations)
 VAR MixedPaxTasks = (PaxMovieNight, PaxMealService, PaxGameNight, PaxExercise)
 VAR PositivePaxTasks = (PaxObsDeck, PaxKaraoke, PaxStargazing, PaxCocktails)
-LIST Recipes = Curry, Pho, JollofRice, Pupusas, Borscht, Bibimbap, Tamales, DimSum, Shakshuka, Pierogi, Feijoada, Bannock
 
 /*
 
@@ -137,16 +136,9 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 ~ p3_loops++
 { p3_loops < LIST_COUNT(LIST_ALL(P3Tasks)) and CHOICE_COUNT() < p3_cap: -> p3_shuffle }
 
-// P4: Recreation — shuffle, respects p4_cap
+// P4: Rest — only sleep when fatigued
 - (p4_offer)
-~ temp p4_loops = 0
-- (p4_shuffle)
-{ shuffle:
-    - { CHOICE_COUNT() < p4_cap: <- task_relax }
-    - { CHOICE_COUNT() < p4_cap and Fatigue >= 30 and Fatigue < 70: <- task_sleep_rest }
-}
-~ p4_loops++
-{ p4_loops < LIST_COUNT(LIST_ALL(P4Tasks)) and CHOICE_COUNT() < p4_cap: -> p4_shuffle }
+{ CHOICE_COUNT() < p4_cap and Fatigue >= 30 and Fatigue < 70: <- task_sleep_rest }
 
 // P5: Rest — only when no P1–P3 tasks are active
 ~ temp has_obligations = has_tier_tasks(1) or has_tier_tasks(2) or has_tier_tasks(3)
@@ -194,9 +186,6 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 = task_maintenance
 + [Ship maintenance — {LIST_COUNT(Backlog)} tasks{ has_overdue_tasks(): (overdue!)}] -> maintenance_options
-
-= task_relax
-+ [Take a break] -> relax_options
 
 = task_rest
 + [Call it a day — skip remaining {AP} AP] -> do_rest
@@ -248,33 +237,6 @@ Engine: {EngineCondition}% / Ship: {ShipCondition}%
 - else:
     + [{ MaintName(task) } (1 AP)] -> do_maintenance(task)
 }
-
-= relax_options
-What sounds good right now?
-+ [Cook a special meal (2 AP)] -> cook_options
-+ [Quick workout (1 AP)] -> do_recreation(1, 8)
-+ [Watch a movie (2 AP)] -> do_recreation(2, 15)
-+ { is_module_active(Entertainment) } [Play video games (1 AP)] -> do_video_games
-+ { is_module_active(Entertainment) } [Listen to music (1 AP)] -> do_listen_music
-+ [Never mind] -> ship_options
-
-= cook_options
-What do you feel like making?
-~ temp cook_pool = PurchasedIngredients
-~ temp fill_count = MAX(4 - LIST_COUNT(PurchasedIngredients), 0)
-~ cook_pool += list_random_subset_of_size(LIST_ALL(Recipes), fill_count)
-- (cook_top)
-~ temp meal = pop(cook_pool)
-{ meal:
-    <- cook_choice(meal)
-    -> cook_top
-}
--
-+ [Never mind] -> relax_options
-
-= cook_choice(meal)
-+ [{ recipe_name(meal) }{ PurchasedIngredients ? meal:  (fresh ingredients)}]
-    -> do_cook(meal)
 
 /*
 
@@ -392,95 +354,6 @@ What do you feel like making?
     {MaintFatigued(task)}
 - else:
     {MaintComplete(task)}
-}
--> pass_time(1)
-
-/*
-
-    Cook a Special Meal
-    A chosen recipe from the cooking sub-menu. Costs 2 AP.
-    Fresh ingredient meals get a larger morale boost.
-
-*/
-= do_cook(meal)
-{ PurchasedIngredients ? meal:
-    ~ Morale = MIN(Morale + apply_recreation_bonus(15), 100)
-    ~ PurchasedIngredients -= meal
-- else:
-    ~ Morale = MIN(Morale + apply_recreation_bonus(12), 100)
-}
-{ meal:
-// Standard recipes
-- Curry:     The curry takes all afternoon — dry-toasting spices, building the sauce layer by layer. The ship smells incredible. You eat two bowls.
-- Pho:       You coax a decent broth from dried aromatics and whatever protein's on hand, then drape rice noodles in and watch them soften. It's not Hanoi, but it'll do.
-- JollofRice: You caramelize the tomatoes first, the way your neighbor used to, until they go almost sticky-sweet. The rice drinks up all that smoky red sauce. You scrape the pot.
-- Pupusas:   The corn masa takes some kneading. You stuff them with cheese and a little hot sauce, press them flat, and cook them in a dry pan until the edges crisp. Simple food, honestly satisfying.
-- Borscht:   You dig the last of the beets out of cold storage and make a proper pot of borscht — earthy, deep red, a little sour. You eat it with a spoonful of shelf-stable sour cream substitute. Good enough.
-- Bibimbap:  You fry an egg, lay it over a bowl of rice and whatever pickled vegetables you have left, drizzle on the gochujang sauce you've been hoarding, and mix it all together. The colors alone improve your mood.
-- Tamales:   The masa-spreading is meditative work. You fold each one slowly, steam the whole batch, and let them rest. Unwrapping the first one, the dough pulling back from the husk, feels like a small ceremony.
-- DimSum:    You fold dumplings one by one, pinching each pleat into place. It takes an hour and your hands start to cramp. The first one you steam, you eat standing at the stove.
-- Shakshuka: The whole dish comes together in one pan — tomatoes, peppers, a generous hand with the cumin, then eggs cracked straight in. You eat it with flatbread and watch the stars.
-- Pierogi:   Boiled first, then pan-fried in a little oil until the skins blister and turn golden. You eat them standing up over the stove before they even cool down.
-- Feijoada:  The black beans simmer low and slow with smoked seasonings until they're silky and rich. You serve it over rice with a few drops of hot sauce. It's the kind of meal that makes the ship feel like home.
-- Bannock:   Just flour, water, a pinch of salt, fried in the pan. You don't know why it tastes so good — maybe because it's simple, and simple things feel true out here.
-// Fresh ingredient meals
-- EarthStrawberries:   You hull the strawberries one by one — they're impossibly red, sweet in a way that nothing packaged ever is. The shortcake is rough around the edges, but the berries make it perfect.
-- EarthWagyu:          You pat the steak dry, season it with just salt, and sear it in a screaming-hot pan. It's too good for this kitchen. You eat it slowly.
-- LunaHerbs:           Fresh herbs change everything. The smell when you bruise the rosemary hits you like a memory — green and earthy, nothing like the dried stuff. The fish is simple, the herbs do all the work.
-- LunaCheese:          You melt the cave-aged cheese slowly with a splash of wine and a clove of garlic, kept just below a simmer. The fondue is ridiculous for a cargo ship. You don't care.
-- MarsPeppers:         Greenhouse peppers, deep red and glossy. You roast them until the skins char, then stuff them with spiced rice and bake. The ship smells like somewhere people live on purpose.
-- MarsHoney:           You glaze the ribs in the Olympus honey — dark, almost bitter, earthy in a way that Earth honey isn't. The roasting smells extraordinary. You feel briefly, absurdly, like a person who has their life together.
-- CeresTruffles:       One truffle, shaved paper-thin over a bowl of risotto, transforms a routine meal into something you'd pay for. You eat it slowly and say nothing.
-- CeresSake:           You marinate the fish overnight in sake and soy, then broil it until the glaze caramelizes. The belt-brewed sake has a rougher edge than anything from the inner system. It works.
-- GanymedeIceCream:    You assemble the sundae with the ceremonial focus it deserves. Two scoops of real cream ice cream from Ganymede dairy. Synthetic chocolate sauce. You sit in the captain's chair and eat it while the stars drift past.
-- GanymedeSalt:        You crust the bread dough in Europan salt crystals and bake it in the ship's tiny oven. It comes out uneven and slightly dense. It's still the best bread you've had in months.
-- TitanMeats:          You arrange the cured meats on a tray with crackers and the last of the good mustard. It's a ridiculous extravagance for a hauling run. That's exactly the point.
-- TitanBerries:        You make the cobbler in a single pan — berries tumbled in with a crumble topping, baked until the juice runs and bubbles at the edges. You eat it warm with reconstituted cream.
-}
--> pass_time(2)
-
-/*
-
-    Recreation
-    Flexible recreation handler. Cost and morale boost are parameters.
-
-*/
-= do_recreation(cost, morale_boost)
-~ Morale = MIN(Morale + apply_recreation_bonus(morale_boost), 100)
-{ cost > 1:
-    You settle in for a movie. For a couple of hours, you're not a trucker — you're just an audience.
-    { shuffle:
-    -   You heat up a bag of protein puffs — technically popcorn-flavored — and eat them one at a time.
-    -   You bring a bulb of coffee and a ration bar. The bar's gone before the opening credits.
-    -   You eat nothing, which you'll regret later. But the movie's good enough that you don't notice.
-    }
-- else:
-    You run through a quick workout routine. Your muscles thank you.
-    { shuffle:
-    -   Afterward you eat a protein bar standing over the sink. You've earned it.
-    -   Afterward you drain a full bulb of water and dig out a ration pack. The fatigue makes everything taste better.
-    -   Afterward you sit on the floor for a minute, then eat crackers straight from the bag. No regrets.
-    }
-}
--> pass_time(cost)
-
-= do_video_games
-~ Morale = MIN(Morale + apply_recreation_bonus(10), 100)
-{ shuffle:
--   You boot up a game on the entertainment console. Time melts away as you get absorbed in the action.
--   You spend some time gaming. It's a nice escape from the monotony of deep space hauling.
--   The entertainment system loads your saved game. For a while, you forget you're hurtling through the void.
--   You lose an hour to a dogfighting sim. Ironic, given your actual job.
-}
--> pass_time(1)
-
-= do_listen_music
-~ Morale = MIN(Morale + apply_recreation_bonus(5), 100)
-{ shuffle:
--   You put on some music and let it fill the cockpit. The ship feels less empty.
--   You queue up a playlist and let the music wash over you. Simple pleasures.
--   Music drifts through the ship. You catch yourself humming along.
--   Something melancholy tonight. It fits the mood, somehow.
 }
 -> pass_time(1)
 
@@ -632,20 +505,6 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
     -> passenger_satisfaction_check ->
     -> pick_passenger_task ->
 }
-// Morale decay: faster if ship is dirty
-{ ShipCondition < 50:
-    ~ Morale = MAX(Morale - 3, 0)
-- else:
-    ~ Morale = MAX(Morale - 1, 0)
-}
-// Low morale reduces effective AP
-{ Morale < 20:
-    ~ AP = MIN(AP, 4)
-- else:
-    { Morale < 40:
-        ~ AP = MIN(AP, 5)
-    }
-}
 { ShipClock == 0:
     -> arrive_in_port(ShipDestination)
 }
@@ -706,7 +565,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
     - 1: ~ return (not FlipDone and TripDay >= TripDuration / 2)
     - 2: ~ return (EngineCondition < 80) or (Fatigue >= 70)
     - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay >= NavCheckDueDay) or (TripDay >= CargoCheckDueDay) or (LIST_COUNT(Backlog) > 0) or (DailyPassengerTask != () and not PassengerTaskCompleted)
-    - 4: ~ return true  // Relax is always available
+    - 4: ~ return Fatigue >= 30 and Fatigue < 70
 }
 ~ return false
 
@@ -786,10 +645,6 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 - NavGyroCalib:   ~ return "nav gyroscope calibration"
 - CargoSensor:    ~ return "cargo sensor recalibration"
 - CargoSealCheck: ~ return "cargo bay seal check"
-- EntWiring:      ~ return "entertainment system wiring check"
-- EntDisplayClean: ~ return "display panel cleaning"
-- WellSanitize:   ~ return "wellness suite sanitization"
-- WellCalib:      ~ return "autodoc calibration"
 - PaxLifeSupp:    ~ return "passenger life support check"
 - PaxBerthClean:  ~ return "passenger berth cleaning"
 }
@@ -817,10 +672,6 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 - NavGyroCalib:   ~ return "You recalibrate the navigation gyroscopes. Heading data looks solid."
 - CargoSensor:    ~ return "You recalibrate the cargo bay sensors. Weight readings are accurate again."
 - CargoSealCheck: ~ return "You inspect the cargo bay seals and tighten the loose ones."
-- EntWiring:      ~ return "You trace the entertainment system wiring and fix a dodgy connection."
-- EntDisplayClean: ~ return "You clean the display panels. The picture's crisp again."
-- WellSanitize:   ~ return "You run the wellness suite through a full sanitization cycle."
-- WellCalib:      ~ return "You recalibrate the autodoc's sensors. Readings are precise again."
 - PaxLifeSupp:    ~ return "You run through the passenger life support diagnostics. Air and water systems nominal."
 - PaxBerthClean:  ~ return "You clean the passenger berths and restock the basics. Everything looks presentable."
 }
@@ -848,10 +699,6 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 - NavGyroCalib:   ~ return "You attempt the gyro calibration but the numbers swim. Close enough."
 - CargoSensor:    ~ return "You poke at the sensor calibration. The readings are... better."
 - CargoSealCheck: ~ return "You check a few seals but skip the hard-to-reach ones."
-- EntWiring:      ~ return "You jiggle a wire until the static clears. Engineering at its finest."
-- EntDisplayClean: ~ return "You smear the displays more than clean them."
-- WellSanitize:   ~ return "You run a quick sanitization cycle. Probably killed most of the germs."
-- WellCalib:      ~ return "You squint at the autodoc readings and call it calibrated."
 - PaxLifeSupp:    ~ return "You half-check the passenger life support. Probably fine."
 - PaxBerthClean:  ~ return "You give the berths a quick once-over. It'll have to do."
 }
@@ -869,7 +716,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 - AirFilter:      ~ return "The air smells stale and metallic. Those filters are long overdue."
 - HullCheck:      ~ return "You hear a creak you don't recognize. Should have checked the hull."
 - DrainLines:     ~ return "The drains are backing up. Should have flushed them when you had the chance."
-- Scrub:          ~ return "The common areas are getting grimy. Morale isn't the only thing suffering."
+- Scrub:          ~ return "The common areas are getting grimy. It's starting to smell in here."
 // Module tasks
 - RepDroneServo:  ~ return "The repair drone's arm is jerking erratically. The servos needed attention."
 - RepDroneOptics: ~ return "The repair drone keeps bumping into things. Its optics are filthy."
@@ -879,10 +726,6 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 - NavGyroCalib:   ~ return "Course heading keeps drifting. The gyroscopes are way out of spec."
 - CargoSensor:    ~ return "The cargo sensors are giving bogus readings. Hope nothing shifted."
 - CargoSealCheck: ~ return "You hear a whistle near the cargo bay. The seals are loosening."
-- EntWiring:      ~ return "The entertainment system is glitching out. Wiring issue, probably."
-- EntDisplayClean: ~ return "The displays are so grimy you can barely read them."
-- WellSanitize:   ~ return "The wellness suite smells like a gym locker. Sanitization is overdue."
-- WellCalib:      ~ return "The autodoc's readings are drifting. Can't trust it like this."
 - PaxLifeSupp:    ~ return "The passenger section air smells recycled and stale. Life support needed attention."
 - PaxBerthClean:  ~ return "The passenger berths are getting grimy. Someone left a polite but firm note."
 }
@@ -895,48 +738,6 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ CompletedToday = ()
 ~ MaintCooldown = ()
 ~ add_daily_tasks()
-
-// Returns the display name for a recipe or fresh ingredient meal.
-=== function recipe_name(meal)
-{ meal:
-// Standard recipes — named with personal connection
-- Curry:             ~ return "Grandma's yellow curry"
-- Pho:               ~ return "the pho recipe from back home"
-- JollofRice:        ~ return "Uncle Kofi's jollof rice"
-- Pupusas:           ~ return "the pupusas you learned to make at seventeen"
-- Borscht:           ~ return "borscht (your old neighbor's recipe)"
-- Bibimbap:          ~ return "bibimbap the way you like it"
-- Tamales:           ~ return "holiday tamales"
-- DimSum:            ~ return "homemade dumplings"
-- Shakshuka:         ~ return "shakshuka for one"
-- Pierogi:           ~ return "fried pierogi"
-- Feijoada:          ~ return "Sunday feijoada"
-- Bannock:           ~ return "Grandpa's bannock"
-// Fresh ingredient meals — named to feature the special ingredient
-- EarthStrawberries: ~ return "shortcake with real Earth strawberries"
-- EarthWagyu:        ~ return "pan-seared wagyu steak"
-- LunaHerbs:         ~ return "fish with fresh Luna herbs"
-- LunaCheese:        ~ return "cave-aged cheese fondue"
-- MarsPeppers:       ~ return "stuffed Mars greenhouse peppers"
-- MarsHoney:         ~ return "ribs glazed with Olympus honey"
-- CeresTruffles:     ~ return "risotto with asteroid truffles"
-- CeresSake:         ~ return "sake-glazed salmon"
-- GanymedeIceCream:  ~ return "Ganymede dairy ice cream sundae"
-- GanymedeSalt:      ~ return "salt-crusted bread (Europan sea salt)"
-- TitanMeats:        ~ return "charcuterie with Titan-cured meats"
-- TitanBerries:      ~ return "cobbler with cryo-preserved berries"
-}
-~ return "something"
-
-// Apply Entertainment System morale bonus to a base recreation boost.
-// At 75%+ condition: +50% bonus (base + base / 2, integer math).
-// Otherwise: base unchanged.
-=== function apply_recreation_bonus(base_boost)
-~ temp bonus = 0
-{ get_module_condition(Entertainment) >= 75:
-    ~ bonus = base_boost / 2
-}
-~ return base_boost + bonus
 
 // Complete a maintenance task: remove from backlog/stale, add to cooldown.
 // Replacement tasks are generated at start of next day, not immediately.

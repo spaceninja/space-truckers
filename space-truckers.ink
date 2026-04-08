@@ -25,8 +25,7 @@ VAR ShipCargo = ()
 VAR FlightMode = Bal
 
 VAR Fatigue = 0           // 0–100 scale. Gravity-modified accumulation.
-VAR Morale = 80           // 0–100 scale. Decays daily, boosted by recreation.
-VAR ShipCondition = 100   // 0–100%. Degrades from skipped maintenance. Affects morale.
+VAR ShipCondition = 100   // 0–100%. Degrades from skipped maintenance.
 VAR EngineCondition = 100 // 0–100%. Degrades from skipped maintenance. Affects fuel cost.
 
 // Maintenance backlog — 3-4 new tasks drawn daily via two-stage selection.
@@ -34,7 +33,7 @@ VAR EngineCondition = 100 // 0–100%. Degrades from skipped maintenance. Affect
 // Skipped tasks age: fresh → stale → auto-resolve with condition penalty.
 LIST EngineMaintTasks = EngTune, FuelLine, Injector, Coolant
 LIST ShipMaintTasks = AirFilter, HullCheck, DrainLines, Scrub
-LIST ModuleMaintTasks = RepDroneServo, RepDroneOptics, ClnDroneBrush, ClnDroneFilter, NavChipFlush, NavGyroCalib, CargoSensor, CargoSealCheck, EntWiring, EntDisplayClean, WellSanitize, WellCalib, PaxLifeSupp, PaxBerthClean
+LIST ModuleMaintTasks = RepDroneServo, RepDroneOptics, ClnDroneBrush, ClnDroneFilter, NavChipFlush, NavGyroCalib, CargoSensor, CargoSealCheck, PaxLifeSupp, PaxBerthClean
 VAR Backlog = ()          // current maintenance tasks (accumulates daily)
 VAR StaleBacklog = ()     // tasks that survived yesterday without completion
 VAR CompletedToday = ()   // tasks completed this day, becomes tomorrow's cooldown
@@ -58,13 +57,8 @@ VAR EventChance = 0        // Escalating probability for random events (0–100)
 VAR EventCooldownDay = -1  // TripDay of last event; prevents pile-ups same day
 VAR CargoDamagePct = 0     // Accumulated cargo damage % (reduces delivery pay)
 
-// Fresh ingredients — purchasable at port, unlock premium cooking options in transit.
-// Each item corresponds to a port-specific ingredient and a named meal in do_cook().
-LIST FreshIngredients = EarthStrawberries, EarthWagyu, LunaHerbs, LunaCheese, MarsPeppers, MarsHoney, CeresTruffles, CeresSake, GanymedeIceCream, GanymedeSalt, TitanMeats, TitanBerries
-VAR PurchasedIngredients = ()  // subset of FreshIngredients currently in the galley
-
 // Module system — ship modules that automate routine tasks.
-LIST ShipModules = RepairDrones, CleaningDrones, AutoNav, CargoMgmt, Entertainment, WellnessSuite, PassengerModule
+LIST ShipModules = RepairDrones, CleaningDrones, AutoNav, CargoMgmt, PassengerModule
 LIST ModuleStats = ModName, ModPrice, ModDesc
 VAR InstalledModules = ()      // currently installed modules
 VAR RefurbishedModules = ()    // subset of InstalledModules bought refurbished (80% max cap)
@@ -75,8 +69,6 @@ VAR RepairDronesCondition = 0
 VAR CleaningDronesCondition = 0
 VAR AutoNavCondition = 0
 VAR CargoMgmtCondition = 0
-VAR EntertainmentCondition = 0
-VAR WellnessSuiteCondition = 0
 VAR PassengerModuleCondition = 0
 VAR PassengerModuleTier = 0       // 0=not installed, 1=Basic Berths, 2=Standard Cabin, 3=Luxury Suite
 

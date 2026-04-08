@@ -51,7 +51,7 @@ Tasks are threaded (`<-`) into `ship_options` using `CHOICE_COUNT()` caps:
 | P1   | Urgent (ship flip)                            | No cap                          |
 | P2   | Important (engine, urgent sleep)              | `TaskCap - p3_floor - p4_floor` |
 | P3   | Routine (paperwork, nav, cargo inspect, maintenance backlog) | `TaskCap - p4_floor` |
-| P4   | Recreation (relax, sleep)                     | `TaskCap`                       |
+| P4   | Rest (sleep)                                  | `TaskCap`                       |
 | P5   | Rest (skip day)                               | Only when no P1-P3 active       |
 
 Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes eligibility checks.
@@ -89,14 +89,12 @@ Cargo inspections: `CargoCheckDueDay` (starts at 2), `CargoCheckPenaltyPct` → 
 - `ModuleData(module, stat)` lookup, `get_module_condition()`/`set_module_condition()` accessors
 - `is_module_active(module)` — installed AND condition >= 50
 - `get_drone_capacity(module)` — 2 at 75%+, 1 at 50-74%, 0 below 50%
-- `module_auto_tasks` tunnel: runs in `next_day()` and at trip start; handles all modules — drones (engine/ship task split, stale-first), AutoNav, CargoMgmt, WellnessSuite
+- `module_auto_tasks` tunnel: runs in `next_day()` and at trip start; handles all modules — drones (engine/ship task split, stale-first), AutoNav, CargoMgmt
 - `RefurbishedModules` VAR tracks 80% max cap; `get_module_max_condition()` enforces it
 - Module maintenance tasks in `ModuleMaintTasks` LIST: 2 tasks per module; `module_tasks_for(mod)` returns a module's task pair; `available_module_tasks()` returns the union across installed modules
 - Narrative lookup: `MaintName(task)`, `MaintComplete(task)`, `MaintFatigued(task)`, `MaintOverdue(task)` — one function per text type, switch block covering all tasks from all three LISTs
 - Purchase UI: `ship_upgrades` knot with buy new/refurb/repair options for modules; `engine_upgrades` stitch for engine purchases (next tier only, manufacturer gated by location)
 - Engine upgrade system: `EngPrice` stat in `EngineStats`, `RefurbishedEngine` VAR (boolean), `get_engine_max_condition()` in functions.ink mirrors `get_module_max_condition()` pattern; manufacturer availability via `manufacturer_available_here(mfg)` checked against `here`
-- Entertainment System: `apply_recreation_bonus(base)` function in ship.ink — +50% morale at 75%+ condition; new P4 tasks `VideoGames`/`ListenMusic` gated by `is_module_active(Entertainment)`
-- WellnessSuite wires `has_medical_module()` in events.ink
 - AutoNav (500€): advances `NavCheckDueDay = TripDay + 3` on auto-complete; 75%+ every check, 50-74% even `TripDay` only
 - CargoMgmt (700€): handles inspections + paperwork with 1-task-per-day limit; inspections prioritized (expire same day), paperwork fills remaining days; advances `CargoCheckDueDay = TripDay + get_cargo_check_interval()` on inspection; 75%+ every due day, 50-74% even `TripDay` only
 - PassengerModule (tiered, unique upgrade path): uses `PassengerModuleTier` VAR (0=not installed, 1-3) rather than a single condition gate; separate `passenger_module_upgrades` stitch excluded from `browse_module_list`; cargo gated by `InstalledModules ? PassengerModule` in `cargo_is_available`

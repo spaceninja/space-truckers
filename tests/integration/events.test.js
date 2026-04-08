@@ -67,7 +67,6 @@ function setupTransit(overrides = {}) {
     AP: 6,
     ActionPointsMax: 6,
     Fatigue: 0,
-    Morale: 80,
     ShipCondition: 100,
     EngineCondition: 100,
     ShipFuel: 200,
@@ -109,7 +108,6 @@ function setupEvent(eventKnot, overrides = {}) {
     AP: 6,
     ActionPointsMax: 6,
     Fatigue: 0,
-    Morale: 80,
     ShipCondition: 100,
     EngineCondition: 100,
     ShipFuel: 200,
@@ -139,7 +137,7 @@ describe("Event triggering", () => {
     const story = setupTransit({ EventChance: 0 });
     // If an event had fired, the story would have diverted before presenting
     // normal task choices. Verify we got normal choices instead.
-    expect(hasChoice(story, "Take a break")).toBe(true);
+    expect(hasChoice(story, "Call it a day")).toBe(true);
   });
 
   it("events do not repeat within a trip", () => {
@@ -166,7 +164,6 @@ describe("Event triggering", () => {
     story.variablesState["AP"] = 6;
     story.variablesState["ActionPointsMax"] = 6;
     story.variablesState["Fatigue"] = 0;
-    story.variablesState["Morale"] = 80;
     story.variablesState["ShipCondition"] = 100;
     story.variablesState["EngineCondition"] = 100;
     story.variablesState["ShipFuel"] = 200;
@@ -213,7 +210,6 @@ describe("Event triggering", () => {
     story.variablesState["AP"] = 6;
     story.variablesState["ActionPointsMax"] = 6;
     story.variablesState["Fatigue"] = 0;
-    story.variablesState["Morale"] = 80;
     story.variablesState["ShipCondition"] = 100;
     story.variablesState["EngineCondition"] = 100;
     story.variablesState["ShipFuel"] = 200;
@@ -248,7 +244,7 @@ describe("Event triggering", () => {
       EventCooldownDay: 3, // same as default TripDay
     });
     // Cooldown active — should get normal task choices, not an event
-    expect(hasChoice(story, "Take a break")).toBe(true);
+    expect(hasChoice(story, "Call it a day")).toBe(true);
     // EventChance should still have incremented (cooldown blocks event, not increment)
     // Actually per our logic: when in cooldown, we skip the check entirely
     // so EventChance should NOT increment either
@@ -478,7 +474,6 @@ describe("Event: Cargo Shift", () => {
     story.variablesState["AP"] = 6;
     story.variablesState["ActionPointsMax"] = 6;
     story.variablesState["Fatigue"] = 0;
-    story.variablesState["Morale"] = 80;
     story.variablesState["ShipCondition"] = 100;
     story.variablesState["EngineCondition"] = 100;
     story.variablesState["ShipFuel"] = 200;
@@ -521,28 +516,24 @@ describe("Event: Distress Signal", () => {
     expect(story.variablesState["PlayerBankBalance"]).toBe(1500);
   });
 
-  it("share supplies costs 2 AP, awards 150€, and boosts morale", () => {
+  it("share supplies costs 2 AP and awards 150€", () => {
     const story = setupEvent("event_distress_signal", {
       AP: 6,
       PlayerBankBalance: 1000,
-      Morale: 60,
     });
     pickChoice(story, "Share some supplies");
     expect(story.variablesState["AP"]).toBe(4); // 6 - 2
     expect(story.variablesState["PlayerBankBalance"]).toBe(1150);
-    expect(story.variablesState["Morale"]).toBe(70); // 60 + 10
   });
 
   it("send relay costs 0 AP and has no reward", () => {
     const story = setupEvent("event_distress_signal", {
       AP: 6,
       PlayerBankBalance: 1000,
-      Morale: 60,
     });
     pickChoice(story, "Send a distress relay");
     expect(story.variablesState["AP"]).toBe(6); // unchanged
     expect(story.variablesState["PlayerBankBalance"]).toBe(1000); // unchanged
-    expect(story.variablesState["Morale"]).toBe(60); // unchanged
   });
 });
 

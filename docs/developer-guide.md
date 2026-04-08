@@ -365,10 +365,10 @@ The transit day presents tasks to the player via a priority-based selection syst
 | P1 | Urgent | Always shown when applicable. No cap. |
 | P2 | Important | Shown when stat thresholds met. Shuffled. Capped at `TaskCap - p3_floor - p4_floor`. |
 | P3 | Routine | Shown on schedule or when relevant. Shuffled. Capped at `TaskCap - p4_floor`. |
-| P4 | Recreation | Fills remaining slots. Shuffled. Capped at `TaskCap`. |
+| P4 | Rest | Fills remaining slots. Capped at `TaskCap`. |
 | P5 | Rest | Shown only when no P1–P3 tasks are active. |
 
-`TaskCap` (default 7) controls the maximum number of top-level tasks. P3 and P4 each have a floor of 1 slot (if eligible tasks exist in that tier), ensuring the player always has at least one routine task and one recreation option.
+`TaskCap` (default 7) controls the maximum number of top-level tasks. P3 has a floor of 1 slot (if eligible tasks exist), ensuring the player always has at least one routine task.
 
 ### Threading + CHOICE_COUNT() Pattern
 
@@ -389,7 +389,6 @@ Shuffle blocks randomize which tasks within a tier get offered first, providing 
 Related tasks are collapsed into single top-level entries that expand into sub-menus with flavor text:
 
 - **Sleep** (P2 when fatigue ≥ 70, P4 when 30–69) → nap (1 AP), full sleep (2 AP)
-- **Relax** (P4, always) → cook a special meal (2 AP), workout (1 AP), movie (2 AP), video games (1 AP, Entertainment active), listen to music (1 AP, Entertainment active)
 - **Ship maintenance** (P3, when backlog has tasks) → shows all backlog tasks (1 AP each), stale tasks marked "overdue"
 - **Engine care** (P2, when condition < 80) → run diagnostics (2 AP)
 
@@ -427,7 +426,7 @@ When fatigue is 70 or above, work tasks are subject to a dice roll that can caus
 - **Degraded** (ship flip, engine tune, backlog maintenance) — The task completes but with a reduced effect. Ship flip adds a fuel penalty. Engine tune restores +8 instead of +15. Backlog maintenance restores +1 instead of +3.
 - **Fail + retry** (nav check, cargo inspection, paperwork) — The task doesn't count. The due day is not advanced, so the task remains available for retry. AP is still spent.
 
-Only "work" tasks use `fatigue_check()`. Sleep, recreation, eating, and rest are unaffected.
+Only "work" tasks use `fatigue_check()`. Sleep and rest are unaffected.
 
 `is_overtired()` is still used for UI concerns (P2 sleep threshold, task offering logic). `fatigue_check()` is used for task outcome resolution.
 
@@ -443,8 +442,6 @@ Random events are P0 interruptions that fire during transit, bypassing the task 
 - **Passenger events** — only eligible when the player has passenger cargo (static check at trip start)
 
 **Passenger event eligibility:** The `PassengerEvents` VAR holds the subset of events that require passengers. In `transit()`, `Events -= PassengerEvents` removes all passenger events in one operation when no passenger cargo is aboard. To add a new passenger event, add it to both the `Events` LIST and the `PassengerEvents` VAR (they are adjacent in `events.ink`).
-
-**`has_medical_module()`:** Returns `is_module_active(WellnessSuite)`. Used by the medical emergency event to improve patient outcomes — better recovery odds and no possibility of a fatal outcome when the suite is active (condition >= 50%).
 
 **Passenger satisfaction impacts:** All four passenger events and the coffee machine event modify `PassengerSatisfaction` (guarded by `InstalledModules ? PassengerModule`). See the event tables in `events.ink` for the specific values. The coffee machine event affects satisfaction if passengers are present (the lack of coffee hits harder with an audience).
 
@@ -493,10 +490,6 @@ All module daily behavior runs via the `module_auto_tasks` tunnel, called from `
 - **Auto-Nav Computer** (500€) — auto-completes nav checks. Full (75%+): completes every check. Reduced (50-74%): completes on even `TripDay` only. Advances `NavCheckDueDay = TripDay + 3` on completion.
 - **Cargo Management System** (700€) — handles both cargo inspections and paperwork (1 task/day, inspections prioritized). Full (75%+): completes every task due. Reduced (50-74%): completes on even `TripDay` only. Inspections take priority because they expire (day-of only); paperwork persists until delivery. Advances `CargoCheckDueDay = TripDay + get_cargo_check_interval()` on inspection completion.
 
-- **Entertainment System** (400€) — improves recreation. Full (75%+): all recreation (cooking, workout, movie, video games, music) gets a +50% morale bonus via `apply_recreation_bonus(base)`. The bonus uses integer math: `base + base / 2`. Reduced (50-74%): video games and music are available (module is active), but no morale bonus. Below 50%: offline, no extra options. Video games and music appear inside the "Take a break" → `relax_options` sub-menu when Entertainment is active (not as standalone P4 choices). They are gated with `{ is_module_active(Entertainment) }` inline choice guards inside `relax_options`.
-
-- **Wellness Suite** (500€) — daily fatigue/morale benefit and medical emergency improvement. Full (75%+): -5 fatigue, +2 morale per day. Reduced (50-74%): -3 fatigue, +1 morale. Applied in `module_auto_tasks` with narrative flavor text (gym, autodoc, sunlight simulator, therapy, haircut). Also wires `has_medical_module()` → `is_module_active(WellnessSuite)` to improve medical emergency outcomes.
-
 - **Passenger Module** (tiered, separate upgrade path) — gates passenger cargo and drives the satisfaction system. Unlike other modules, this has a `PassengerModuleTier` VAR (0=not installed, 1-3=tier) and a separate purchase/upgrade UI stitch (`passenger_module_upgrades`) that is linked from `upgrade_menu` but excluded from the standard `browse_module_list`. Tier is upgraded sequentially (T0→T1→T2→T3); pricing is cumulative (200/400/800€ total, delta charged per upgrade). The refurbished option is only available at initial install (T0→T1). Passive satisfaction bonus activates at T2+.
 
 ### Module Maintenance (Two Layers)
@@ -524,7 +517,6 @@ Port menu option `[Ship upgrades]` diverts to `ship_upgrades` in `modules.ink`. 
 8. Wire module-specific behavior:
    - For maintenance auto-complete or daily passive effects: add a stitch in `module_auto_tasks` (modules.ink)
    - For task list effects: gate tasks with `is_module_active(Module)` in `ship_options`
-   - For event/combat effects: update the relevant function (e.g., `has_medical_module()`)
 
 ---
 

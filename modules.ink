@@ -11,8 +11,6 @@
 - CleaningDrones: ~ return module_row(stat, "Cleaning Drones", 600, "Auto-complete ship maintenance tasks")
 - AutoNav:        ~ return module_row(stat, "Auto-Nav Computer", 500, "Auto-complete navigation checks")
 - CargoMgmt:      ~ return module_row(stat, "Cargo Management", 700, "Auto-complete cargo inspections and paperwork")
-- Entertainment:  ~ return module_row(stat, "Entertainment System", 400, "Improved recreation and morale boosts")
-- WellnessSuite:  ~ return module_row(stat, "Wellness Suite", 500, "Daily health benefits and emergency medical care")
 - PassengerModule: ~ return module_row(stat, "Passenger Module", 200, "Passenger berths and facilities")
 }
 ~ return 0
@@ -43,8 +41,6 @@
 - CleaningDrones: ~ return CleaningDronesCondition
 - AutoNav:        ~ return AutoNavCondition
 - CargoMgmt:      ~ return CargoMgmtCondition
-- Entertainment:  ~ return EntertainmentCondition
-- WellnessSuite:  ~ return WellnessSuiteCondition
 - PassengerModule: ~ return PassengerModuleCondition
 }
 ~ return 0
@@ -61,8 +57,6 @@
 - CleaningDrones: ~ CleaningDronesCondition = value
 - AutoNav:        ~ AutoNavCondition = value
 - CargoMgmt:      ~ CargoMgmtCondition = value
-- Entertainment:  ~ EntertainmentCondition = value
-- WellnessSuite:  ~ WellnessSuiteCondition = value
 - PassengerModule: ~ PassengerModuleCondition = value
 }
 
@@ -215,10 +209,6 @@
 - NavGyroCalib:   ~ return AutoNav
 - CargoSensor:    ~ return CargoMgmt
 - CargoSealCheck: ~ return CargoMgmt
-- EntWiring:      ~ return Entertainment
-- EntDisplayClean: ~ return Entertainment
-- WellSanitize:   ~ return WellnessSuite
-- WellCalib:      ~ return WellnessSuite
 - PaxLifeSupp:    ~ return PassengerModule
 - PaxBerthClean:  ~ return PassengerModule
 }
@@ -231,8 +221,6 @@
 - CleaningDrones: ~ return (ClnDroneBrush, ClnDroneFilter)
 - AutoNav:        ~ return (NavChipFlush, NavGyroCalib)
 - CargoMgmt:      ~ return (CargoSensor, CargoSealCheck)
-- Entertainment:  ~ return (EntWiring, EntDisplayClean)
-- WellnessSuite:  ~ return (WellSanitize, WellCalib)
 - PassengerModule: ~ return (PaxLifeSupp, PaxBerthClean)
 }
 ~ return ()
@@ -270,9 +258,6 @@
 }
 { InstalledModules ? CargoMgmt:
     -> process_cargo_mgmt ->
-}
-{ InstalledModules ? WellnessSuite:
-    -> process_wellness ->
 }
 ->->
 
@@ -392,32 +377,6 @@
                 ~ PaperworkDone = PaperworkDone + 1
                 The cargo management system pings — it managed to file a chunk of paperwork, but it's taking longer than it should. You make a mental note to have a tech look at it next time you're in port.
             }
-        }
-    }
-}
-->->
-
-= process_wellness
-~ temp well_cond = get_module_condition(WellnessSuite)
-{ well_cond >= 75:
-    ~ Fatigue = MAX(Fatigue - 5, 0)
-    ~ Morale = MIN(Morale + 2, 100)
-    { shuffle:
-    -   You squeeze in a quick session in the ship's gym. Your body thanks you.
-    -   The autodoc dispenses your daily vitamin pack. It's the little things.
-    -   You spend twenty minutes under the sunlight simulator. Somehow it actually helps.
-    -   You check in with the remote therapy service. Just talking helps more than you expected.
-    -   The hair trimmer takes care of business. You look almost human again.
-    -   You grab the painkiller the autodoc recommends for the ache in your shoulder. Problem solved.
-    }
-- else:
-    { well_cond >= 50:
-        ~ Fatigue = MAX(Fatigue - 3, 0)
-        ~ Morale = MIN(Morale + 1, 100)
-        { shuffle:
-        -   The gym equipment is acting up again, but you manage a short session.
-        -   The autodoc is running slow, but eventually dispenses your supplements.
-        -   The sunlight simulator flickers a bit, but you take what you can get.
         }
     }
 }
