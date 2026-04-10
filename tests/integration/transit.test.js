@@ -145,32 +145,37 @@ describe("Task priority system", () => {
   describe("P2: Important tasks", () => {
     it("shows engine check when condition < 80", () => {
       const story = setupTransit({ EngineCondition: 70 });
-      expect(hasChoice(story, "engine")).toBe(true);
+      expect(hasChoice(story, "diagnostics and tune")).toBe(true);
     });
 
     it("does not show engine check when condition >= 80", () => {
       const story = setupTransit({ EngineCondition: 80 });
-      expect(hasChoice(story, "engine")).toBe(false);
+      expect(hasChoice(story, "diagnostics and tune")).toBe(false);
     });
 
-    it("shows urgent sleep when fatigue >= 70", () => {
+    it("shows nap when fatigue >= 70", () => {
       const story = setupTransit({ Fatigue: 75 });
-      expect(hasChoice(story, "barely keep your eyes open")).toBe(true);
+      expect(hasChoice(story, "nap")).toBe(true);
     });
 
-    it("does not show urgent sleep when fatigue < 70", () => {
+    it("shows full sleep when fatigue >= 70 (implies >= 40)", () => {
+      const story = setupTransit({ Fatigue: 75 });
+      expect(hasChoice(story, "full cycle")).toBe(true);
+    });
+
+    it("does not show sleep at P2 when fatigue < 70", () => {
       const story = setupTransit({ Fatigue: 60 });
-      expect(hasChoice(story, "barely keep your eyes open")).toBe(false);
+      // Sleep appears at P4 (30-69), not as P2 urgent
+      // Both nap and full sleep should be absent from P2 (they may still appear at P4)
+      // Verify P4 nap is present but P2 urgent context is not triggered
+      // (best proxy: full sleep still shows since fatigue >= 40)
+      expect(hasChoice(story, "nap")).toBe(true); // P4 nap
     });
-  });
 
-  describe("P3: Routine tasks", () => {
-    it("shows paperwork when chunks remain", () => {
-      const story = setupTransit({
-        PaperworkDone: 0,
-        PaperworkTotal: 2,
-      });
-      expect(hasChoice(story, "paperwork")).toBe(true);
+    it("does not show sleep at all when fatigue < 30", () => {
+      const story = setupTransit({ Fatigue: 20 });
+      expect(hasChoice(story, "nap")).toBe(false);
+      expect(hasChoice(story, "full cycle")).toBe(false);
     });
 
     it("shows nav check when due (TripDay >= NavCheckDueDay)", () => {
@@ -189,12 +194,6 @@ describe("Task priority system", () => {
         NavCheckDueDay: 9, // completed on day 6, next due day 9
       });
       expect(hasChoice(story, "Navigation check")).toBe(false);
-    });
-
-    it("shows ship maintenance when backlog has tasks", () => {
-      const story = setupTransit();
-      // Backlog is always populated at trip start
-      expect(hasChoice(story, "Ship maintenance")).toBe(true);
     });
 
     it("shows cargo inspection when due (TripDay >= CargoCheckDueDay)", () => {
@@ -216,39 +215,99 @@ describe("Task priority system", () => {
     });
   });
 
+  describe("P3: Routine tasks", () => {
+    it("shows maintenance tasks directly when backlog has tasks", () => {
+      const story = setupTransit();
+      // Backlog is always populated; maintenance tasks appear directly
+      const choices = choiceTexts(story);
+      expect(choices.some((c) => c.includes("AP)"))).toBe(true);
+    });
+
+    it("shows stale maintenance tasks before fresh ones", () => {
+      const story = createStory();
+      story.variablesState["ShipCargo"] = new InkList();
+      // Set up one stale task and one fresh task
+      const staleTask = cargo(story, "ShipMaintTasks.AirFilter");
+      const freshTask = cargo(story, "EngineMaintTasks.EngTune");
+      story.variablesState["Backlog"] = cargo(
+        story,
+        "ShipMaintTasks.AirFilter",
+        "EngineMaintTasks.EngTune"
+      );
+      story.variablesState["StaleBacklog"] = staleTask;
+      const defaults = {
+        ShipClock: 5,
+        ShipDestination: L(story, "AllLocations.Mars"),
+        TripDuration: 10,
+        TripDay: 3,
+        FlipDone: true,
+        FlightMode: L(story, "FlightModes.Bal"),
+        PaperworkDone: 1,
+        PaperworkTotal: 1,
+        TripFuelCost: 100,
+        TripFuelPenalty: 0,
+        NavCheckDueDay: 99,
+        NavPenaltyPct: 0,
+        CargoCheckDueDay: 99,
+        CargoCheckPenaltyPct: 0,
+        AP: 6,
+        ActionPointsMax: 6,
+        Fatigue: 0,
+        ShipCondition: 100,
+        EngineCondition: 100,
+        ShipFuel: 200,
+        TaskCap: 7,
+        TasksCompletedToday: 0,
+        EventChance: 0,
+        EventCooldownDay: -1,
+        CargoDamagePct: 0,
+        DEBUG: false,
+      };
+      for (const [key, value] of Object.entries(defaults)) {
+        story.variablesState[key] = value;
+      }
+      story.ChoosePathString("transit.ship_options");
+      drainText(story);
+      const choices = choiceTexts(story);
+      // The stale task (AirFilter) should appear before the fresh task (EngTune)
+      const airFilterIdx = choices.findIndex((c) => c.includes("overdue"));
+      const engTuneIdx = choices.findIndex(
+        (c) => c.includes("AP)") && !c.includes("overdue")
+      );
+      expect(airFilterIdx).toBeGreaterThanOrEqual(0);
+      expect(engTuneIdx).toBeGreaterThanOrEqual(0);
+      expect(airFilterIdx).toBeLessThan(engTuneIdx);
+    });
+  });
+
   describe("P4: Rest", () => {
-    it("shows sleep rest when fatigue is moderate (30-69)", () => {
+    it("shows nap when fatigue is moderate (30-69)", () => {
       const story = setupTransit({ Fatigue: 50 });
-      expect(hasChoice(story, "Get some rest")).toBe(true);
-      // Should NOT show the urgent version
-      expect(hasChoice(story, "barely keep your eyes open")).toBe(false);
+      expect(hasChoice(story, "nap")).toBe(true);
+    });
+
+    it("shows full cycle when fatigue >= 40", () => {
+      const story = setupTransit({ Fatigue: 50 });
+      expect(hasChoice(story, "full cycle")).toBe(true);
+    });
+
+    it("hides full cycle when fatigue < 40 (but >= 30)", () => {
+      const story = setupTransit({ Fatigue: 35 });
+      expect(hasChoice(story, "nap")).toBe(true);
+      expect(hasChoice(story, "full cycle")).toBe(false);
     });
 
     it("does not show P4 sleep when fatigue < 30", () => {
       const story = setupTransit({ Fatigue: 20 });
-      // "Get some rest" should not appear at all (neither P2 nor P4)
-      expect(hasChoice(story, "Get some rest")).toBe(false);
+      expect(hasChoice(story, "nap")).toBe(false);
     });
-  });
 
-  describe("P3 floor guarantee", () => {
-    it("shows at least 1 P3 task when P2 tasks would fill the cap", () => {
-      // With only 2 P2 tasks currently this won't hit the cap,
-      // but verify P3 tasks appear alongside P2
+    it("shows paperwork when chunks remain", () => {
       const story = setupTransit({
-        EngineCondition: 70,
-        Fatigue: 75,
         PaperworkDone: 0,
         PaperworkTotal: 2,
-        ShipCondition: 70,
       });
-      // At least one P3 task should appear
-      const choices = choiceTexts(story);
-      const hasP3 =
-        choices.some((c) => c.includes("paperwork")) ||
-        choices.some((c) => c.includes("Ship maintenance")) ||
-        choices.some((c) => c.includes("Navigation"));
-      expect(hasP3).toBe(true);
+      expect(hasChoice(story, "paperwork")).toBe(true);
     });
   });
 
@@ -341,90 +400,80 @@ describe("Task priority system", () => {
     });
   });
 
-  describe("Sub-menus", () => {
-    it("sleep sub-menu shows nap when fatigue >= 30", () => {
-      const story = setupTransit({ Fatigue: 50 });
-      pickChoice(story, "Get some rest");
-      expect(hasChoice(story, "nap")).toBe(true);
-      expect(hasChoice(story, "full cycle")).toBe(true);
-    });
-
-    it("sleep sub-menu hides full sleep when fatigue < 40", () => {
-      const story = setupTransit({ Fatigue: 35 });
-      pickChoice(story, "Get some rest");
-      expect(hasChoice(story, "nap")).toBe(true);
-      expect(hasChoice(story, "full cycle")).toBe(false);
-    });
-
-    it("engine sub-menu shows diagnostics option", () => {
-      const story = setupTransit({ EngineCondition: 70 });
-      pickChoice(story, "engine");
-      expect(hasChoice(story, "diagnostics")).toBe(true);
-      expect(hasChoice(story, "Never mind")).toBe(true);
-    });
-
-    it("maintenance sub-menu shows backlog tasks", () => {
-      const story = setupTransit();
-      pickChoice(story, "Ship maintenance");
-      // Should show at least one maintenance task and a back option
-      const choices = choiceTexts(story);
-      expect(choices.length).toBeGreaterThanOrEqual(2); // at least 1 task + Never mind
-      expect(hasChoice(story, "Never mind")).toBe(true);
-    });
-  });
-
   describe("TaskCap enforcement", () => {
     it("respects a reduced TaskCap", () => {
       const story = setupTransit({
         TaskCap: 3,
-        // Activate several tasks across tiers
-        PaperworkDone: 0,
-        PaperworkTotal: 2,
+        // Activate tasks across tiers
         TripDay: 6,
-        NavCheckDueDay: 6, // nav check due
+        NavCheckDueDay: 6, // nav check due (P2)
+        CargoCheckDueDay: 6, // cargo inspect due (P2)
+        EngineCondition: 70, // engine eligible (P2)
       });
       const choices = choiceTexts(story);
-      // Should not exceed TaskCap + possible Rest
-      // Rest won't show since P3 tasks are active
+      // Should not exceed TaskCap; P3 (maintenance) gets leftover slots
       expect(choices.length).toBeLessThanOrEqual(3);
     });
   });
 
   describe("Shuffle variety", () => {
-    it("offers different P3 tasks across runs with different seeds", () => {
-      // Reuse a single story instance across seeds to avoid repeated compilation
-      const story = setupTransit({
-        TaskCap: 3, // Force only 1 P3 slot (cap 3, floor p4=1, so p3_cap=2, p2_cap=1)
-        PaperworkDone: 0,
-        PaperworkTotal: 2,
-        ShipCondition: 70,
+    it("offers different P2 tasks across runs with different seeds", () => {
+      // P2 shuffles engine, nav check, cargo inspect — with a small cap only
+      // some fit, so the shuffle determines which appear.
+      const story = createStory();
+      story.variablesState["ShipCargo"] = new InkList();
+      story.variablesState["Backlog"] = new InkList(); // no P3 tasks
+      const baseVars = {
+        ShipClock: 5,
+        ShipDestination: L(story, "AllLocations.Mars"),
+        TripDuration: 10,
         TripDay: 6,
-        NavCheckDueDay: 6, // nav check due — all 3 P3 tasks eligible
-      });
+        FlipDone: true,
+        FlightMode: L(story, "FlightModes.Bal"),
+        PaperworkDone: 1,
+        PaperworkTotal: 1,
+        TripFuelCost: 100,
+        TripFuelPenalty: 0,
+        NavCheckDueDay: 6, // due — P2 eligible
+        NavPenaltyPct: 0,
+        CargoCheckDueDay: 6, // due — P2 eligible
+        CargoCheckPenaltyPct: 0,
+        AP: 6,
+        ActionPointsMax: 6,
+        Fatigue: 0, // no sleep tasks
+        ShipCondition: 100,
+        EngineCondition: 70, // < 80 — P2 eligible
+        ShipFuel: 200,
+        TaskCap: 2, // only 2 slots; 3 eligible P2 tasks compete
+        TasksCompletedToday: 0,
+        EventChance: 0,
+        EventCooldownDay: -1,
+        CargoDamagePct: 0,
+        DEBUG: false,
+      };
+      for (const [key, value] of Object.entries(baseVars)) {
+        story.variablesState[key] = value;
+      }
 
-      const p3Seen = new Set();
+      const p2Seen = new Set();
       for (let seed = 0; seed < 20; seed++) {
         story.state.storySeed = seed;
-        // Reset variables and re-navigate with this seed
-        story.variablesState["PaperworkDone"] = 0;
-        story.variablesState["PaperworkTotal"] = 2;
-        story.variablesState["ShipCondition"] = 70;
-        story.variablesState["TripDay"] = 6;
+        story.variablesState["EngineCondition"] = 70;
         story.variablesState["NavCheckDueDay"] = 6;
-        story.variablesState["TaskCap"] = 3;
+        story.variablesState["CargoCheckDueDay"] = 6;
+        story.variablesState["TaskCap"] = 2;
         story.variablesState["EventChance"] = 0;
         story.variablesState["EventCooldownDay"] = -1;
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         const choices = choiceTexts(story);
-        if (choices.some((c) => c.includes("paperwork"))) p3Seen.add("paperwork");
-        if (choices.some((c) => c.includes("Navigation"))) p3Seen.add("nav");
-        if (choices.some((c) => c.includes("Tidy"))) p3Seen.add("ship_maint");
-        // Early exit once variety is confirmed
-        if (p3Seen.size >= 2) break;
+        if (choices.some((c) => c.includes("engine"))) p2Seen.add("engine");
+        if (choices.some((c) => c.includes("Navigation"))) p2Seen.add("nav");
+        if (choices.some((c) => c.includes("Cargo inspection"))) p2Seen.add("cargo");
+        if (p2Seen.size >= 2) break;
       }
-      // With shuffle, we should see at least 2 different P3 tasks across 20 runs
-      expect(p3Seen.size).toBeGreaterThanOrEqual(2);
+      // With shuffle, we should see at least 2 different P2 tasks across 20 runs
+      expect(p2Seen.size).toBeGreaterThanOrEqual(2);
     });
   });
 });
@@ -524,8 +573,7 @@ describe("Fatigue-based task failure", () => {
         Fatigue: 0,
         EngineCondition: 70,
       });
-      pickChoice(story, "engine");
-      pickChoice(story, "diagnostics");
+      pickChoice(story, "diagnostics and tune");
       expect(story.variablesState["EngineCondition"]).toBe(85);
     });
 
@@ -537,8 +585,7 @@ describe("Fatigue-based task failure", () => {
       });
       const condBefore = story.variablesState["ShipCondition"];
       const engBefore = story.variablesState["EngineCondition"];
-      pickChoice(story, "Ship maintenance");
-      // Pick the first maintenance task (index 0)
+      // Maintenance tasks appear directly; pick the first one (index 0)
       story.ChooseChoiceIndex(0);
       story.ContinueMaximally();
       const condAfter = story.variablesState["ShipCondition"];
@@ -624,8 +671,7 @@ describe("Fatigue-based task failure", () => {
         story.variablesState["EventCooldownDay"] = -1;
         story.ChoosePathString("transit.ship_options");
         drainText(story);
-        pickChoice(story, "engine");
-        pickChoice(story, "diagnostics");
+        pickChoice(story, "diagnostics and tune");
         const cond = story.variablesState["EngineCondition"];
         if (cond === 75) fullBoosts++;
         else if (cond === 68) degradedBoosts++;

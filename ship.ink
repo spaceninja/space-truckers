@@ -5,9 +5,9 @@ VAR ActionPointsMax = 6
 
 // Task registry lists — used only for LIST_COUNT() to keep shuffle loop
 // bounds in sync. Add an entry here when adding a task to a tier's shuffle.
-LIST P2Tasks = EngineMaintenance, UrgentSleep
-LIST P3Tasks = Paperwork, NavCheck, CargoInspect, MaintBacklog, PassengerTask
-LIST P4Tasks = SleepRest
+LIST P2Tasks = EngineMaintenance, UrgentSleep, NavCheck, CargoInspect
+LIST P3Tasks = MaintBacklog, PassengerTask
+LIST P4Tasks = Paperwork, SleepRest
 
 // Passenger task pool — 12 tasks in 3 tone categories.
 // Tone category VARs control weighted random selection in pick_passenger_task.
@@ -98,47 +98,64 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 <center><em><small>{ShipClock} days to {LocationData(ShipDestination, Name)} / {AP} AP remaining</small></em></center>
 - (ship_opts)
 
-// Calculate tier floors and caps
-// has_tier_tasks() returns true/false which Ink treats as 1/0,
-// so these work as slot reservations in the cap math below.
-~ temp p3_floor = has_tier_tasks(3)
-~ temp p4_floor = has_tier_tasks(4)
-~ temp p2_cap = TaskCap - p3_floor - p4_floor
-~ temp p3_cap = TaskCap - p4_floor
-~ temp p4_cap = TaskCap
+// All tiers fill slots up to TaskCap; higher priority runs first so
+// lower-priority tasks only get slots left over by upper tiers.
+~ temp cap = TaskCap
 
 // P1: Urgent — always show, no cap
 { not FlipDone and TripDay >= TripDuration / 2: <- task_flip }
 // (future: random events, emergencies)
 
-// P2: Important — shuffle, respects p2_cap
+// P2: Important — shuffle for variety, respects cap
 - (p2_offer)
 ~ temp p2_loops = 0
 - (p2_shuffle)
 { shuffle:
-    - { CHOICE_COUNT() < p2_cap and EngineCondition < 80: <- task_engine }
-    - { CHOICE_COUNT() < p2_cap and Fatigue >= 70: <- task_sleep_urgent }
+    - { CHOICE_COUNT() < cap and EngineCondition < 80: <- task_engine }
+    - { CHOICE_COUNT() < cap and Fatigue >= 70:
+        <- task_nap
+        { CHOICE_COUNT() < cap and Fatigue >= 40: <- task_full_sleep }
+      }
+    - { CHOICE_COUNT() < cap and TripDay >= NavCheckDueDay: <- task_nav_check }
+    - { CHOICE_COUNT() < cap and TripDay >= CargoCheckDueDay: <- task_cargo_inspect }
 }
 ~ p2_loops++
-{ p2_loops < LIST_COUNT(LIST_ALL(P2Tasks)) and CHOICE_COUNT() < p2_cap: -> p2_shuffle }
+{ p2_loops < LIST_COUNT(LIST_ALL(P2Tasks)) and CHOICE_COUNT() < cap: -> p2_shuffle }
 
-// P3: Routine — shuffle, respects p3_cap
+// P3: Routine — deterministic sub-priority order, respects cap
+// Sub-priority: (1) overdue maint, (2) passenger task, (3) fresh maint
+
+// (1) Overdue maintenance tasks
 - (p3_offer)
-~ temp p3_loops = 0
-- (p3_shuffle)
-{ shuffle:
-    - { CHOICE_COUNT() < p3_cap and PaperworkDone < PaperworkTotal: <- task_paperwork }
-    - { CHOICE_COUNT() < p3_cap and TripDay >= NavCheckDueDay: <- task_nav_check }
-    - { CHOICE_COUNT() < p3_cap and TripDay >= CargoCheckDueDay: <- task_cargo_inspect }
-    - { CHOICE_COUNT() < p3_cap and LIST_COUNT(Backlog) > 0: <- task_maintenance }
-    - { CHOICE_COUNT() < p3_cap and DailyPassengerTask != () and not PassengerTaskCompleted: <- task_passenger }
+~ temp _stale = Backlog ^ StaleBacklog
+- (stale_top)
+~ temp stale_task = pop(_stale)
+{ stale_task:
+    { CHOICE_COUNT() < cap: <- maint_choice(stale_task) }
+    -> stale_top
 }
-~ p3_loops++
-{ p3_loops < LIST_COUNT(LIST_ALL(P3Tasks)) and CHOICE_COUNT() < p3_cap: -> p3_shuffle }
 
-// P4: Rest — only sleep when fatigued
+// (2) Passenger task
+- (p3_passenger)
+{ CHOICE_COUNT() < cap and DailyPassengerTask != () and not PassengerTaskCompleted: <- task_passenger }
+
+// (3) Fresh maintenance tasks
+~ temp _fresh = Backlog - StaleBacklog
+- (fresh_top)
+~ temp fresh_task = pop(_fresh)
+{ fresh_task:
+    { CHOICE_COUNT() < cap: <- maint_choice(fresh_task) }
+    -> fresh_top
+}
+-
+
+// P4: Low priority — paperwork, optional sleep
 - (p4_offer)
-{ CHOICE_COUNT() < p4_cap and Fatigue >= 30 and Fatigue < 70: <- task_sleep_rest }
+{ CHOICE_COUNT() < cap and PaperworkDone < PaperworkTotal: <- task_paperwork }
+{ CHOICE_COUNT() < cap and Fatigue >= 30 and Fatigue < 70:
+    <- task_nap
+    { CHOICE_COUNT() < cap and Fatigue >= 40: <- task_full_sleep }
+}
 
 // P5: Rest — only when no P1–P3 tasks are active
 ~ temp has_obligations = has_tier_tasks(1) or has_tier_tasks(2) or has_tier_tasks(3)
@@ -173,62 +190,19 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 = task_cargo_inspect
 + [Cargo inspection (1 AP)] -> do_cargo_inspect
 
-// --- Group tasks (open sub-menus) ---
+// --- Group tasks (direct actions, no sub-menus) ---
 
 = task_engine
-+ [Check on the engine] -> engine_options
++ [Run engine diagnostics and tune — {EngineCondition}% (2 AP)] -> do_engine_tune
 
-= task_sleep_urgent
-+ [Get some rest — you can barely keep your eyes open] -> sleep_options
+= task_nap
++ [Take a nap (1 AP)] -> sleep(1)
 
-= task_sleep_rest
-+ [Get some rest] -> sleep_options
-
-= task_maintenance
-+ [Ship maintenance — {LIST_COUNT(Backlog)} tasks{ has_overdue_tasks(): (overdue!)}] -> maintenance_options
+= task_full_sleep
++ [Sleep for a full cycle (2 AP)] -> sleep(2)
 
 = task_rest
 + [Call it a day — skip remaining {AP} AP] -> do_rest
-
-/*
-
-    Sub-Menu Stitches
-    Each sub-menu shows flavor text, offers sub-options with AP costs,
-    and includes a free "Never mind" back option.
-
-*/
-
-= engine_options
-You pop open the engine access panel. Condition: {EngineCondition}%.
-+ [Run diagnostics and tune (2 AP)] -> do_engine_tune
-+ [Never mind] -> ship_options
-
-= sleep_options
-{ Fatigue >= 70:
-    You can barely keep your eyes open. You need rest.
-- else:
-    You're feeling the fatigue. Some rest might help.
-}
-+ [Take a nap (1 AP)] -> sleep(1)
-+ { Fatigue >= 40 } [Sleep for a full cycle (2 AP)] -> sleep(2)
-+ [Never mind] -> ship_options
-
-= maintenance_options
-{ has_overdue_tasks():
-    Some of these have been waiting. You should get to them before things get worse.
-- else:
-    The ship needs some attention.
-}
-Engine: {EngineCondition}% / Ship: {ShipCondition}%
-~ temp _maint = Backlog
-- (maint_top)
-~ temp task = pop(_maint)
-{ task:
-    <- maint_choice(task)
-    -> maint_top
-}
--
-+ [Never mind] -> ship_options
 
 = maint_choice(task)
 ~ temp stale = StaleBacklog ? task
@@ -563,9 +537,9 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 === function has_tier_tasks(tier)
 { tier:
     - 1: ~ return (not FlipDone and TripDay >= TripDuration / 2)
-    - 2: ~ return (EngineCondition < 80) or (Fatigue >= 70)
-    - 3: ~ return (PaperworkDone < PaperworkTotal) or (TripDay >= NavCheckDueDay) or (TripDay >= CargoCheckDueDay) or (LIST_COUNT(Backlog) > 0) or (DailyPassengerTask != () and not PassengerTaskCompleted)
-    - 4: ~ return Fatigue >= 30 and Fatigue < 70
+    - 2: ~ return (EngineCondition < 80) or (Fatigue >= 70) or (TripDay >= NavCheckDueDay) or (TripDay >= CargoCheckDueDay)
+    - 3: ~ return (LIST_COUNT(Backlog) > 0) or (DailyPassengerTask != () and not PassengerTaskCompleted)
+    - 4: ~ return (PaperworkDone < PaperworkTotal) or (Fatigue >= 30 and Fatigue < 70)
 }
 ~ return false
 

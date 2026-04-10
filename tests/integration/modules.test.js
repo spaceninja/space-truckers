@@ -297,7 +297,6 @@ describe("module maintenance effects", () => {
 
     s.ChoosePathString("transit.ship_options");
     drainText(s);
-    pickChoice(s, "Ship maintenance");
     pickChoice(s, "repair drone servo calibration");
 
     expect(s.EvaluateFunction("get_module_condition", [L(s, "ShipModules.RepairDrones")])).toBe(73);
@@ -317,7 +316,6 @@ describe("module maintenance effects", () => {
 
       t.ChoosePathString("transit.ship_options");
       drainText(t);
-      pickChoice(t, "Ship maintenance");
       pickChoice(t, "repair drone servo calibration");
 
       const cond = t.EvaluateFunction("get_module_condition", [L(t, "ShipModules.RepairDrones")]);

@@ -171,9 +171,8 @@ describe("Satisfaction — skip penalty and passive bonus from next_day", () => 
     s.variablesState["Backlog"] = L(s, "ShipMaintTasks.AirFilter");
     s.ChoosePathString("transit.ship_options");
     drainText(s);
-    pickChoice(s, "Ship maintenance");
-    s.ChooseChoiceIndex(0); // pick first maintenance task — 1 AP → AP=0 → next_day fires
-    drainText(s);
+    // Maintenance tasks appear directly now; pick AirFilter to spend 1 AP → next_day fires
+    pickChoice(s, "air filter");
   }
 
   it("skipping the daily task applies -3 satisfaction penalty", () => {
