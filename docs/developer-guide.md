@@ -360,15 +360,19 @@ The transit day presents tasks to the player via a priority-based selection syst
 
 ### Priority Tiers
 
-| Tier | Label | Selection Rule |
-|---|---|---|
-| P1 | Urgent | Always shown when applicable. No cap. |
-| P2 | Important | Shown when stat thresholds met. Shuffled. Capped at `TaskCap - p3_floor - p4_floor`. |
-| P3 | Routine | Shown on schedule or when relevant. Shuffled. Capped at `TaskCap - p4_floor`. |
-| P4 | Rest | Fills remaining slots. Capped at `TaskCap`. |
-| P5 | Rest | Shown only when no P1–P3 tasks are active. |
+| Tier | Label | Tasks | Selection Rule |
+|---|---|---|---|
+| P1 | Urgent | Ship flip | Always shown when applicable. No cap. |
+| P2 | Important | Engine tune, urgent sleep (nap + full), nav check, cargo inspection | Shuffled for variety. Fills slots up to `TaskCap`. |
+| P3 | Routine | Maintenance backlog, passenger task | Deterministic sub-priority order (see below). Fills remaining slots. |
+| P4 | Low | Paperwork, optional sleep (nap + full) | Fills remaining slots after P3. |
+| P5 | Rest | Call it a day | Shown only when no P1–P3 tasks are active. |
 
-`TaskCap` (default 7) controls the maximum number of top-level tasks. P3 has a floor of 1 slot (if eligible tasks exist), ensuring the player always has at least one routine task.
+`TaskCap` (default 7) controls the maximum number of top-level choices shown (excluding P5). All tasks appear directly — no sub-menus.
+
+### Cap System
+
+All tiers share a single `cap = TaskCap`. Higher-priority tiers run first, consuming slots; lower tiers get whatever's left. No floor reservations.
 
 ### Threading + CHOICE_COUNT() Pattern
 
@@ -376,32 +380,32 @@ Ink evaluates all choices in a block simultaneously — you can't run code betwe
 
 ```ink
 // Each task is threaded in if its condition is met and cap allows
-{ CHOICE_COUNT() < p3_cap and LIST_COUNT(Backlog) > 0: <- task_maintenance }
+{ CHOICE_COUNT() < cap and TripDay >= NavCheckDueDay: <- task_nav_check }
 
-= task_maintenance
-+ [Ship maintenance — {LIST_COUNT(Backlog)} tasks] -> maintenance_options
+= task_nav_check
++ [Navigation check (1 AP)] -> do_nav_check
 ```
 
-Shuffle blocks randomize which tasks within a tier get offered first, providing day-to-day variety when more tasks are eligible than slots allow.
+P2 uses a shuffle block for variety. P3 uses a deterministic ordering loop (no shuffle).
 
-### Grouped Tasks and Sub-Menus
+### P3 Sub-Priority Ordering
 
-Related tasks are collapsed into single top-level entries that expand into sub-menus with flavor text:
+When not all P3 tasks fit, they appear in this order:
 
-- **Sleep** (P2 when fatigue ≥ 70, P4 when 30–69) → nap (1 AP), full sleep (2 AP)
-- **Ship maintenance** (P3, when backlog has tasks) → shows all backlog tasks (1 AP each), stale tasks marked "overdue"
-- **Engine care** (P2, when condition < 80) → run diagnostics (2 AP)
+1. **Overdue (stale) maintenance tasks** — about to auto-resolve with a -5 condition penalty
+2. **Passenger task** — daily skip penalty (-3 satisfaction)
+3. **Fresh maintenance tasks** — no immediate penalty for deferring
 
-Each sub-menu includes a free "Never mind" back option. After completing a sub-task, the player returns to the top-level task list.
+This is implemented via two sequential pop() loops and a direct passenger check, rather than a shuffle block.
 
 ### has_tier_tasks() Function
 
-The `has_tier_tasks(tier)` function (ship.ink) centralizes the "are there eligible tasks at this priority?" check. It's used for floor calculations and Rest gating. When adding new tasks to any tier, update the appropriate case in this function.
+The `has_tier_tasks(tier)` function (ship.ink) centralizes the "are there eligible tasks at this priority?" check. It's used for P5 (Rest) gating only. When adding new tasks to any tier, update the appropriate case in this function.
 
 ### Adding a New Task
 
-1. Add an entry to the appropriate task registry list (`P2Tasks`, `P3Tasks`, or `P4Tasks` in ship.ink) — this keeps the shuffle loop count in sync automatically
-2. Write a `task_*` stitch that injects one choice (and optionally a `*_options` sub-menu stitch)
+1. Add an entry to the appropriate task registry list (`P2Tasks`, `P3Tasks`, or `P4Tasks` in ship.ink) — this keeps the P2 shuffle loop count in sync automatically (P3 does not use a shuffle)
+2. Write a `task_*` stitch that injects one direct-action choice with AP cost
 3. Add a `{ CHOICE_COUNT() < cap and condition: <- task_* }` line in the appropriate priority section of `ship_options`
 4. Update `has_tier_tasks()` with the new task's condition in the appropriate tier
 

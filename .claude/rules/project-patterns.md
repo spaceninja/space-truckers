@@ -49,12 +49,12 @@ Tasks are threaded (`<-`) into `ship_options` using `CHOICE_COUNT()` caps:
 | Tier | Purpose                                       | Cap logic                       |
 | ---- | --------------------------------------------- | ------------------------------- |
 | P1   | Urgent (ship flip)                            | No cap                          |
-| P2   | Important (engine, urgent sleep)              | `TaskCap - p3_floor - p4_floor` |
-| P3   | Routine (paperwork, nav, cargo inspect, maintenance backlog) | `TaskCap - p4_floor` |
-| P4   | Rest (sleep)                                  | `TaskCap`                       |
+| P2   | Important (engine, urgent sleep, nav check, cargo inspect) | Fills slots up to `TaskCap`; shuffled for variety |
+| P3   | Routine (maintenance backlog, passenger task) | Deterministic sub-priority: stale maint → passenger → fresh maint |
+| P4   | Low (paperwork, optional sleep)               | Fills remaining slots after P3  |
 | P5   | Rest (skip day)                               | Only when no P1-P3 active       |
 
-Each tier uses a shuffle block for variety. `has_tier_tasks(tier)` centralizes eligibility checks.
+All tasks appear as top-level choices (no sub-menus). Cap is `temp cap = TaskCap`; each tier guards with `CHOICE_COUNT() < cap`. `has_tier_tasks(tier)` centralizes eligibility checks (used only for P5 gating).
 
 ## Cooldown-Based Periodic Tasks (ship.ink)
 
