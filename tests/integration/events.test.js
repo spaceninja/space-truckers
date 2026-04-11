@@ -68,7 +68,7 @@ function setupTransit(overrides = {}) {
     ActionPointsMax: 6,
     Fatigue: 0,
     ShipCondition: 100,
-    EngineCondition: 100,
+    
     ShipFuel: 200,
     TaskCap: 7,
     TasksCompletedToday: 0,
@@ -109,7 +109,7 @@ function setupEvent(eventKnot, overrides = {}) {
     ActionPointsMax: 6,
     Fatigue: 0,
     ShipCondition: 100,
-    EngineCondition: 100,
+    
     ShipFuel: 200,
     TaskCap: 7,
     TasksCompletedToday: 0,
@@ -165,7 +165,7 @@ describe("Event triggering", () => {
     story.variablesState["ActionPointsMax"] = 6;
     story.variablesState["Fatigue"] = 0;
     story.variablesState["ShipCondition"] = 100;
-    story.variablesState["EngineCondition"] = 100;
+    
     story.variablesState["ShipFuel"] = 200;
     story.variablesState["TaskCap"] = 7;
     story.variablesState["TasksCompletedToday"] = 0;
@@ -176,7 +176,7 @@ describe("Event triggering", () => {
     // Fire all 6 non-passenger events
     for (let i = 0; i < 6; i++) {
       story.variablesState["AP"] = 6;
-      story.variablesState["EngineCondition"] = 100;
+      
       story.variablesState["TripFuelPenalty"] = 0;
       story.variablesState["CargoDamagePct"] = 0;
       story.variablesState["ShipClock"] = 5;
@@ -211,7 +211,7 @@ describe("Event triggering", () => {
     story.variablesState["ActionPointsMax"] = 6;
     story.variablesState["Fatigue"] = 0;
     story.variablesState["ShipCondition"] = 100;
-    story.variablesState["EngineCondition"] = 100;
+    
     story.variablesState["ShipFuel"] = 200;
     story.variablesState["TaskCap"] = 7;
     story.variablesState["TasksCompletedToday"] = 0;
@@ -283,7 +283,7 @@ describe("Event: Micrometeorite", () => {
       story.variablesState["AP"] = 6;
       story.variablesState["TripFuelPenalty"] = 0;
       story.variablesState["TripFuelCost"] = 100;
-      story.variablesState["EngineCondition"] = 100;
+      
       story.variablesState["CargoDamagePct"] = 0;
       story.ChoosePathString("event_micrometeorite");
       drainText(story);
@@ -304,14 +304,14 @@ describe("Event: Micrometeorite", () => {
     for (let i = 0; i < 50; i++) {
       story.variablesState["Fatigue"] = 0;
       story.variablesState["AP"] = 6;
-      story.variablesState["EngineCondition"] = 100;
+      story.variablesState["ShipCondition"] = 100;
       story.variablesState["CargoDamagePct"] = 0;
       story.variablesState["TripFuelPenalty"] = 0;
       story.ChoosePathString("event_micrometeorite");
       drainText(story);
-      const eng = story.variablesState["EngineCondition"];
+      const cond = story.variablesState["ShipCondition"];
       const dmg = story.variablesState["CargoDamagePct"];
-      if (eng < 100) outcomes.add("system");
+      if (cond < 100) outcomes.add("system");
       else if (dmg > 0) outcomes.add("cargo");
       else outcomes.add("lucky");
       if (outcomes.size >= 2) break;
@@ -329,11 +329,11 @@ describe("Event: Power Surge", () => {
     const story = setupEvent("event_power_surge", {
       Fatigue: 0,
       AP: 6,
-      EngineCondition: 100,
+      
       TripFuelPenalty: 0,
     });
     pickChoice(story, "Isolate the surge");
-    expect(story.variablesState["EngineCondition"]).toBe(75); // 100 - 25
+    expect(story.variablesState["ShipCondition"]).toBe(75); // 100 - 25
     expect(story.variablesState["AP"]).toBe(4); // 6 - 2
     expect(story.variablesState["TripFuelPenalty"]).toBe(0);
   });
@@ -341,7 +341,7 @@ describe("Event: Power Surge", () => {
   it("quick fix costs 3 AP and more damage when fatigued (statistical)", () => {
     const story = setupEvent("event_power_surge", {
       AP: 6,
-      EngineCondition: 100,
+      
       TripFuelPenalty: 0,
     });
 
@@ -349,14 +349,14 @@ describe("Event: Power Surge", () => {
     for (let i = 0; i < 50; i++) {
       story.variablesState["Fatigue"] = 90;
       story.variablesState["AP"] = 6;
-      story.variablesState["EngineCondition"] = 100;
+      story.variablesState["ShipCondition"] = 100;
       story.variablesState["TripFuelPenalty"] = 0;
       story.ChoosePathString("event_power_surge");
       drainText(story);
       pickChoice(story, "Isolate the surge");
-      // Fatigue failure: EngineCondition should be 60 (100-40) and AP 3
+      // Fatigue failure: ShipCondition should be 60 (100-40) and AP 3
       if (
-        story.variablesState["EngineCondition"] === 60 &&
+        story.variablesState["ShipCondition"] === 60 &&
         story.variablesState["AP"] === 3
       ) {
         worstCase++;
@@ -370,20 +370,20 @@ describe("Event: Power Surge", () => {
     const story = setupEvent("event_power_surge", {
       Fatigue: 0,
       AP: 6,
-      EngineCondition: 100,
+      
       TripFuelCost: 100,
       TripFuelPenalty: 0,
     });
     pickChoice(story, "full system reset");
     expect(story.variablesState["AP"]).toBe(3); // 6 - 3
     expect(story.variablesState["TripFuelPenalty"]).toBe(5); // +5%
-    expect(story.variablesState["EngineCondition"]).toBe(100); // no damage
+    expect(story.variablesState["ShipCondition"]).toBe(100); // no damage
   });
 
   it("proper fix costs 4 AP, adds fuel penalty AND damage when fatigued (statistical)", () => {
     const story = setupEvent("event_power_surge", {
       AP: 6,
-      EngineCondition: 100,
+      
       TripFuelCost: 100,
       TripFuelPenalty: 0,
     });
@@ -392,7 +392,7 @@ describe("Event: Power Surge", () => {
     for (let i = 0; i < 50; i++) {
       story.variablesState["Fatigue"] = 90;
       story.variablesState["AP"] = 6;
-      story.variablesState["EngineCondition"] = 100;
+      story.variablesState["ShipCondition"] = 100;
       story.variablesState["TripFuelPenalty"] = 0;
       story.ChoosePathString("event_power_surge");
       drainText(story);
@@ -401,7 +401,7 @@ describe("Event: Power Surge", () => {
       if (
         story.variablesState["AP"] === 2 &&
         story.variablesState["TripFuelPenalty"] === 5 &&
-        story.variablesState["EngineCondition"] === 85 // 100-15
+        story.variablesState["ShipCondition"] === 85 // 100-15
       ) {
         worstCase++;
         break;
@@ -475,7 +475,7 @@ describe("Event: Cargo Shift", () => {
     story.variablesState["ActionPointsMax"] = 6;
     story.variablesState["Fatigue"] = 0;
     story.variablesState["ShipCondition"] = 100;
-    story.variablesState["EngineCondition"] = 100;
+    
     story.variablesState["ShipFuel"] = 200;
     story.variablesState["TaskCap"] = 7;
     story.variablesState["TasksCompletedToday"] = 0;
@@ -489,7 +489,7 @@ describe("Event: Cargo Shift", () => {
     // Run the dispatcher 20 times
     for (let i = 0; i < 20; i++) {
       story.variablesState["AP"] = 6;
-      story.variablesState["EngineCondition"] = 100;
+      
       story.variablesState["TripFuelPenalty"] = 0;
       story.variablesState["CargoDamagePct"] = 0;
       story.variablesState["Events"] = allEvents;

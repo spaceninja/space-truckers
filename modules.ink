@@ -7,8 +7,7 @@
 */
 === function ModuleData(module, stat)
 { module:
-- RepairDrones:   ~ return module_row(stat, "Repair Drones", 800, "Auto-complete engine maintenance tasks")
-- CleaningDrones: ~ return module_row(stat, "Cleaning Drones", 600, "Auto-complete ship maintenance tasks")
+- DroneBay:       ~ return module_row(stat, "Drone Bay", 600, "Maintenance drones that auto-complete daily tasks")
 - AutoNav:        ~ return module_row(stat, "Auto-Nav Computer", 500, "Auto-complete navigation checks")
 - CargoMgmt:      ~ return module_row(stat, "Cargo Management", 700, "Auto-complete cargo inspections and paperwork")
 - PassengerModule: ~ return module_row(stat, "Passenger Module", 200, "Passenger berths and facilities")
@@ -37,8 +36,7 @@
 */
 === function get_module_condition(module)
 { module:
-- RepairDrones:   ~ return RepairDronesCondition
-- CleaningDrones: ~ return CleaningDronesCondition
+- DroneBay:       ~ return DroneBayCondition
 - AutoNav:        ~ return AutoNavCondition
 - CargoMgmt:      ~ return CargoMgmtCondition
 - PassengerModule: ~ return PassengerModuleCondition
@@ -53,8 +51,7 @@
 */
 === function set_module_condition(module, value)
 { module:
-- RepairDrones:   ~ RepairDronesCondition = value
-- CleaningDrones: ~ CleaningDronesCondition = value
+- DroneBay:       ~ DroneBayCondition = value
 - AutoNav:        ~ AutoNavCondition = value
 - CargoMgmt:      ~ CargoMgmtCondition = value
 - PassengerModule: ~ PassengerModuleCondition = value
@@ -76,27 +73,24 @@
     75-100%: 2 tasks, 50-74%: 1 task, below 50%: offline.
 
 */
-=== function get_drone_capacity(module)
-~ temp cond = get_module_condition(module)
+=== function get_drone_capacity()
+~ temp cond = get_module_condition(DroneBay)
+~ temp per_drone = 0
 { cond >= 75:
-    ~ return 2
+    ~ per_drone = 2
 }
-{ cond >= 50:
-    ~ return 1
+{ cond >= 50 and per_drone == 0:
+    ~ per_drone = 1
 }
-~ return 0
+~ return per_drone * DroneBayTier
 
 /*
 
     Get Module Max Condition
     Returns the maximum condition a module can be repaired to.
-    Refurbished modules cap at 80%.
 
 */
 === function get_module_max_condition(module)
-{ RefurbishedModules ? module:
-    ~ return 80
-}
 ~ return 100
 
 /*
@@ -163,6 +157,33 @@
 
 /*
 
+    Drone Bay Tier Helpers
+    Price for fresh install at each tier (cumulative — used for upgrade delta math).
+    Upgrade cost = DroneBayTierPrice(next) - DroneBayTierPrice(current).
+
+*/
+=== function DroneBayTierPrice(tier)
+{ tier:
+- 1: ~ return 600
+- 2: ~ return 1000
+}
+~ return 0
+
+/*
+
+    Drone Bay Tier Name
+    Display name for each tier of the drone bay module.
+
+*/
+=== function DroneBayTierName(tier)
+{ tier:
+- 1: ~ return "Single Drone"
+- 2: ~ return "Dual Drones"
+}
+~ return "None"
+
+/*
+
     Has Damaged Modules
     Returns true if any installed module is below max condition.
 
@@ -201,10 +222,8 @@
 // Maps a module maintenance task to its parent module.
 === function maint_task_module(task)
 { task:
-- RepDroneServo:  ~ return RepairDrones
-- RepDroneOptics: ~ return RepairDrones
-- ClnDroneBrush:  ~ return CleaningDrones
-- ClnDroneFilter: ~ return CleaningDrones
+- DroneBayServo:  ~ return DroneBay
+- DroneBayOptics: ~ return DroneBay
 - NavChipFlush:   ~ return AutoNav
 - NavGyroCalib:   ~ return AutoNav
 - CargoSensor:    ~ return CargoMgmt
@@ -217,8 +236,7 @@
 // Returns the maintenance tasks belonging to a specific module.
 === function module_tasks_for(mod)
 { mod:
-- RepairDrones:   ~ return (RepDroneServo, RepDroneOptics)
-- CleaningDrones: ~ return (ClnDroneBrush, ClnDroneFilter)
+- DroneBay:       ~ return (DroneBayServo, DroneBayOptics)
 - AutoNav:        ~ return (NavChipFlush, NavGyroCalib)
 - CargoMgmt:      ~ return (CargoSensor, CargoSealCheck)
 - PassengerModule: ~ return (PaxLifeSupp, PaxBerthClean)
@@ -247,11 +265,8 @@
 
 */
 === module_auto_tasks
-{ is_module_active(RepairDrones):
-    -> process_drone(RepairDrones, true) ->
-}
-{ is_module_active(CleaningDrones):
-    -> process_drone(CleaningDrones, false) ->
+{ is_module_active(DroneBay):
+    -> process_drone ->
 }
 { InstalledModules ? AutoNav:
     -> process_auto_nav ->
@@ -269,8 +284,8 @@
     Uses gathers for looping to keep temp vars in scope.
 
 */
-= process_drone(module, engine_only)
-~ temp capacity = get_drone_capacity(module)
+= process_drone
+~ temp capacity = get_drone_capacity()
 ~ temp processed = 0
 ~ temp stale_pass = true
 ~ temp candidates = Backlog ^ StaleBacklog
@@ -284,30 +299,16 @@
     ->->
 }
 ~ temp task = pop(candidates)
-// Skip module tasks — drones only handle engine/ship tasks
-{ is_module_maint(task):
-    -> drone_loop
-}
-{ is_engine_maint(task) == engine_only:
-    ~ complete_maintenance_task(task)
-    ~ processed++
-    -> drone_notify(task, engine_only) ->
-}
+~ complete_maintenance_task(task)
+~ processed++
+-> drone_notify(task) ->
 -> drone_loop
 
-= drone_notify(task, engine_only)
-{ engine_only:
-    { shuffle:
-    -   The repair drone whirs to life, handling the {MaintName(task)} before you're even out of your bunk.
-    -   Your repair drone takes care of the {MaintName(task)} overnight.
-    -   You wake to find the repair drone has already finished the {MaintName(task)}.
-    }
-- else:
-    { shuffle:
-    -   The cleaning drone has already handled the {MaintName(task)}.
-    -   Your cleaning drone quietly takes care of the {MaintName(task)}.
-    -   You notice the cleaning drone has been busy — the {MaintName(task)} is done.
-    }
+= drone_notify(task)
+{ shuffle:
+-   A maintenance drone handles the {MaintName(task)} before you're even out of your bunk.
+-   Your drone takes care of the {MaintName(task)} overnight.
+-   You wake to find a drone has already finished the {MaintName(task)}.
 }
 ->->
 
@@ -389,7 +390,7 @@
 
 */
 === ship_upgrades
-Engine: {manufacturer_name(ShipManufacturer)} Tier {ShipEngineTier}{RefurbishedEngine: (Refurbished — {get_engine_max_condition()}% max)}, condition {EngineCondition}%, fuel capacity {ShipFuelCapacity}.
+Engine: {manufacturer_name(ShipManufacturer)} Tier {ShipEngineTier}, fuel capacity {ShipFuelCapacity}.
 { LIST_COUNT(InstalledModules) > 0:
     Installed modules:
     -> show_module_status ->
@@ -400,6 +401,7 @@ Engine: {manufacturer_name(ShipManufacturer)} Tier {ShipEngineTier}{RefurbishedE
     + [Browse available modules] -> browse_modules
 }
 + { has_damaged_modules() } [Repair modules] -> repair_modules
++ { DroneBayTier < 2 } [Drone Bay — {DroneBayTier == 0: install|upgrade}] -> drone_bay_upgrades
 + { PassengerModuleTier < 3 } [Passenger module — {PassengerModuleTier == 0: install|upgrade}] -> passenger_module_upgrades
 + { ShipEngineTier < 4 and (manufacturer_available_here(Kepler) or manufacturer_available_here(Olympus) or manufacturer_available_here(Huygens)) }
     [Browse engine upgrades] -> engine_upgrades
@@ -421,10 +423,13 @@ Engine: {manufacturer_name(ShipManufacturer)} Tier {ShipEngineTier}{RefurbishedE
 ~ temp module = pop(_modules)
 ~ temp cond = get_module_condition(module)
 ~ temp max_cond = get_module_max_condition(module)
-{ module == PassengerModule:
-    {PassengerTierName(PassengerModuleTier)}: {cond}%{max_cond < 100: /{max_cond}% max (refurbished)}{ cond < 50: — degraded}{ cond >= 50 and cond < 75: — reduced}
+{
+- module == PassengerModule:
+    {PassengerTierName(PassengerModuleTier)}: {cond}%{ cond < 50: — degraded}{ cond >= 50 and cond < 75: — reduced}
+- module == DroneBay:
+    {DroneBayTierName(DroneBayTier)}: {cond}%{ cond < 50: — OFFLINE}{ cond >= 50 and cond < 75: — reduced}
 - else:
-    {module_name(module)}: {cond}%{max_cond < 100: /{max_cond}% max (refurbished)}{ cond < 50: — OFFLINE}{ cond >= 50 and cond < 75: — reduced}
+    {module_name(module)}: {cond}%{ cond < 50: — OFFLINE}{ cond >= 50 and cond < 75: — reduced}
 }
 { LIST_COUNT(_modules) > 0:
     -> status_next
@@ -449,35 +454,26 @@ Available modules:
 - -> upgrade_menu
 
 = browse_module_list
-~ temp _avail = LIST_ALL(ShipModules) - InstalledModules - PassengerModule
+~ temp _avail = LIST_ALL(ShipModules) - InstalledModules - PassengerModule - DroneBay
 { LIST_COUNT(_avail) <= 0:
     ->->
 }
 - (browse_next)
 ~ temp module = pop(_avail)
 ~ temp price = ModuleData(module, ModPrice)
-~ temp half_price = price / 2
-<- buy_module_choices(module, price, half_price)
+<- buy_module_choices(module, price)
 { LIST_COUNT(_avail) > 0:
     -> browse_next
 }
 ->->
 
-= buy_module_choices(module, price, half_price)
-+ { PlayerBankBalance >= price } [Buy {module_name(module)} — new ({price} €)]
+= buy_module_choices(module, price)
++ { PlayerBankBalance >= price } [Buy {module_name(module)} ({price} €)]
     ~ PlayerBankBalance -= price
     ~ install_module(module, 100)
     {module_name(module)} installed at 100% condition.
     -> upgrade_menu
-+ { PlayerBankBalance < price } [Buy {module_name(module)} — new ({price} €) — can't afford #UNCLICKABLE]
-    -> upgrade_menu
-+ { PlayerBankBalance >= half_price } [Buy {module_name(module)} — refurbished ({half_price} €)]
-    ~ PlayerBankBalance -= half_price
-    ~ install_module(module, 60)
-    ~ RefurbishedModules += module
-    {module_name(module)} installed at 60% condition (refurbished — 80% max).
-    -> upgrade_menu
-+ { PlayerBankBalance < half_price } [Buy {module_name(module)} — refurbished ({half_price} €) — can't afford #UNCLICKABLE]
++ { PlayerBankBalance < price } [Buy {module_name(module)} ({price} €) — can't afford #UNCLICKABLE]
     -> upgrade_menu
 
 /*
@@ -544,67 +540,47 @@ Available Tier {next_tier} engines at this port:
 = engine_buy_choices(mfg, tier)
 ~ temp avail = manufacturer_available_here(mfg)
 ~ temp price = EngineData(mfg, tier, EngPrice)
-~ temp half_price = price / 2
 ~ temp new_cap = EngineData(mfg, tier, FuelCap)
 + { avail and PlayerBankBalance >= price }
-    [{manufacturer_name(mfg)} Tier {tier} — new ({price} €, {new_cap} fuel capacity)]
+    [{manufacturer_name(mfg)} Tier {tier} ({price} €, {new_cap} fuel capacity)]
     ~ PlayerBankBalance -= price
     ~ ShipManufacturer = mfg
     ~ ShipEngineTier = tier
     ~ ShipFuelCapacity = new_cap
     ~ ShipFuel = MIN(ShipFuel, ShipFuelCapacity)
-    ~ EngineCondition = 100
-    ~ RefurbishedEngine = false
     The installation crew works through the night. By morning, a gleaming {manufacturer_name(mfg)} Tier {tier} engine hums in your hold. Fuel capacity: {ShipFuelCapacity}.
     -> upgrade_menu
 + { avail and PlayerBankBalance < price }
-    [{manufacturer_name(mfg)} Tier {tier} — new ({price} €) — can't afford #UNCLICKABLE]
-    -> upgrade_menu
-+ { avail and PlayerBankBalance >= half_price }
-    [{manufacturer_name(mfg)} Tier {tier} — refurbished ({half_price} €, {new_cap} fuel capacity)]
-    ~ PlayerBankBalance -= half_price
-    ~ ShipManufacturer = mfg
-    ~ ShipEngineTier = tier
-    ~ ShipFuelCapacity = new_cap
-    ~ ShipFuel = MIN(ShipFuel, ShipFuelCapacity)
-    ~ EngineCondition = 60
-    ~ RefurbishedEngine = true
-    A refurbished {manufacturer_name(mfg)} Tier {tier} engine, showing some wear but still solid. Installed at 60% condition — max 80% after repairs. Fuel capacity: {ShipFuelCapacity}.
-    -> upgrade_menu
-+ { avail and PlayerBankBalance < half_price }
-    [{manufacturer_name(mfg)} Tier {tier} — refurbished ({half_price} €) — can't afford #UNCLICKABLE]
+    [{manufacturer_name(mfg)} Tier {tier} ({price} €) — can't afford #UNCLICKABLE]
     -> upgrade_menu
 
 /*
 
     Passenger Module Upgrades
     Tiered install/upgrade menu for the passenger module.
-    Tier 1 (Basic Berths): 200€ fresh install or 100€ refurbished.
+    Tier 1 (Basic Berths): 200€.
     Tier 2 (Standard Cabin): 200€ upgrade delta (400 total).
     Tier 3 (Luxury Suite): 400€ upgrade delta (800 total).
-    Refurbished option only available for initial Tier 1 install.
 
 */
 = passenger_module_upgrades
 { PassengerModuleTier == 0:
     No passenger facilities aboard. Installing passenger berths lets you take on passenger cargo.
 - else:
-    Current: {PassengerTierName(PassengerModuleTier)}{RefurbishedModules ? PassengerModule: (refurbished — {get_module_max_condition(PassengerModule)}% max)}, condition {get_module_condition(PassengerModule)}%.
+    Current: {PassengerTierName(PassengerModuleTier)}, condition {get_module_condition(PassengerModule)}%.
 }
 ~ temp next_tier = PassengerModuleTier + 1
 { next_tier <= 3:
     ~ temp next_price = PassengerTierPrice(next_tier)
     ~ temp upgrade_cost = next_price - PassengerTierPrice(PassengerModuleTier)
-    ~ temp half_cost = upgrade_cost / 2
-    <- passenger_buy_choice(next_tier, upgrade_cost, half_cost)
+    <- passenger_buy_choice(next_tier, upgrade_cost)
 }
 + [Back] -> upgrade_menu
 - -> upgrade_menu
 
-= passenger_buy_choice(tier, price, half_price)
-// New install/upgrade
+= passenger_buy_choice(tier, price)
 + { PlayerBankBalance >= price }
-    [Install {PassengerTierName(tier)} — new ({price} €)]
+    [Install {PassengerTierName(tier)} ({price} €)]
     ~ PlayerBankBalance -= price
     { PassengerModuleTier == 0:
         ~ install_module(PassengerModule, 100)
@@ -620,17 +596,46 @@ Available Tier {next_tier} engines at this port:
     }
     -> upgrade_menu
 + { PlayerBankBalance < price }
-    [Install {PassengerTierName(tier)} — new ({price} €) — can't afford #UNCLICKABLE]
+    [Install {PassengerTierName(tier)} ({price} €) — can't afford #UNCLICKABLE]
     -> upgrade_menu
-// Refurbished option — only for initial Tier 1 install
-+ { PassengerModuleTier == 0 and PlayerBankBalance >= half_price }
-    [Install {PassengerTierName(tier)} — refurbished ({half_price} €)]
-    ~ PlayerBankBalance -= half_price
-    ~ install_module(PassengerModule, 60)
-    ~ RefurbishedModules += PassengerModule
-    ~ PassengerModuleTier = tier
-    Basic Berths installed at 60% condition (refurbished — 80% max). You can now take on passenger cargo.
+
+/*
+
+    Drone Bay Upgrades
+    Tiered install/upgrade menu for the drone bay.
+    Tier 1 (Single Drone): 600€.
+    Tier 2 (Dual Drones): 400€ upgrade delta (1000€ total).
+
+*/
+= drone_bay_upgrades
+{ DroneBayTier == 0:
+    No maintenance drones aboard. A Drone Bay lets drones auto-complete daily maintenance tasks.
+- else:
+    Current: {DroneBayTierName(DroneBayTier)}, condition {get_module_condition(DroneBay)}%.
+}
+~ temp next_tier = DroneBayTier + 1
+{ next_tier <= 2:
+    ~ temp upgrade_cost = DroneBayTierPrice(next_tier) - DroneBayTierPrice(DroneBayTier)
+    <- drone_bay_buy_choice(next_tier, upgrade_cost)
+}
++ [Back] -> upgrade_menu
+- -> upgrade_menu
+
+= drone_bay_buy_choice(tier, price)
++ { PlayerBankBalance >= price }
+    [Install {DroneBayTierName(tier)} ({price} €)]
+    ~ PlayerBankBalance -= price
+    { DroneBayTier == 0:
+        ~ install_module(DroneBay, 100)
+    }
+    ~ DroneBayTier = tier
+    {
+    - tier == 1:
+        A single maintenance drone is installed in the bay. It will auto-complete up to two maintenance tasks per day.
+    - tier == 2:
+        A second drone joins the bay. Two drones means up to four tasks handled automatically each day.
+    }
     -> upgrade_menu
-+ { PassengerModuleTier == 0 and PlayerBankBalance < half_price }
-    [Install {PassengerTierName(tier)} — refurbished ({half_price} €) — can't afford #UNCLICKABLE]
++ { PlayerBankBalance < price }
+    [Install {DroneBayTierName(tier)} ({price} €) — can't afford #UNCLICKABLE]
     -> upgrade_menu

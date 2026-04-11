@@ -25,15 +25,12 @@ VAR ShipCargo = ()
 VAR FlightMode = Bal
 
 VAR Fatigue = 0           // 0–100 scale. Gravity-modified accumulation.
-VAR ShipCondition = 100   // 0–100%. Degrades from skipped maintenance.
-VAR EngineCondition = 100 // 0–100%. Degrades from skipped maintenance. Affects fuel cost.
+VAR ShipCondition = 100   // 0–100%. Degrades from skipped maintenance. Affects fuel cost.
 
-// Maintenance backlog — 3-4 new tasks drawn daily via two-stage selection.
-// Stage 1: 3 engine + 3 ship + 1 module (if installed) → Stage 2: draw 3-4.
+// Maintenance backlog — 3-4 new tasks drawn daily from a unified pool.
 // Skipped tasks age: fresh → stale → auto-resolve with condition penalty.
-LIST EngineMaintTasks = EngTune, FuelLine, Injector, Coolant
-LIST ShipMaintTasks = AirFilter, HullCheck, DrainLines, Scrub
-LIST ModuleMaintTasks = RepDroneServo, RepDroneOptics, ClnDroneBrush, ClnDroneFilter, NavChipFlush, NavGyroCalib, CargoSensor, CargoSealCheck, PaxLifeSupp, PaxBerthClean
+LIST MaintTasks = FuelLine, Injector, Coolant, AirFilter, HullCheck, DrainLines, Scrub, SensorRecal, HullPatch, LaundryRun, WiringCheck
+LIST ModuleMaintTasks = DroneBayServo, DroneBayOptics, NavChipFlush, NavGyroCalib, CargoSensor, CargoSealCheck, PaxLifeSupp, PaxBerthClean
 VAR Backlog = ()          // current maintenance tasks (accumulates daily)
 VAR StaleBacklog = ()     // tasks that survived yesterday without completion
 VAR CompletedToday = ()   // tasks completed this day, becomes tomorrow's cooldown
@@ -58,15 +55,13 @@ VAR EventCooldownDay = -1  // TripDay of last event; prevents pile-ups same day
 VAR CargoDamagePct = 0     // Accumulated cargo damage % (reduces delivery pay)
 
 // Module system — ship modules that automate routine tasks.
-LIST ShipModules = RepairDrones, CleaningDrones, AutoNav, CargoMgmt, PassengerModule
+LIST ShipModules = DroneBay, AutoNav, CargoMgmt, PassengerModule
 LIST ModuleStats = ModName, ModPrice, ModDesc
 VAR InstalledModules = ()      // currently installed modules
-VAR RefurbishedModules = ()    // subset of InstalledModules bought refurbished (80% max cap)
-VAR RefurbishedEngine = false  // true if current engine was bought refurbished (80% max cap)
 
 // Per-module condition (0 = not installed, 1-100 = condition)
-VAR RepairDronesCondition = 0
-VAR CleaningDronesCondition = 0
+VAR DroneBayCondition = 0
+VAR DroneBayTier = 0              // 0=not installed, 1=single drone, 2=dual drones
 VAR AutoNavCondition = 0
 VAR CargoMgmtCondition = 0
 VAR PassengerModuleCondition = 0

@@ -5,7 +5,7 @@ VAR ActionPointsMax = 6
 
 // Task registry lists — used only for LIST_COUNT() to keep shuffle loop
 // bounds in sync. Add an entry here when adding a task to a tier's shuffle.
-LIST P2Tasks = EngineMaintenance, UrgentSleep, NavCheck, CargoInspect
+LIST P2Tasks = UrgentSleep, NavCheck, CargoInspect
 LIST P3Tasks = MaintBacklog, PassengerTask
 LIST P4Tasks = Paperwork, SleepRest
 
@@ -111,7 +111,6 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 ~ temp p2_loops = 0
 - (p2_shuffle)
 { shuffle:
-    - { CHOICE_COUNT() < cap and EngineCondition < 80: <- task_engine }
     - { CHOICE_COUNT() < cap and Fatigue >= 70:
         <- task_nap
         { CHOICE_COUNT() < cap and Fatigue >= 40: <- task_full_sleep }
@@ -191,9 +190,6 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 + [Cargo inspection (1 AP)] -> do_cargo_inspect
 
 // --- Group tasks (direct actions, no sub-menus) ---
-
-= task_engine
-+ [Run engine diagnostics and tune — {EngineCondition}% (2 AP)] -> do_engine_tune
 
 = task_nap
 + [Take a nap (1 AP)] -> sleep(1)
@@ -283,28 +279,12 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 
 /*
 
-    Engine Tune (P2)
-    Deep engine diagnostics when condition is critical. Costs 2 AP.
-    Separate from the backlog — this is an urgent, targeted repair.
-
-*/
-= do_engine_tune
-{ fatigue_check():
-    ~ EngineCondition = MIN(EngineCondition + 8, get_engine_max_condition())
-    You fumble through the diagnostics, missing a few steps. The engine's a little better, but not as much as it should be. Condition: {EngineCondition}%.
-- else:
-    ~ EngineCondition = MIN(EngineCondition + 15, get_engine_max_condition())
-    You run diagnostics and tune the engine. Condition improved to {EngineCondition}%.
-}
--> pass_time(2)
-
-/*
-
     Backlog Maintenance
     Complete a maintenance task from the backlog. Costs 1 AP.
     Economy: +3 condition (rested), +1 condition (fatigued).
-    Engine tasks → EngineCondition, ship tasks → ShipCondition,
-    module tasks → that specific module's condition.
+    When ShipCondition < 60 and rested: urgency boost gives +5.
+    Module tasks → that specific module's condition.
+    All other tasks → ShipCondition.
 
 */
 = do_maintenance(task)
@@ -312,10 +292,12 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 ~ temp boost = 3
 { fatigue_check():
     ~ boost = 1
+- else:
+    { ShipCondition < 60 and not is_module_maint(task):
+        ~ boost = 5
+    }
 }
 {
-- is_engine_maint(task):
-    ~ EngineCondition = MIN(EngineCondition + boost, get_engine_max_condition())
 - is_module_maint(task):
     ~ temp module = maint_task_module(task)
     ~ temp condition = get_module_condition(module)
@@ -324,7 +306,10 @@ Flying to {LocationData(destination, Name)} for {duration} days…
 - else:
     ~ ShipCondition = MIN(ShipCondition + boost, 100)
 }
-{ boost < 3:
+{
+- boost == 5:
+    {MaintComplete(task)} The urgency sharpens your focus — you work faster and more thoroughly than usual.
+- boost < 3:
     {MaintFatigued(task)}
 - else:
     {MaintComplete(task)}
@@ -509,8 +494,6 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 ~ Backlog -= task
 ~ StaleBacklog -= task
 {
-- is_engine_maint(task):
-    ~ EngineCondition = MAX(EngineCondition - 5, 0)
 - is_module_maint(task):
     ~ temp module = maint_task_module(task)
     // Guard: skip if module was uninstalled since task was added
@@ -537,7 +520,7 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 === function has_tier_tasks(tier)
 { tier:
     - 1: ~ return (not FlipDone and TripDay >= TripDuration / 2)
-    - 2: ~ return (EngineCondition < 80) or (Fatigue >= 70) or (TripDay >= NavCheckDueDay) or (TripDay >= CargoCheckDueDay)
+    - 2: ~ return (Fatigue >= 70) or (TripDay >= NavCheckDueDay) or (TripDay >= CargoCheckDueDay)
     - 3: ~ return (LIST_COUNT(Backlog) > 0) or (DailyPassengerTask != () and not PassengerTaskCompleted)
     - 4: ~ return (PaperworkDone < PaperworkTotal) or (Fatigue >= 30 and Fatigue < 70)
 }
@@ -590,31 +573,24 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 
 */
 
-// Classification: which system does this maintenance task belong to?
-=== function is_engine_maint(task)
-~ return LIST_ALL(EngineMaintTasks) ? task
-
-=== function is_ship_maint(task)
-~ return LIST_ALL(ShipMaintTasks) ? task
-
 // Human-readable name for a maintenance task.
 === function MaintName(task)
 { task:
-// Engine tasks
-- EngTune:        ~ return "engine tune-up"
+// Ship/engine tasks
 - FuelLine:       ~ return "fuel line cleaning"
 - Injector:       ~ return "injector calibration"
 - Coolant:        ~ return "coolant system check"
-// Ship tasks
 - AirFilter:      ~ return "air filter swap"
 - HullCheck:      ~ return "hull inspection"
 - DrainLines:     ~ return "drain line flush"
 - Scrub:          ~ return "common area scrub"
+- SensorRecal:    ~ return "sensor recalibration"
+- HullPatch:      ~ return "hull micro-fracture patch"
+- LaundryRun:     ~ return "laundry run"
+- WiringCheck:    ~ return "wiring harness check"
 // Module tasks
-- RepDroneServo:  ~ return "repair drone servo calibration"
-- RepDroneOptics: ~ return "repair drone optics cleaning"
-- ClnDroneBrush:  ~ return "cleaning drone brush replacement"
-- ClnDroneFilter: ~ return "cleaning drone filter swap"
+- DroneBayServo:  ~ return "drone bay servo calibration"
+- DroneBayOptics: ~ return "drone bay optics cleaning"
 - NavChipFlush:   ~ return "nav computer chip flush"
 - NavGyroCalib:   ~ return "nav gyroscope calibration"
 - CargoSensor:    ~ return "cargo sensor recalibration"
@@ -627,21 +603,21 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 // Completion text for a maintenance task (rested).
 === function MaintComplete(task)
 { task:
-// Engine tasks
-- EngTune:        ~ return "You run through the engine tune-up. Sounds healthier already."
+// Ship/engine tasks
 - FuelLine:       ~ return "You flush the fuel lines clean. Flow rate's back to normal."
 - Injector:       ~ return "You recalibrate the injectors. The engine idles smoother now."
 - Coolant:        ~ return "You top off the coolant and bleed the air out. Temps look good."
-// Ship tasks
 - AirFilter:      ~ return "You pop the old filters out and slot in fresh ones. The air tastes better already."
 - HullCheck:      ~ return "You walk the hull sections checking for stress fractures. All clear."
 - DrainLines:     ~ return "You hook up the purge line and flush the residue. Disgusting, but necessary."
 - Scrub:          ~ return "You give the common areas a proper scrub. The ship feels livable again."
+- SensorRecal:    ~ return "You run through the sensor suite. All readings are back in spec."
+- HullPatch:      ~ return "You locate the hairline fracture and seal it. One less thing to worry about."
+- LaundryRun:     ~ return "You run the laundry. Clean clothes make a surprising difference to morale."
+- WiringCheck:    ~ return "You trace the wiring harness and tighten a few loose connectors."
 // Module tasks
-- RepDroneServo:  ~ return "You recalibrate the repair drone's servos. Its movements are precise again."
-- RepDroneOptics: ~ return "You clean the repair drone's optical sensors. It can see what it's fixing now."
-- ClnDroneBrush:  ~ return "You swap the cleaning drone's worn brushes for fresh ones."
-- ClnDroneFilter: ~ return "You replace the cleaning drone's clogged filter. Much better airflow."
+- DroneBayServo:  ~ return "You recalibrate the drone bay servos. The drones move with precision again."
+- DroneBayOptics: ~ return "You clean the drone bay optical sensors. Target acquisition is back to normal."
 - NavChipFlush:   ~ return "You flush the nav computer's cache. Response time is snappy again."
 - NavGyroCalib:   ~ return "You recalibrate the navigation gyroscopes. Heading data looks solid."
 - CargoSensor:    ~ return "You recalibrate the cargo bay sensors. Weight readings are accurate again."
@@ -654,21 +630,21 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 // Completion text for a maintenance task (fatigued — reduced effectiveness).
 === function MaintFatigued(task)
 { task:
-// Engine tasks
-- EngTune:        ~ return "Your hands shake through the tune-up. It's done, but not your best work."
+// Ship/engine tasks
 - FuelLine:       ~ return "You fumble with the fuel line fittings. Close enough."
 - Injector:       ~ return "You squint at the injector readings, too tired to be precise."
 - Coolant:        ~ return "You slosh coolant everywhere topping off the system. It'll do."
-// Ship tasks
 - AirFilter:      ~ return "You swap the filters but drop one in the process. Good enough."
 - HullCheck:      ~ return "You half-heartedly walk the hull. Probably fine."
 - DrainLines:     ~ return "You flush the drains but skip the secondary lines. Too tired."
 - Scrub:          ~ return "You push a mop around but your heart isn't in it."
+- SensorRecal:    ~ return "You poke at the sensor settings. The readings are... better."
+- HullPatch:      ~ return "You smear sealant over the crack. It'll hold. Probably."
+- LaundryRun:     ~ return "You start the laundry and immediately forget about it. It'll be wrinkled."
+- WiringCheck:    ~ return "You poke at the wiring but can't focus. You tighten a few obvious ones."
 // Module tasks
-- RepDroneServo:  ~ return "You fumble the servo calibration. The drone wobbles a bit less, at least."
-- RepDroneOptics: ~ return "You wipe the drone's optics but can barely keep your own eyes open."
-- ClnDroneBrush:  ~ return "You swap the brushes but install one backwards. It'll work, mostly."
-- ClnDroneFilter: ~ return "You jam a new filter in place. Not a clean fit, but it'll run."
+- DroneBayServo:  ~ return "You fumble through the servo calibration. The drones wobble a bit less, at least."
+- DroneBayOptics: ~ return "You wipe the drone optics but can barely keep your own eyes open."
 - NavChipFlush:   ~ return "You start the cache flush but skip the verification step."
 - NavGyroCalib:   ~ return "You attempt the gyro calibration but the numbers swim. Close enough."
 - CargoSensor:    ~ return "You poke at the sensor calibration. The readings are... better."
@@ -681,21 +657,21 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 // Consequence text for an overdue maintenance task (auto-resolved with penalty).
 === function MaintOverdue(task)
 { task:
-// Engine tasks
-- EngTune:        ~ return "The engine's been knocking all day. Should have done that tune-up."
+// Ship/engine tasks
 - FuelLine:       ~ return "Fuel flow is getting sluggish. The lines needed cleaning days ago."
 - Injector:       ~ return "The injectors are misfiring. You can hear it in the engine's stutter."
 - Coolant:        ~ return "The engine's running hot. The coolant system needed attention."
-// Ship tasks
 - AirFilter:      ~ return "The air smells stale and metallic. Those filters are long overdue."
 - HullCheck:      ~ return "You hear a creak you don't recognize. Should have checked the hull."
 - DrainLines:     ~ return "The drains are backing up. Should have flushed them when you had the chance."
 - Scrub:          ~ return "The common areas are getting grimy. It's starting to smell in here."
+- SensorRecal:    ~ return "A sensor alarm trips and then clears. Something's drifting out of spec."
+- HullPatch:      ~ return "You feel a faint vibration in the hull. That fracture needed sealing."
+- LaundryRun:     ~ return "The ship is starting to smell. Laundry waits for no one."
+- WiringCheck:    ~ return "A light flickers. The wiring harness needed attention."
 // Module tasks
-- RepDroneServo:  ~ return "The repair drone's arm is jerking erratically. The servos needed attention."
-- RepDroneOptics: ~ return "The repair drone keeps bumping into things. Its optics are filthy."
-- ClnDroneBrush:  ~ return "The cleaning drone is just pushing dirt around. Its brushes are shot."
-- ClnDroneFilter: ~ return "The cleaning drone smells worse than what it's cleaning. Filter's clogged."
+- DroneBayServo:  ~ return "A drone is moving erratically. The servos needed attention."
+- DroneBayOptics: ~ return "A drone keeps missing its targets. The optics are filthy."
 - NavChipFlush:   ~ return "The nav computer is sluggish. Its cache is bloated."
 - NavGyroCalib:   ~ return "Course heading keeps drifting. The gyroscopes are way out of spec."
 - CargoSensor:    ~ return "The cargo sensors are giving bogus readings. Hope nothing shifted."
@@ -724,20 +700,12 @@ You call it a day and stretch out in your bunk, watching the stars drift past th
 === function has_overdue_tasks()
 ~ return LIST_COUNT(Backlog ^ StaleBacklog) > 0
 
-// Two-stage daily task selection. Stage 1: draw 3 engine, 3 ship, 1 module
-// (from installed modules only). Stage 2: coin flip for 3 or 4 from combined pool.
+// Daily task selection: draw 3-4 tasks from the unified pool (MaintTasks + module tasks).
 // Cooldown excludes yesterday's completed tasks from the draw.
 === function add_daily_tasks()
-// Build per-system pools (exclude backlog + cooldown)
-~ temp eng_pool = LIST_ALL(EngineMaintTasks) - Backlog - MaintCooldown
-~ temp ship_pool = LIST_ALL(ShipMaintTasks) - Backlog - MaintCooldown
+~ temp pool = LIST_ALL(MaintTasks) - Backlog - MaintCooldown
 ~ temp mod_pool = available_module_tasks() - Backlog - MaintCooldown
-// Stage 1: draw candidates from each system
-~ temp combined = list_random_subset_of_size(eng_pool, 3) + list_random_subset_of_size(ship_pool, 3)
-{ LIST_COUNT(mod_pool) > 0:
-    ~ combined += list_random_subset_of_size(mod_pool, 1)
-}
-// Stage 2: coin flip for 3 or 4, then draw from combined pool
+~ temp combined = pool + mod_pool
 ~ temp draw_count = 3
 { RANDOM(1, 2) == 1:
     ~ draw_count = 4

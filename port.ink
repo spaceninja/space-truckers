@@ -26,7 +26,7 @@ Welcome to {LocationData(port, Name)}!
 + [Manage cargo] -> manage_cargo
 + [Deliver cargo] -> deliver_cargo
 + [Buy fuel] -> fuel_station
-+ { EngineCondition < get_engine_max_condition() or ShipCondition < 100 } [Ship repairs] -> repair_services
++ { ShipCondition < 100 } [Ship repairs] -> repair_services
 + [Ship upgrades] -> ship_upgrades
 + [Ship out!] -> ship_out
 + { DEBUG } [\[DEBUG\] Cheats] -> debug_cheats
@@ -49,24 +49,18 @@ Balance: {PlayerBankBalance} € / Engine: {ShipManufacturer} Tier {ShipEngineTi
     ~ ShipManufacturer = Kepler
     ~ ShipEngineTier = 2
     ~ ShipFuelCapacity = EngineData(ShipManufacturer, ShipEngineTier, FuelCap)
-    ~ EngineCondition = 100
-    ~ RefurbishedEngine = false
     Kepler Tier 2 engine installed.
     -> cheat_menu
 + { ShipEngineTier < 3 } [\[DEBUG\] Upgrade to Tier 3 engine]
     ~ ShipManufacturer = Kepler
     ~ ShipEngineTier = 3
     ~ ShipFuelCapacity = EngineData(ShipManufacturer, ShipEngineTier, FuelCap)
-    ~ EngineCondition = 100
-    ~ RefurbishedEngine = false
     Kepler Tier 3 engine installed.
     -> cheat_menu
 + { ShipEngineTier < 4 } [\[DEBUG\] Upgrade to Tier 4 engine]
     ~ ShipManufacturer = Kepler
     ~ ShipEngineTier = 4
     ~ ShipFuelCapacity = EngineData(ShipManufacturer, ShipEngineTier, FuelCap)
-    ~ EngineCondition = 100
-    ~ RefurbishedEngine = false
     Kepler Tier 4 engine installed.
     -> cheat_menu
 + { LIST_COUNT(InstalledModules) < LIST_COUNT(LIST_ALL(ShipModules)) } [\[DEBUG\] Install all modules]
@@ -83,7 +77,8 @@ Balance: {PlayerBankBalance} € / Engine: {ShipManufacturer} Tier {ShipEngineTi
     -> install_next
 }
 ~ PassengerModuleTier = 3
-All modules installed at 100%. Passenger Module set to Tier 3.
+~ DroneBayTier = 2
+All modules installed at 100%. Passenger Module set to Tier 3. Drone Bay set to Tier 2.
 -> cheat_menu
 
 /*
@@ -343,35 +338,22 @@ The current unit cost of fuel is {price} €. Your fuel gauge reads {ShipFuel}/{
 /*
 
     Ship Repairs
-    Pay to restore engine and ship condition at port.
-    Engine repair: (100 - condition) × 2 €
-    Cleaning service: (100 - condition) × 1 €
+    Pay to restore ship condition at port.
+    Repair: (100 - condition) × 2 €
 
 */
 = repair_services
-~ temp engine_max = get_engine_max_condition()
-~ temp engine_damage = engine_max - EngineCondition
-~ temp ship_damage = 100 - ShipCondition
-~ temp engine_cost = engine_damage * 2
-~ temp ship_cost = ship_damage * 1
-Engine condition: {EngineCondition}%{RefurbishedEngine: /{engine_max}% max} / Ship condition: {ShipCondition}%. Your balance: {PlayerBankBalance} €.
-+ { EngineCondition < engine_max and PlayerBankBalance >= engine_cost }
-    [Engine repair — restore to {engine_max}% ({engine_cost} €)]
-    ~ PlayerBankBalance -= engine_cost
-    ~ EngineCondition = engine_max
-    The mechanics go over your engine thoroughly. It's running as well as it can.
-    -> repair_services
-+ { EngineCondition < engine_max and PlayerBankBalance < engine_cost }
-    [Engine repair — restore to {engine_max}% ({engine_cost} €) — can't afford #UNCLICKABLE]
-    -> repair_services
-+ { ShipCondition < 100 and PlayerBankBalance >= ship_cost }
-    [Cleaning service — restore to 100% ({ship_cost} €)]
-    ~ PlayerBankBalance -= ship_cost
+~ temp damage = 100 - ShipCondition
+~ temp cost = damage * 2
+Ship condition: {ShipCondition}%. Your balance: {PlayerBankBalance} €.
++ { ShipCondition < 100 and PlayerBankBalance >= cost }
+    [Ship repair — restore to 100% ({cost} €)]
+    ~ PlayerBankBalance -= cost
     ~ ShipCondition = 100
-    A cleaning crew sweeps through the ship. Everything is spotless.
+    The repair crew goes over every system. Your ship is back in top shape.
     -> repair_services
-+ { ShipCondition < 100 and PlayerBankBalance < ship_cost }
-    [Cleaning service — restore to 100% ({ship_cost} €) — can't afford #UNCLICKABLE]
++ { ShipCondition < 100 and PlayerBankBalance < cost }
+    [Ship repair — restore to 100% ({cost} €) — can't afford #UNCLICKABLE]
     -> repair_services
 + [Done] -> port_opts
 
@@ -422,10 +404,10 @@ Engine condition: {EngineCondition}%{RefurbishedEngine: /{engine_max}% max} / Sh
 ~ temp slow_cost   = get_trip_fuel_cost(here, to, eco_fuel)
 ~ temp norm_cost   = get_trip_fuel_cost(here, to, bal_fuel)
 ~ temp fast_cost   = get_trip_fuel_cost(here, to, turbo_fuel)
-// Apply engine degradation fuel penalty to displayed costs
-~ slow_cost = slow_cost + get_engine_fuel_penalty(slow_cost)
-~ norm_cost = norm_cost + get_engine_fuel_penalty(norm_cost)
-~ fast_cost = fast_cost + get_engine_fuel_penalty(fast_cost)
+// Apply ship condition fuel penalty to displayed costs
+~ slow_cost = slow_cost + get_fuel_penalty(slow_cost)
+~ norm_cost = norm_cost + get_fuel_penalty(norm_cost)
+~ fast_cost = fast_cost + get_fuel_penalty(fast_cost)
 ~ temp slow_time   = get_trip_duration(here, to, eco_speed)
 ~ temp norm_time   = get_trip_duration(here, to, bal_speed)
 ~ temp fast_time   = get_trip_duration(here, to, turbo_speed)
@@ -433,8 +415,8 @@ Engine condition: {EngineCondition}%{RefurbishedEngine: /{engine_max}% max} / Sh
 ~ temp has_express    = cargo_has_express(ShipCargo)
 ~ temp blocks_turbo   = cargo_blocks_turbo(ShipCargo)
 You have {ShipFuel} fuel, and a total mass of {total_mass(ShipCargo)}t.
-{EngineCondition < get_engine_max_condition():
-    Engine condition: {EngineCondition}%{RefurbishedEngine: /{get_engine_max_condition()}% max} — fuel costs increased.
+{ShipCondition < 100:
+    Ship condition: {ShipCondition}% — fuel costs increased.
 }
 + {can_use_flight_mode(has_express, ShipFuel, slow_cost)}
     [Economy Mode ({slow_cost} fuel, {slow_time} days)]

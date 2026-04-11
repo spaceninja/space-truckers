@@ -73,28 +73,29 @@ Cargo inspections: `CargoCheckDueDay` (starts at 2), `CargoCheckPenaltyPct` → 
 
 ## Maintenance Backlog (ship.ink)
 
-- Three systems: `EngineMaintTasks`, `ShipMaintTasks`, `ModuleMaintTasks` LISTs
-- Two-stage daily selection via `add_daily_tasks()`: Stage 1 draws 3 engine + 3 ship + 1 module task (installed modules only) → Stage 2 coin flip for 3 or 4 from that combined pool
+- Unified task pool: `MaintTasks` LIST (general ship tasks) + `ModuleMaintTasks` LIST (per-module tasks)
+- Daily selection via `add_daily_tasks()`: combined pool of `LIST_ALL(MaintTasks) + available_module_tasks()`, minus `Backlog` and `MaintCooldown`; coin flip for 3 or 4 tasks
 - One-day cooldown: `CompletedToday` → `MaintCooldown` rotation excludes recently completed tasks from next day's draw
-- Economy: +3 condition on completion, +1 if fatigued, -5 on overdue auto-resolve
+- Economy: +3 condition on completion, +1 if fatigued, +5 if `ShipCondition < 60` and not fatigued (non-module task); -5 on overdue auto-resolve
 - Two-day aging: fresh → stale (overdue marker) → auto-resolve with condition penalty
-- `is_engine_maint()` / `is_ship_maint()` / `is_module_maint()` categorize tasks; `maint_task_module(task)` maps module tasks to their parent module
+- `is_module_maint()` categorizes tasks; `maint_task_module(task)` maps module tasks to their parent module
 - `has_overdue_tasks()` checks staleness
 - Module tasks affect only their specific module (per-module both directions)
-- Drone modules auto-complete engine/ship tasks (not module tasks) after daily setup (settle → age → add → drones)
+- Drone Bay auto-completes ALL tasks (including module tasks) after daily setup (settle → age → add → drones)
 
 ## Module System (modules.ink)
 
-- `ShipModules` LIST, `InstalledModules` VAR, per-module condition VARs (0 = not installed)
+- `ShipModules` LIST: `DroneBay, AutoNav, CargoMgmt, PassengerModule`; `InstalledModules` VAR; per-module condition VARs (0 = not installed)
 - `ModuleData(module, stat)` lookup, `get_module_condition()`/`set_module_condition()` accessors
 - `is_module_active(module)` — installed AND condition >= 50
-- `get_drone_capacity(module)` — 2 at 75%+, 1 at 50-74%, 0 below 50%
-- `module_auto_tasks` tunnel: runs in `next_day()` and at trip start; handles all modules — drones (engine/ship task split, stale-first), AutoNav, CargoMgmt
-- `RefurbishedModules` VAR tracks 80% max cap; `get_module_max_condition()` enforces it
+- `get_drone_capacity()` — parameterless; per_drone = 2 at 75%+, 1 at 50-74%, 0 below 50%; total = per_drone × DroneBayTier
+- `module_auto_tasks` tunnel: runs in `next_day()` and at trip start; handles all modules — DroneBay (all tasks, stale-first), AutoNav, CargoMgmt
+- `get_module_max_condition()` always returns 100
 - Module maintenance tasks in `ModuleMaintTasks` LIST: 2 tasks per module; `module_tasks_for(mod)` returns a module's task pair; `available_module_tasks()` returns the union across installed modules
-- Narrative lookup: `MaintName(task)`, `MaintComplete(task)`, `MaintFatigued(task)`, `MaintOverdue(task)` — one function per text type, switch block covering all tasks from all three LISTs
-- Purchase UI: `ship_upgrades` knot with buy new/refurb/repair options for modules; `engine_upgrades` stitch for engine purchases (next tier only, manufacturer gated by location)
-- Engine upgrade system: `EngPrice` stat in `EngineStats`, `RefurbishedEngine` VAR (boolean), `get_engine_max_condition()` in functions.ink mirrors `get_module_max_condition()` pattern; manufacturer availability via `manufacturer_available_here(mfg)` checked against `here`
+- Narrative lookup: `MaintName(task)`, `MaintComplete(task)`, `MaintFatigued(task)`, `MaintOverdue(task)` — one function per text type, switch block covering all tasks from both LISTs
+- Purchase UI: `ship_upgrades` knot with buy/repair options for modules; `engine_upgrades` stitch for engine purchases (next tier only, manufacturer gated by location)
+- Engine upgrade system: `EngPrice` stat in `EngineStats`; manufacturer availability via `manufacturer_available_here(mfg)` checked against `here`
+- DroneBay (tiered, unique upgrade path): uses `DroneBayTier` VAR (0=not installed, 1=Single Drone, 2=Dual Drones); T1=600€, T2=+400€; separate `drone_bay_upgrades` stitch excluded from `browse_module_list`; `DroneBayTierName(tier)` / `DroneBayTierPrice(tier)` helpers follow PassengerModule pattern
 - AutoNav (500€): advances `NavCheckDueDay = TripDay + 3` on auto-complete; 75%+ every check, 50-74% even `TripDay` only
 - CargoMgmt (700€): handles inspections + paperwork with 1-task-per-day limit; inspections prioritized (expire same day), paperwork fills remaining days; advances `CargoCheckDueDay = TripDay + get_cargo_check_interval()` on inspection; 75%+ every due day, 50-74% even `TripDay` only
 - PassengerModule (tiered, unique upgrade path): uses `PassengerModuleTier` VAR (0=not installed, 1-3) rather than a single condition gate; separate `passenger_module_upgrades` stitch excluded from `browse_module_list`; cargo gated by `InstalledModules ? PassengerModule` in `cargo_is_available`

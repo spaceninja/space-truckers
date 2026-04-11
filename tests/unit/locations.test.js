@@ -158,16 +158,16 @@ describe("get_trip_fuel_cost", () => {
   });
 });
 
-describe("get_engine_fuel_penalty", () => {
-  // Formula: FLOOR(base_cost × (100 - EngineCondition) / 2 / 100)
+describe("get_fuel_penalty", () => {
+  // Formula: FLOOR(base_cost × (100 - ShipCondition) / 2 / 100)
   // +5% fuel cost per 10% degradation below 100%
-  // Uses fresh story per test to avoid shared state issues with EngineCondition.
+  // Uses fresh story per test to avoid shared state issues with ShipCondition.
 
   function penalty(baseCost, condition) {
     const s = createStory();
     s.variablesState["ShipCargo"] = new InkList();
-    s.variablesState["EngineCondition"] = condition;
-    return s.EvaluateFunction("get_engine_fuel_penalty", [baseCost]);
+    s.variablesState["ShipCondition"] = condition;
+    return s.EvaluateFunction("get_fuel_penalty", [baseCost]);
   }
 
   it("returns 0 at 100% condition", () => {

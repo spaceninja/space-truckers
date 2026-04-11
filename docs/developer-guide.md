@@ -67,7 +67,7 @@ The table below shows Kepler stats as the Tier 1 baseline and representative val
 | 3 | 650 | varies | 1.3–1.8 | varies | 2.3–2.5 | varies | 3.5–4.5 | 2,500 |
 | 4 | 800 | varies | 1.8–2.3 | varies | 3.2–3.5 | varies | 4.5–5.5 | 4,000 |
 
-`FuelFactor` values are multipliers in the fuel cost formula (lower is better). `Speed` values are divisors in the trip duration formula (higher is faster). `EngPrice` is the new-engine purchase cost; refurbished engines cost 50% of this.
+`FuelFactor` values are multipliers in the fuel cost formula (lower is better). `Speed` values are divisors in the trip duration formula (higher is faster).
 
 ### Engine Manufacturers
 
@@ -80,17 +80,6 @@ Three manufacturers offer engines at Tiers 2-4, each optimized for a different m
 | Huygens Deepspace | Best Eco mode | Ganymede, Titan, Ceres |
 
 The player can switch manufacturers at any tier upgrade. Location availability creates meaningful travel decisions — buying a Huygens engine requires a trip to the outer system.
-
-### Refurbished Engines
-
-Refurbished engines follow the same pattern as refurbished modules:
-
-- **Cost:** 50% of new price
-- **Starting condition:** 60%
-- **Max condition cap:** 80% (tracked by `VAR RefurbishedEngine = true`)
-- **Effect:** A permanent −10% fuel efficiency penalty at max condition vs. a new engine
-
-`get_engine_max_condition()` in `functions.ink` returns 80 when `RefurbishedEngine` is true, 100 otherwise. All engine condition caps in `ship.ink` and repair logic in `port.ink` call this function rather than hardcoding 100.
 
 ### What Each Tier Unlocks
 
@@ -234,7 +223,7 @@ Penalties come in two forms:
 
 ### Maintenance Backlog
 
-Ships maintain a persistent maintenance backlog during transit. 3-4 new tasks are drawn daily via two-stage selection across three systems: engine, ship, and modules. Tasks accumulate if neglected. Tracked in four VARs:
+Ships maintain a persistent maintenance backlog during transit. 3-4 new tasks are drawn daily from a unified pool. Tasks accumulate if neglected. Tracked in four VARs:
 
 - **`Backlog`** — current tasks (accumulates daily)
 - **`StaleBacklog`** — tasks that survived yesterday without completion
@@ -242,16 +231,15 @@ Ships maintain a persistent maintenance backlog during transit. 3-4 new tasks ar
 - **`MaintCooldown`** — yesterday's completed tasks; excluded from today's draw so players don't see the same task two days running
 
 **Task categories:**
-- Engine tasks (`EngineMaintTasks` LIST) affect `EngineCondition`. Classified by `is_engine_maint()`.
-- Ship tasks (`ShipMaintTasks` LIST) affect `ShipCondition`. Classified by `is_ship_maint()`.
+- General ship tasks (`MaintTasks` LIST) affect `ShipCondition`. Classified as non-module tasks.
 - Module tasks (`ModuleMaintTasks` LIST) affect the specific module they belong to. Classified by `is_module_maint()`. `maint_task_module(task)` maps each task to its parent module.
 
-**Two-stage daily selection (`add_daily_tasks()`):**
-1. **Stage 1:** Draw 3 random engine tasks + 3 random ship tasks + 1 random module task (only from installed modules) from their respective available pools, excluding current `Backlog` and `MaintCooldown`
-2. **Stage 2:** Coin flip for 3 or 4, then draw that many from the combined pool of 6-7
-3. **Cooldown rotation:** `MaintCooldown = CompletedToday`, then `CompletedToday = ()`
+**Daily selection (`add_daily_tasks()`):**
+1. Build combined pool: `LIST_ALL(MaintTasks) + available_module_tasks()`, minus current `Backlog` and `MaintCooldown`
+2. Coin flip for 3 or 4, then draw that many from the combined pool
+3. Cooldown rotation: `MaintCooldown = CompletedToday`, then `CompletedToday = ()`
 
-The module pool only includes tasks for installed modules (`available_module_tasks()` → `module_tasks_for(mod)`). If no modules are installed, the pool is just engine + ship (6 candidates).
+The module pool only includes tasks for installed modules (`available_module_tasks()` → `module_tasks_for(mod)`). If no modules are installed, the pool is just general ship tasks.
 
 **Task lifecycle (three stages):**
 
@@ -264,31 +252,33 @@ The module pool only includes tasks for installed modules (`available_module_tas
 **In `next_day()` each morning:**
 1. **Settle stale tasks:** `Backlog ^ StaleBacklog` = tasks that survived 2 days → apply condition -5 penalty, print consequence, remove from backlog
 2. **Age today's tasks:** `StaleBacklog = Backlog`
-3. **Add daily tasks:** `add_daily_tasks()` — two-stage selection with cooldown rotation
-4. **Drone auto-complete:** Active drone modules handle engine/ship tasks (not module tasks) from backlog, preferring stale tasks
+3. **Add daily tasks:** `add_daily_tasks()` — unified pool with cooldown rotation
+4. **Drone auto-complete:** Active Drone Bay handles all backlog tasks (including module tasks), preferring stale tasks
 
-When stale tasks are settled, those task types become available again for the next day's pool. This creates a cycle where neglect feels overwhelming but drones and diligent play keep it manageable.
+When stale tasks are settled, those tasks become available again for the next day's pool. This creates a cycle where neglect feels overwhelming but drones and diligent play keep it manageable.
 
 **When a player completes a task:** `complete_maintenance_task(task)` removes it from both `Backlog` and `StaleBacklog`, and adds it to `CompletedToday` for tomorrow's cooldown.
 
+**Condition boost:** Completing a task gives +3 condition (+1 if fatigued). When `ShipCondition < 60` and not fatigued and completing a non-module task, boost is +5 (urgency sharpens focus).
+
 **Trip initialization:** `generate_backlog()` (called from `transit()`) clears all four VARs and calls `add_daily_tasks()` to populate the first day's backlog.
 
-**Conditions no longer degrade passively.** Engine, ship, and module conditions only change from:
+**Conditions only change from:**
 - Skipped maintenance (auto-resolve penalty: -5 per task)
 - Event damage (`damage_random_system()`, micrometeorite cargo hits)
-- Completed maintenance (+3 on success, +1 if fatigued)
+- Completed maintenance (+3 normally, +1 fatigued, +5 when ship condition critical and not fatigued)
 - Port repair services (restore to max condition)
 
-### Engine Degradation Fuel Penalty
+### Ship Condition Fuel Penalty
 
-Degraded engines burn more fuel, applied at departure:
+A degraded ship burns more fuel, applied at departure:
 
 ```
-penalty_pct = (100 - EngineCondition) / 2
+penalty_pct = (100 - ShipCondition) / 2
 extra_fuel = FLOOR(base_cost × penalty_pct / 100)
 ```
 
-At 80% condition, fuel costs are 10% higher. At 50%, they're 25% higher. This is calculated in `get_engine_fuel_penalty()` (locations.ink) and added to displayed fuel costs in `flight_options` (port.ink). The base `get_trip_fuel_cost` function is unchanged — it's also used for cargo filtering at port, where degradation shouldn't apply.
+At 80% condition, fuel costs are 10% higher. At 50%, they're 25% higher. This is calculated in `get_fuel_penalty()` (locations.ink) and added to displayed fuel costs in `flight_options` (port.ink). The base `get_trip_fuel_cost` function is unchanged — it's also used for cargo filtering at port, where degradation shouldn't apply.
 
 ### Mid-Trip Fuel Penalties
 
@@ -330,14 +320,11 @@ If `TripFuelPenalty` exceeds remaining `ShipFuel` on arrival, fuel is set to 0 a
 
 ### Port Repair Services
 
-The player can pay for repairs at any port (port.ink, `repair_services`). The option only appears when at least one condition is below 100%.
+The player can pay for repairs at any port (port.ink, `repair_services`). The option only appears when `ShipCondition < 100`.
 
 | Service | Effect | Cost |
 |---------|--------|------|
-| Engine repair | Restore EngineCondition to 100% | `(100 - condition) × 2` € |
-| Cleaning service | Restore ShipCondition to 100% | `(100 - condition) × 1` € |
-
-Ship condition no longer resets to 100% on arrival — this was a bug that has been fixed.
+| Ship repair | Restore ShipCondition to 100% | `(100 - condition) × 2` € |
 
 ### Ink Integer Math Pitfall
 
@@ -363,7 +350,7 @@ The transit day presents tasks to the player via a priority-based selection syst
 | Tier | Label | Tasks | Selection Rule |
 |---|---|---|---|
 | P1 | Urgent | Ship flip | Always shown when applicable. No cap. |
-| P2 | Important | Engine tune, urgent sleep (nap + full), nav check, cargo inspection | Shuffled for variety. Fills slots up to `TaskCap`. |
+| P2 | Important | Urgent sleep (nap + full), nav check, cargo inspection | Shuffled for variety. Fills slots up to `TaskCap`. |
 | P3 | Routine | Maintenance backlog, passenger task | Deterministic sub-priority order (see below). Fills remaining slots. |
 | P4 | Low | Paperwork, optional sleep (nap + full) | Fills remaining slots after P3. |
 | P5 | Rest | Call it a day | Shown only when no P1–P3 tasks are active. |
@@ -427,7 +414,7 @@ When fatigue is 70 or above, work tasks are subject to a dice roll that can caus
 
 **Two failure modes:**
 
-- **Degraded** (ship flip, engine tune, backlog maintenance) — The task completes but with a reduced effect. Ship flip adds a fuel penalty. Engine tune restores +8 instead of +15. Backlog maintenance restores +1 instead of +3.
+- **Degraded** (ship flip, backlog maintenance) — The task completes but with a reduced effect. Ship flip adds a fuel penalty. Backlog maintenance restores +1 instead of +3.
 - **Fail + retry** (nav check, cargo inspection, paperwork) — The task doesn't count. The due day is not advanced, so the task remains available for retry. AP is still spent.
 
 Only "work" tasks use `fatigue_check()`. Sleep and rest are unaffected.
@@ -451,7 +438,7 @@ Random events are P0 interruptions that fire during transit, bypassing the task 
 
 **Cargo damage:** `CargoDamagePct` accumulates cargo damage during transit (micrometeorite cargo hit, cargo shift with fatigue failure). It reduces delivery pay at port alongside paperwork and inspection penalties. Total combined penalty is capped at 75%. It only increases from event outcomes — normal transit never touches it.
 
-**`damage_random_system(amount)`:** Damages a random system — 50% chance engine, 50% chance a random installed module. If no modules are installed, always damages engine. Module condition floors at 1 (not 0, since 0 = not installed).
+**`damage_random_system(amount)`:** Damages a random system — 50% chance ship condition (`ShipCondition`), 50% chance a random installed module. If no modules are installed, always damages ship condition. Module condition floors at 1 (not 0, since 0 = not installed).
 
 **Adding a new event:**
 1. Add an entry to the `Events` LIST in `events.ink`
@@ -470,12 +457,12 @@ Ship modules automate routine tasks, reducing the daily AP burden as the player 
 
 Modules follow the same LIST + function lookup pattern as cargo, locations, and engines:
 
-- **`ShipModules` LIST** — all module types
+- **`ShipModules` LIST** — all module types: `DroneBay, AutoNav, CargoMgmt, PassengerModule`
 - **`ModuleStats` LIST** — stat keys (`ModName`, `ModPrice`, `ModDesc`)
 - **`ModuleData(module, stat)`** — returns the requested stat
-- **Per-module condition VARs** — `RepairDronesCondition`, `CleaningDronesCondition`, etc. (0 = not installed, 1-100 = condition)
+- **Per-module condition VARs** — `DroneBayCondition`, `AutoNavCondition`, etc. (0 = not installed, 1-100 = condition)
+- **`DroneBayTier` VAR** — 0=not installed, 1=Single Drone, 2=Dual Drones
 - **`InstalledModules` VAR** — LIST of currently installed modules
-- **`RefurbishedModules` VAR** — subset bought refurbished (80% max condition cap)
 
 ### Graduated Effectiveness
 
@@ -489,12 +476,11 @@ Modules follow the same LIST + function lookup pattern as cargo, locations, and 
 
 All module daily behavior runs via the `module_auto_tasks` tunnel, called from `next_day()` (after settle → age → add daily tasks) and at trip start (after `generate_backlog()`).
 
-- **Repair Drones** (800€) — auto-complete engine maintenance tasks from backlog. Prefer stale tasks. Capacity: 2 at 75%+, 1 at 50-74%.
-- **Cleaning Drones** (600€) — auto-complete ship maintenance tasks from backlog. Same capacity tiers as Repair Drones.
+- **Drone Bay** (tiered, separate upgrade path) — auto-completes tasks from backlog (including module tasks). Prefer stale tasks. Capacity = `per_drone × DroneBayTier`: per_drone is 2 at 75%+, 1 at 50-74%, 0 below 50%. T1 (Single Drone, 600€): up to 2 tasks/day. T2 (Dual Drones, +400€): up to 4 tasks/day. Uses `DroneBayTier` VAR and a separate `drone_bay_upgrades` stitch in `modules.ink`, excluded from `browse_module_list`.
 - **Auto-Nav Computer** (500€) — auto-completes nav checks. Full (75%+): completes every check. Reduced (50-74%): completes on even `TripDay` only. Advances `NavCheckDueDay = TripDay + 3` on completion.
 - **Cargo Management System** (700€) — handles both cargo inspections and paperwork (1 task/day, inspections prioritized). Full (75%+): completes every task due. Reduced (50-74%): completes on even `TripDay` only. Inspections take priority because they expire (day-of only); paperwork persists until delivery. Advances `CargoCheckDueDay = TripDay + get_cargo_check_interval()` on inspection completion.
 
-- **Passenger Module** (tiered, separate upgrade path) — gates passenger cargo and drives the satisfaction system. Unlike other modules, this has a `PassengerModuleTier` VAR (0=not installed, 1-3=tier) and a separate purchase/upgrade UI stitch (`passenger_module_upgrades`) that is linked from `upgrade_menu` but excluded from the standard `browse_module_list`. Tier is upgraded sequentially (T0→T1→T2→T3); pricing is cumulative (200/400/800€ total, delta charged per upgrade). The refurbished option is only available at initial install (T0→T1). Passive satisfaction bonus activates at T2+.
+- **Passenger Module** (tiered, separate upgrade path) — gates passenger cargo and drives the satisfaction system. Unlike other modules, this has a `PassengerModuleTier` VAR (0=not installed, 1-3=tier) and a separate purchase/upgrade UI stitch (`passenger_module_upgrades`) that is linked from `upgrade_menu` but excluded from the standard `browse_module_list`. Tier is upgraded sequentially (T0→T1→T2→T3); pricing is cumulative (200/400/800€ total, delta charged per upgrade). Passive satisfaction bonus activates at T2+.
 
 ### Module Maintenance (Two Layers)
 
@@ -505,9 +491,9 @@ All module daily behavior runs via the `module_auto_tasks` tunnel, called from `
 ### Purchase UI
 
 Port menu option `[Ship upgrades]` diverts to `ship_upgrades` in `modules.ink`. Offers:
-- **Buy new** — full price, 100% condition
-- **Buy refurbished** — 50% price, 60% starting condition, 80% max cap
+- **Buy** — full price, 100% condition
 - **Repair** installed modules
+- **Drone Bay** and **Passenger Module** each have their own tiered upgrade stitches (`drone_bay_upgrades`, `passenger_module_upgrades`), linked from `upgrade_menu` but excluded from `browse_module_list`
 
 ### Adding a New Module
 
