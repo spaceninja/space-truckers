@@ -419,6 +419,8 @@ When fatigue is 70 or above, work tasks are subject to a dice roll that can caus
 
 Only "work" tasks use `fatigue_check()`. Sleep and rest are unaffected.
 
+**Gravity-modified fatigue accumulation:** `pass_time()` scales fatigue gain by flight mode. Base rate is `AP_spent × 10`. Turbo increases this to `× 15` (50% more — higher thrust gravity). Eco reduces it to `× 8` (20% less). Balance uses the base rate. Sleep and rest bypass fatigue accumulation entirely.
+
 `is_overtired()` is still used for UI concerns (P2 sleep threshold, task offering logic). `fatigue_check()` is used for task outcome resolution.
 
 ### Random Events

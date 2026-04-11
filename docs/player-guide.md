@@ -41,6 +41,8 @@ A middle ground. Faster than Economy, cheaper than Turbo. As your engine improve
 
 Burns a lot of fuel. Gets you there fast. In the early game, Turbo is often simply out of reach — your tank isn't big enough to afford it. It becomes more accessible as you upgrade, and is essential for Express cargo (see below).
 
+Engine mode also affects how tiring the work is. Higher thrust means higher gravity in the cabin — tasks in Turbo mode wear you out faster, while Economy mode is easier on the body. If you're planning a long haul with a lot of maintenance to do, the lighter gravity in Economy can make a real difference.
+
 The key insight: **the same engine mode feels different depending on how much you're carrying.** A light load costs less fuel in any mode, which means Turbo might be affordable for a small shipment when it wouldn't be for a full hold. Part of the skill of the game is matching your load to your mode.
 
 ---
