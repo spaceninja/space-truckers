@@ -10,7 +10,6 @@
  * Tier 1 is a universal starter engine shared by all manufacturers.
  *
  * Also covers:
- *   get_engine_max_condition  — 100 normally, 80 when RefurbishedEngine=true
  *   manufacturer_available_here — gates which manufacturers are sold at each port
  */
 
@@ -261,23 +260,6 @@ describe("EngineData", () => {
       expect(engine("Olympus", 4, "EngPrice")).toBe(4000);
       expect(engine("Huygens", 4, "EngPrice")).toBe(4000);
     });
-  });
-});
-
-// ── get_engine_max_condition ──────────────────────────────────────────────────
-
-describe("get_engine_max_condition", () => {
-  let story;
-  beforeEach(() => { story = createStory(); });
-
-  it("returns 100 when engine is new", () => {
-    story.variablesState["RefurbishedEngine"] = false;
-    expect(story.EvaluateFunction("get_engine_max_condition", [])).toBe(100);
-  });
-
-  it("returns 80 when engine is refurbished", () => {
-    story.variablesState["RefurbishedEngine"] = true;
-    expect(story.EvaluateFunction("get_engine_max_condition", [])).toBe(80);
   });
 });
 

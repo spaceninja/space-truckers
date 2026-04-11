@@ -57,7 +57,7 @@ function setupTransit(overrides = {}) {
     ActionPointsMax: 6,
     Fatigue: 0,
     ShipCondition: 100,
-    EngineCondition: 100,
+    
     ShipFuel: 200,
     TaskCap: 7,
     TasksCompletedToday: 0,
@@ -168,7 +168,7 @@ describe("Satisfaction — skip penalty and passive bonus from next_day", () => 
    * Sets up AP=1 so the workout consumes all AP, triggering next_day.
    */
   function triggerNextDay(s) {
-    s.variablesState["Backlog"] = L(s, "ShipMaintTasks.AirFilter");
+    s.variablesState["Backlog"] = L(s, "MaintTasks.AirFilter");
     s.ChoosePathString("transit.ship_options");
     drainText(s);
     // Maintenance tasks appear directly now; pick AirFilter to spend 1 AP → next_day fires

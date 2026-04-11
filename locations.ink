@@ -104,12 +104,12 @@ CONST FuelCostOuter = 0.8
 /*
 
     Get Engine Fuel Penalty
-    Returns additional fuel cost from engine degradation.
+    Returns additional fuel cost from ship condition degradation.
     Formula: +5% fuel cost per 10% degradation below 100%.
 
 */
-=== function get_engine_fuel_penalty(base_cost)
-~ temp degradation = 100 - EngineCondition
+=== function get_fuel_penalty(base_cost)
+~ temp degradation = 100 - ShipCondition
 ~ temp penalty_pct = degradation / 2  // +5% fuel cost per 10% degradation
 ~ temp extra_fuel = base_cost * penalty_pct
 ~ return FLOOR(extra_fuel / 100)

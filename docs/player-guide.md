@@ -115,9 +115,9 @@ Your ship needs constant attention. Each day in transit, four new maintenance ta
 
 If you skip a task, it sticks around and gets flagged as overdue. Skip it again and it resolves on its own — badly. That engine tune you put off? It's now a grinding noise and a hit to your engine condition. Tasks you stay on top of keep the ship running smoothly; tasks you ignore cause problems.
 
-**Engine condition** affects fuel costs. A degraded engine burns more fuel — at 80% condition, fuel costs are 10% higher.
+**Ship condition** affects fuel costs. A degraded ship burns more fuel — at 80% condition, fuel costs are 10% higher.
 
-When you reach port, you can pay for professional repairs: an engine overhaul or a cleaning service to restore conditions to 100%. The price depends on how much work needs doing.
+When you reach port, you can pay for a professional ship repair to restore condition to 100%. The price is 2€ per point of damage.
 
 ### Fatigue
 
@@ -145,9 +145,11 @@ At any port, you can visit the **Ship upgrades** menu to buy modules that automa
 
 ### Available Modules
 
-**Repair Drones** (800€) — Automatically handle engine maintenance tasks from your daily backlog. At full condition (75-100%), they handle 2 tasks per day. At reduced condition (50-74%), they handle 1. Below 50%, they go offline.
+**Drone Bay** — Automatically handles maintenance tasks from your daily backlog. Comes in two tiers:
+- **Tier 1 "Single Drone" (600€)** — One drone handles up to 2 tasks per day at full condition, 1 at reduced condition.
+- **Tier 2 "Dual Drones" (+400€ upgrade)** — Two drones, doubling the daily task coverage (up to 4 at full condition, 2 at reduced). At below 50% condition, the bay goes offline.
 
-**Cleaning Drones** (600€) — Same as Repair Drones, but for ship maintenance tasks (air filters, hull inspections, scrubbing, drain lines).
+Unlike other modules, the Drone Bay is not available through the standard module browser — it has its own entry in the Ship upgrades menu.
 
 **Auto-Nav Computer** (500€) — Automatically handles the navigation check that comes due every three days. At full condition (75%+), it handles every check. At reduced condition (50-74%), it handles every other check — you'll need to cover the rest manually. Below 50%, it goes offline. When the auto-nav handles a check, the task won't appear in your task list that day.
 
@@ -175,15 +177,6 @@ At delivery, satisfaction determines your pay modifier on passenger cargo: **+10
 
 Random events involving passengers also affect satisfaction — how you handle a birthday, a complaint, or a medical emergency all shift the number up or down.
 
-### New vs Refurbished
-
-Each module is available in two versions:
-
-- **New** — Full price. Starts at 100% condition. Can be repaired to 100%.
-- **Refurbished** — Half price. Starts at 60% condition (reduced effectiveness). Can only be repaired to 80% max.
-
-A refurbished module is a budget option that gets you automation earlier, but it's fragile — one random event can knock it from full effectiveness to reduced. A new module has a much larger buffer against damage.
-
 ### Module Maintenance
 
 Modules need occasional attention:
@@ -194,7 +187,7 @@ Modules need occasional attention:
 
 ### The Economics
 
-With both drone modules at full effectiveness, they handle 4 maintenance tasks per day — 2 engine, 2 ship. Combined with a task or two of manual work, you can keep on top of the daily backlog easily. Without drones, the backlog accumulates and penalties start mounting.
+A Tier 2 Drone Bay at full effectiveness handles 4 maintenance tasks per day automatically. Combined with a task or two of manual work, you can keep on top of the daily backlog easily. Without drones, the backlog accumulates and penalties start mounting.
 
 The other modules free up AP and improve your quality of life in ways that compound over a long trip. The Auto-Nav and Cargo Management systems handle routine tasks automatically, leaving more time for sleep and other priorities.
 
@@ -234,15 +227,6 @@ Ceres carries all three, which makes it a natural hub for upgrades. If you want 
 
 Engine prices: Tier 2 — 1,500€ / Tier 3 — 2,500€ / Tier 4 — 4,000€.
 
-### Refurbished Engines
-
-Each manufacturer also offers a refurbished option at half price. The trade-offs:
-
-- **Starts at 60% condition** — immediately less fuel-efficient than a new engine, and you'll want to repair it soon.
-- **Caps at 80% condition** — even after a full overhaul, it can't reach 100%. That means a permanent 10% fuel cost penalty compared to a new engine at the same tier.
-- **Worth it?** If you need the tier upgrade but can't afford the full price, a refurbished engine is a real upgrade — just budget for the efficiency loss. If you can afford new, buy new.
-
-The repair screen will show the condition cap for a refurbished engine (e.g., "restore to 80%") so you always know what you're working with.
 
 ---
 

@@ -61,10 +61,10 @@ function setupTransit(overrides = {}) {
   // but setupTransit jumps directly to ship_options)
   story.variablesState["Backlog"] = cargo(
     story,
-    "EngineMaintTasks.EngTune",
-    "ShipMaintTasks.AirFilter",
-    "EngineMaintTasks.FuelLine",
-    "ShipMaintTasks.HullCheck"
+    "MaintTasks.FuelLine",
+    "MaintTasks.AirFilter",
+    "MaintTasks.FuelLine",
+    "MaintTasks.HullCheck"
   );
 
   const defaults = {
@@ -86,7 +86,7 @@ function setupTransit(overrides = {}) {
     ActionPointsMax: 6,
     Fatigue: 0,
     ShipCondition: 100,
-    EngineCondition: 100,
+    
     ShipFuel: 200,
     TaskCap: 7,
     TasksCompletedToday: 0,
@@ -114,7 +114,6 @@ describe("Task priority system", () => {
         TripDay: 5,
         TripDuration: 10,
         // Also activate P2 and P3 tasks
-        EngineCondition: 70,
         Fatigue: 75,
         PaperworkDone: 0,
         PaperworkTotal: 3,
@@ -143,16 +142,6 @@ describe("Task priority system", () => {
   });
 
   describe("P2: Important tasks", () => {
-    it("shows engine check when condition < 80", () => {
-      const story = setupTransit({ EngineCondition: 70 });
-      expect(hasChoice(story, "diagnostics and tune")).toBe(true);
-    });
-
-    it("does not show engine check when condition >= 80", () => {
-      const story = setupTransit({ EngineCondition: 80 });
-      expect(hasChoice(story, "diagnostics and tune")).toBe(false);
-    });
-
     it("shows nap when fatigue >= 70", () => {
       const story = setupTransit({ Fatigue: 75 });
       expect(hasChoice(story, "nap")).toBe(true);
@@ -227,12 +216,12 @@ describe("Task priority system", () => {
       const story = createStory();
       story.variablesState["ShipCargo"] = new InkList();
       // Set up one stale task and one fresh task
-      const staleTask = cargo(story, "ShipMaintTasks.AirFilter");
-      const freshTask = cargo(story, "EngineMaintTasks.EngTune");
+      const staleTask = cargo(story, "MaintTasks.AirFilter");
+      const freshTask = cargo(story, "MaintTasks.FuelLine");
       story.variablesState["Backlog"] = cargo(
         story,
-        "ShipMaintTasks.AirFilter",
-        "EngineMaintTasks.EngTune"
+        "MaintTasks.AirFilter",
+        "MaintTasks.FuelLine"
       );
       story.variablesState["StaleBacklog"] = staleTask;
       const defaults = {
@@ -254,7 +243,7 @@ describe("Task priority system", () => {
         ActionPointsMax: 6,
         Fatigue: 0,
         ShipCondition: 100,
-        EngineCondition: 100,
+        
         ShipFuel: 200,
         TaskCap: 7,
         TasksCompletedToday: 0,
@@ -328,7 +317,7 @@ describe("Task priority system", () => {
     it("shows rest when no P1-P3 tasks are active", () => {
       const story = setupRestTransit({
         FlipDone: true,
-        EngineCondition: 100,
+        
         Fatigue: 0,
         PaperworkDone: 1,
         PaperworkTotal: 1,
@@ -342,7 +331,7 @@ describe("Task priority system", () => {
       // Default setupTransit has backlog = P3 active
       const story = setupTransit({
         FlipDone: true,
-        EngineCondition: 100,
+        
         Fatigue: 0,
         PaperworkDone: 1,
         PaperworkTotal: 1,
@@ -355,11 +344,11 @@ describe("Task priority system", () => {
     it("does not show rest when P2 tasks are active", () => {
       const story = setupRestTransit({
         FlipDone: true,
-        EngineCondition: 70, // engine degraded = P2 active
+        TripDay: 6,
+        NavCheckDueDay: 6, // nav check due = P2 active
         Fatigue: 0,
         PaperworkDone: 1,
         PaperworkTotal: 1,
-        TripDay: 4,
         ShipCondition: 100,
       });
       expect(hasChoice(story, "Call it a day")).toBe(false);
@@ -370,7 +359,7 @@ describe("Task priority system", () => {
         AP: 4,
         ShipClock: 3,
         FlipDone: true,
-        EngineCondition: 100,
+        
         Fatigue: 20,
         PaperworkDone: 1,
         PaperworkTotal: 1,
@@ -388,7 +377,7 @@ describe("Task priority system", () => {
         ShipClock: 3,
         Fatigue: 20,
         FlipDone: true,
-        EngineCondition: 100,
+        
         PaperworkDone: 1,
         PaperworkTotal: 1,
         TripDay: 4,
@@ -408,7 +397,6 @@ describe("Task priority system", () => {
         TripDay: 6,
         NavCheckDueDay: 6, // nav check due (P2)
         CargoCheckDueDay: 6, // cargo inspect due (P2)
-        EngineCondition: 70, // engine eligible (P2)
       });
       const choices = choiceTexts(story);
       // Should not exceed TaskCap; P3 (maintenance) gets leftover slots
@@ -418,7 +406,7 @@ describe("Task priority system", () => {
 
   describe("Shuffle variety", () => {
     it("offers different P2 tasks across runs with different seeds", () => {
-      // P2 shuffles engine, nav check, cargo inspect — with a small cap only
+      // P2 shuffles nav check, cargo inspect, and sleep tasks — with a small cap only
       // some fit, so the shuffle determines which appear.
       const story = createStory();
       story.variablesState["ShipCargo"] = new InkList();
@@ -440,9 +428,8 @@ describe("Task priority system", () => {
         CargoCheckPenaltyPct: 0,
         AP: 6,
         ActionPointsMax: 6,
-        Fatigue: 0, // no sleep tasks
+        Fatigue: 75, // P2 sleep eligible
         ShipCondition: 100,
-        EngineCondition: 70, // < 80 — P2 eligible
         ShipFuel: 200,
         TaskCap: 2, // only 2 slots; 3 eligible P2 tasks compete
         TasksCompletedToday: 0,
@@ -458,18 +445,18 @@ describe("Task priority system", () => {
       const p2Seen = new Set();
       for (let seed = 0; seed < 20; seed++) {
         story.state.storySeed = seed;
-        story.variablesState["EngineCondition"] = 70;
         story.variablesState["NavCheckDueDay"] = 6;
         story.variablesState["CargoCheckDueDay"] = 6;
+        story.variablesState["Fatigue"] = 75;
         story.variablesState["TaskCap"] = 2;
         story.variablesState["EventChance"] = 0;
         story.variablesState["EventCooldownDay"] = -1;
         story.ChoosePathString("transit.ship_options");
         drainText(story);
         const choices = choiceTexts(story);
-        if (choices.some((c) => c.includes("engine"))) p2Seen.add("engine");
         if (choices.some((c) => c.includes("Navigation"))) p2Seen.add("nav");
         if (choices.some((c) => c.includes("Cargo inspection"))) p2Seen.add("cargo");
+        if (choices.some((c) => c.includes("nap"))) p2Seen.add("sleep");
         if (p2Seen.size >= 2) break;
       }
       // With shuffle, we should see at least 2 different P2 tasks across 20 runs
@@ -568,30 +555,18 @@ describe("Fatigue-based task failure", () => {
       expect(story.variablesState["PaperworkDone"]).toBe(1);
     });
 
-    it("engine maintenance gives full +15 at fatigue 0", () => {
-      const story = setupTransit({
-        Fatigue: 0,
-        EngineCondition: 70,
-      });
-      pickChoice(story, "diagnostics and tune");
-      expect(story.variablesState["EngineCondition"]).toBe(85);
-    });
-
     it("backlog maintenance gives +3 condition at fatigue 0", () => {
       const story = setupTransit({
         Fatigue: 0,
         ShipCondition: 80,
-        EngineCondition: 80,
       });
       const condBefore = story.variablesState["ShipCondition"];
-      const engBefore = story.variablesState["EngineCondition"];
       // Maintenance tasks appear directly; pick the first one (index 0)
       story.ChooseChoiceIndex(0);
       story.ContinueMaximally();
       const condAfter = story.variablesState["ShipCondition"];
-      const engAfter = story.variablesState["EngineCondition"];
-      // One of the two conditions should have increased by 3
-      expect(condAfter - condBefore + engAfter - engBefore).toBe(3);
+      // Ship condition should have increased by 3 (non-module task)
+      expect(condAfter - condBefore).toBe(3);
     });
   });
 
@@ -652,33 +627,6 @@ describe("Fatigue-based task failure", () => {
       }
       expect(successes).toBeGreaterThan(0);
       expect(successes).toBeLessThan(iterations);
-    });
-
-    it("engine maintenance sometimes gives degraded result at fatigue 90", () => {
-      const story = setupTransit({
-        Fatigue: 90,
-        EngineCondition: 60,
-      });
-
-      let fullBoosts = 0;
-      let degradedBoosts = 0;
-      for (let i = 0; i < 50; i++) {
-        story.variablesState["Fatigue"] = 90;
-        story.variablesState["EngineCondition"] = 60;
-        story.variablesState["AP"] = 6;
-        story.variablesState["ShipClock"] = 5;
-        story.variablesState["EventChance"] = 0;
-        story.variablesState["EventCooldownDay"] = -1;
-        story.ChoosePathString("transit.ship_options");
-        drainText(story);
-        pickChoice(story, "diagnostics and tune");
-        const cond = story.variablesState["EngineCondition"];
-        if (cond === 75) fullBoosts++;
-        else if (cond === 68) degradedBoosts++;
-        if (fullBoosts > 0 && degradedBoosts > 0) break;
-      }
-      expect(fullBoosts).toBeGreaterThan(0);
-      expect(degradedBoosts).toBeGreaterThan(0);
     });
 
     it("ship flip sometimes degrades at fatigue 90 (no longer deterministic)", () => {

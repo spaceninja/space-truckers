@@ -131,18 +131,6 @@
 
 /*
 
-    Returns the maximum engine condition for the player's current engine.
-    Refurbished engines are capped at 80%; new engines can reach 100%.
-
-*/
-=== function get_engine_max_condition()
-{ RefurbishedEngine:
-    ~ return 80
-}
-~ return 100
-
-/*
-
     Returns true if the given manufacturer's engines are sold at the current port.
     Kepler: Earth, Luna, Ceres
     Olympus: Mars, Ceres
