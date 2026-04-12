@@ -8,13 +8,17 @@
  *     → true when Fatigue >= 70
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { createStory } from "../helpers/story.js";
 
 let story;
 
-beforeEach(() => {
+beforeAll(() => {
   story = createStory();
+});
+
+beforeEach(() => {
+  story.ResetState();
 });
 
 describe("can_sleep", () => {

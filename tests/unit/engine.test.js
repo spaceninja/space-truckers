@@ -267,7 +267,7 @@ describe("EngineData", () => {
 
 describe("manufacturer_available_here", () => {
   let story;
-  beforeEach(() => { story = createStory(); });
+  beforeAll(() => { story = createStory(); });
 
   function availableAt(mfg, location) {
     story.variablesState["here"] = L(story, `AllLocations.${location}`);

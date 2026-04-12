@@ -7,14 +7,18 @@
  *   pick_passenger_task — weighted category selection
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { InkList } from "inkjs/full";
 import { createStory, L } from "../helpers/story.js";
 
 let story;
 
-beforeEach(() => {
+beforeAll(() => {
   story = createStory();
+});
+
+beforeEach(() => {
+  story.ResetState();
 });
 
 describe("PassengerTierPrice", () => {

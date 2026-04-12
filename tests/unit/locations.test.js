@@ -161,13 +161,10 @@ describe("get_trip_fuel_cost", () => {
 describe("get_fuel_penalty", () => {
   // Formula: FLOOR(base_cost × (100 - ShipCondition) / 2 / 100)
   // +5% fuel cost per 10% degradation below 100%
-  // Uses fresh story per test to avoid shared state issues with ShipCondition.
 
   function penalty(baseCost, condition) {
-    const s = createStory();
-    s.variablesState["ShipCargo"] = new InkList();
-    s.variablesState["ShipCondition"] = condition;
-    return s.EvaluateFunction("get_fuel_penalty", [baseCost]);
+    story.variablesState["ShipCondition"] = condition;
+    return story.EvaluateFunction("get_fuel_penalty", [baseCost]);
   }
 
   it("returns 0 at 100% condition", () => {
@@ -216,5 +213,29 @@ describe("get_fuel_price", () => {
   });
   it("Titan is outer system: 0.8", () => {
     expect(story.EvaluateFunction("get_fuel_price", [loc("Titan")])).toBeCloseTo(0.8);
+  });
+});
+
+// ── LocationData (spot-checks for Name stat) ──────────────────────────────────
+
+describe("LocationData Name", () => {
+  it("Earth displays as 'Earth'", () => {
+    expect(story.EvaluateFunction("LocationData", [loc("Earth"), L(story, "LocationStats.Name")])).toBe("Earth");
+  });
+
+  it("Luna displays as 'Moon Base'", () => {
+    expect(story.EvaluateFunction("LocationData", [loc("Luna"), L(story, "LocationStats.Name")])).toBe("Moon Base");
+  });
+
+  it("Ceres displays as 'Ceres Station'", () => {
+    expect(story.EvaluateFunction("LocationData", [loc("Ceres"), L(story, "LocationStats.Name")])).toBe("Ceres Station");
+  });
+
+  it("Ganymede displays as 'Ganymede Outpost'", () => {
+    expect(story.EvaluateFunction("LocationData", [loc("Ganymede"), L(story, "LocationStats.Name")])).toBe("Ganymede Outpost");
+  });
+
+  it("Titan displays as 'Titan Base'", () => {
+    expect(story.EvaluateFunction("LocationData", [loc("Titan"), L(story, "LocationStats.Name")])).toBe("Titan Base");
   });
 });

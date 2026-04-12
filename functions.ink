@@ -1,8 +1,10 @@
 /*
 
+	Core Ink standard library function — no unit tests needed.
+
 	Tests if the flow passes a particular gather on this turn.
 
-	Usage: 
+	Usage:
 
 	- (welcome)
 		"Welcome!"
@@ -18,6 +20,8 @@
 ~ return TURNS_SINCE(x) == 0
 
 /*
+
+	Core Ink standard library function — no unit tests needed.
 
 	Tests if the flow passes a particular gather "very recently" - that is, within the last 3 turns.
 
@@ -38,6 +42,8 @@
 
 /*
 
+	Core Ink standard library function — no unit tests needed.
+
 	Takes the bottom element from a list, and returns it, modifying the list.
 
 	Returns the empty list () if the source list is empty.
@@ -56,6 +62,8 @@
 
 /*
 
+	Core Ink standard library function — no unit tests needed.
+
 	Takes a random element from a list, and returns it, modifying the list.
 
 	Returns the empty list () if the source list is empty.
@@ -73,6 +81,8 @@
 ~ return el 
     
 /*
+
+	Core Ink standard library function — no unit tests needed.
 
 	Returns a randomised subset of items from a list, up to a given size.
 

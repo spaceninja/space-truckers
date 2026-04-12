@@ -10,101 +10,15 @@
  * phrasing changes.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
-import { InkList } from "inkjs/full";
-import { createStory, L, cargo, drainText } from "../helpers/story.js";
-
-function choiceTexts(story) {
-  return story.currentChoices.map((c) => c.text);
-}
-
-function hasChoice(story, text) {
-  return story.currentChoices.some((c) => c.text.includes(text));
-}
-
-function pickChoice(story, text) {
-  const idx = story.currentChoices.findIndex((c) => c.text.includes(text));
-  if (idx === -1)
-    throw new Error(
-      `Choice not found: "${text}"\nAvailable: ${choiceTexts(story).join(", ")}`
-    );
-  story.ChooseChoiceIndex(idx);
-  drainText(story);
-}
-
-/**
- * Pick a choice and return the output text (before draining to next choice point).
- */
-function pickChoiceGetText(story, text) {
-  const idx = story.currentChoices.findIndex((c) => c.text.includes(text));
-  if (idx === -1)
-    throw new Error(
-      `Choice not found: "${text}"\nAvailable: ${choiceTexts(story).join(", ")}`
-    );
-  story.ChooseChoiceIndex(idx);
-  let output = "";
-  while (story.canContinue) {
-    output += story.Continue();
-  }
-  return output;
-}
-
-/**
- * Set up a story in transit state and navigate to ship_options.
- * Returns the story at the first choice point.
- */
-function setupTransit(overrides = {}) {
-  const story = createStory();
-  // Initialize required list variables
-  story.variablesState["ShipCargo"] = new InkList();
-  // Populate maintenance backlog (transit() does this via generate_backlog(),
-  // but setupTransit jumps directly to ship_options)
-  story.variablesState["Backlog"] = cargo(
-    story,
-    "MaintTasks.FuelLine",
-    "MaintTasks.AirFilter",
-    "MaintTasks.FuelLine",
-    "MaintTasks.HullCheck"
-  );
-
-  const defaults = {
-    ShipClock: 5,
-    ShipDestination: L(story, "AllLocations.Mars"),
-    TripDuration: 10,
-    TripDay: 3,
-    FlipDone: true,
-    FlightMode: L(story, "FlightModes.Bal"),
-    PaperworkDone: 1,
-    PaperworkTotal: 1,
-    TripFuelCost: 100,
-    TripFuelPenalty: 0,
-    NavCheckDueDay: 99,
-    NavPenaltyPct: 0,
-    CargoCheckDueDay: 99,
-    CargoCheckPenaltyPct: 0,
-    AP: 6,
-    ActionPointsMax: 6,
-    Fatigue: 0,
-    ShipCondition: 100,
-    
-    ShipFuel: 200,
-    TaskCap: 7,
-    TasksCompletedToday: 0,
-    EventChance: 0,
-    EventCooldownDay: -1,
-    CargoDamagePct: 0,
-    DEBUG: false,
-  };
-
-  const vars = { ...defaults, ...overrides };
-  for (const [key, value] of Object.entries(vars)) {
-    story.variablesState[key] = value;
-  }
-
-  story.ChoosePathString("transit.ship_options");
-  drainText(story);
-  return story;
-}
+import { describe, it, expect } from "vitest";
+import { cargo, drainText } from "../helpers/story.js";
+import {
+  choiceTexts,
+  hasChoice,
+  pickChoice,
+  pickChoiceGetText,
+  setupTransit,
+} from "../helpers/integration.js";
 
 describe("Task priority system", () => {
   describe("P1: Urgent tasks always show", () => {
@@ -206,59 +120,31 @@ describe("Task priority system", () => {
 
   describe("P3: Routine tasks", () => {
     it("shows maintenance tasks directly when backlog has tasks", () => {
-      const story = setupTransit();
-      // Backlog is always populated; maintenance tasks appear directly
+      const story = setupTransit({}, { navigate: false });
+      story.variablesState["Backlog"] = cargo(
+        story,
+        "MaintTasks.FuelLine",
+        "MaintTasks.AirFilter",
+        "MaintTasks.HullCheck"
+      );
+      story.ChoosePathString("transit.ship_options");
+      drainText(story);
       const choices = choiceTexts(story);
       expect(choices.some((c) => c.includes("AP)"))).toBe(true);
     });
 
     it("shows stale maintenance tasks before fresh ones", () => {
-      const story = createStory();
-      story.variablesState["ShipCargo"] = new InkList();
-      // Set up one stale task and one fresh task
-      const staleTask = cargo(story, "MaintTasks.AirFilter");
-      const freshTask = cargo(story, "MaintTasks.FuelLine");
+      const story = setupTransit({}, { navigate: false });
       story.variablesState["Backlog"] = cargo(
         story,
         "MaintTasks.AirFilter",
         "MaintTasks.FuelLine"
       );
-      story.variablesState["StaleBacklog"] = staleTask;
-      const defaults = {
-        ShipClock: 5,
-        ShipDestination: L(story, "AllLocations.Mars"),
-        TripDuration: 10,
-        TripDay: 3,
-        FlipDone: true,
-        FlightMode: L(story, "FlightModes.Bal"),
-        PaperworkDone: 1,
-        PaperworkTotal: 1,
-        TripFuelCost: 100,
-        TripFuelPenalty: 0,
-        NavCheckDueDay: 99,
-        NavPenaltyPct: 0,
-        CargoCheckDueDay: 99,
-        CargoCheckPenaltyPct: 0,
-        AP: 6,
-        ActionPointsMax: 6,
-        Fatigue: 0,
-        ShipCondition: 100,
-        
-        ShipFuel: 200,
-        TaskCap: 7,
-        TasksCompletedToday: 0,
-        EventChance: 0,
-        EventCooldownDay: -1,
-        CargoDamagePct: 0,
-        DEBUG: false,
-      };
-      for (const [key, value] of Object.entries(defaults)) {
-        story.variablesState[key] = value;
-      }
+      story.variablesState["StaleBacklog"] = cargo(story, "MaintTasks.AirFilter");
       story.ChoosePathString("transit.ship_options");
       drainText(story);
       const choices = choiceTexts(story);
-      // The stale task (AirFilter) should appear before the fresh task (EngTune)
+      // The stale task (AirFilter) should appear before the fresh task (FuelLine)
       const airFilterIdx = choices.findIndex((c) => c.includes("overdue"));
       const engTuneIdx = choices.findIndex(
         (c) => c.includes("AP)") && !c.includes("overdue")
@@ -301,23 +187,9 @@ describe("Task priority system", () => {
   });
 
   describe("P5: Rest", () => {
-    // Rest only shows when no P1-P3 tasks are active. Since the backlog
-    // is always populated in setupTransit, clear it for Rest tests.
-    function setupRestTransit(overrides = {}) {
-      const story = setupTransit(overrides);
-      story.variablesState["Backlog"] = new InkList();
-      // Reset EventChance so the re-entry doesn't risk triggering a random event
-      story.variablesState["EventChance"] = 0;
-      // Re-enter ship_options after clearing backlog
-      story.ChoosePathString("transit.ship_options");
-      drainText(story);
-      return story;
-    }
-
     it("shows rest when no P1-P3 tasks are active", () => {
-      const story = setupRestTransit({
+      const story = setupTransit({
         FlipDone: true,
-        
         Fatigue: 0,
         PaperworkDone: 1,
         PaperworkTotal: 1,
@@ -328,21 +200,26 @@ describe("Task priority system", () => {
     });
 
     it("does not show rest when P3 tasks are active (backlog populated)", () => {
-      // Default setupTransit has backlog = P3 active
       const story = setupTransit({
         FlipDone: true,
-        
         Fatigue: 0,
         PaperworkDone: 1,
         PaperworkTotal: 1,
         TripDay: 4,
         ShipCondition: 100,
-      });
+      }, { navigate: false });
+      story.variablesState["Backlog"] = cargo(
+        story,
+        "MaintTasks.FuelLine",
+        "MaintTasks.AirFilter"
+      );
+      story.ChoosePathString("transit.ship_options");
+      drainText(story);
       expect(hasChoice(story, "Call it a day")).toBe(false);
     });
 
     it("does not show rest when P2 tasks are active", () => {
-      const story = setupRestTransit({
+      const story = setupTransit({
         FlipDone: true,
         TripDay: 6,
         NavCheckDueDay: 6, // nav check due = P2 active
@@ -355,11 +232,10 @@ describe("Task priority system", () => {
     });
 
     it("spends all remaining AP and advances the day", () => {
-      const story = setupRestTransit({
+      const story = setupTransit({
         AP: 4,
         ShipClock: 3,
         FlipDone: true,
-        
         Fatigue: 20,
         PaperworkDone: 1,
         PaperworkTotal: 1,
@@ -372,12 +248,11 @@ describe("Task priority system", () => {
     });
 
     it("does not accumulate fatigue when resting", () => {
-      const story = setupRestTransit({
+      const story = setupTransit({
         AP: 4,
         ShipClock: 3,
         Fatigue: 20,
         FlipDone: true,
-        
         PaperworkDone: 1,
         PaperworkTotal: 1,
         TripDay: 4,
@@ -408,39 +283,13 @@ describe("Task priority system", () => {
     it("offers different P2 tasks across runs with different seeds", () => {
       // P2 shuffles nav check, cargo inspect, and sleep tasks — with a small cap only
       // some fit, so the shuffle determines which appear.
-      const story = createStory();
-      story.variablesState["ShipCargo"] = new InkList();
-      story.variablesState["Backlog"] = new InkList(); // no P3 tasks
-      const baseVars = {
-        ShipClock: 5,
-        ShipDestination: L(story, "AllLocations.Mars"),
-        TripDuration: 10,
+      const story = setupTransit({
         TripDay: 6,
-        FlipDone: true,
-        FlightMode: L(story, "FlightModes.Bal"),
-        PaperworkDone: 1,
-        PaperworkTotal: 1,
-        TripFuelCost: 100,
-        TripFuelPenalty: 0,
         NavCheckDueDay: 6, // due — P2 eligible
-        NavPenaltyPct: 0,
         CargoCheckDueDay: 6, // due — P2 eligible
-        CargoCheckPenaltyPct: 0,
-        AP: 6,
-        ActionPointsMax: 6,
         Fatigue: 75, // P2 sleep eligible
-        ShipCondition: 100,
-        ShipFuel: 200,
         TaskCap: 2, // only 2 slots; 3 eligible P2 tasks compete
-        TasksCompletedToday: 0,
-        EventChance: 0,
-        EventCooldownDay: -1,
-        CargoDamagePct: 0,
-        DEBUG: false,
-      };
-      for (const [key, value] of Object.entries(baseVars)) {
-        story.variablesState[key] = value;
-      }
+      }, { navigate: false });
 
       const p2Seen = new Set();
       for (let seed = 0; seed < 20; seed++) {
@@ -467,58 +316,31 @@ describe("Task priority system", () => {
 
 describe("Fatigue-based task failure", () => {
   describe("Exhaustion text tiers", () => {
-    it("shows no exhaustion text when fatigue < 70", () => {
-      const story = createStory();
-      story.variablesState["ShipCargo"] = new InkList();
-      story.variablesState["Fatigue"] = 50;
-      story.variablesState["ShipClock"] = 5;
-      story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
-      story.variablesState["AP"] = 6;
+    function setupAndGetText(fatigue) {
+      const story = setupTransit({ Fatigue: fatigue }, { navigate: false });
       story.ChoosePathString("transit.ship_options");
       let text = "";
       while (story.canContinue) text += story.Continue();
+      return text;
+    }
+
+    it("shows no exhaustion text when fatigue < 70", () => {
+      const text = setupAndGetText(50);
       expect(text).not.toMatch(/running on fumes/i);
       expect(text).not.toMatch(/hands are shaking/i);
       expect(text).not.toMatch(/barely function/i);
     });
 
     it("shows tier 1 text at fatigue 70-79", () => {
-      const story = createStory();
-      story.variablesState["ShipCargo"] = new InkList();
-      story.variablesState["Fatigue"] = 75;
-      story.variablesState["ShipClock"] = 5;
-      story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
-      story.variablesState["AP"] = 6;
-      story.ChoosePathString("transit.ship_options");
-      let text = "";
-      while (story.canContinue) text += story.Continue();
-      expect(text).toMatch(/running on fumes/i);
+      expect(setupAndGetText(75)).toMatch(/running on fumes/i);
     });
 
     it("shows tier 2 text at fatigue 80-89", () => {
-      const story = createStory();
-      story.variablesState["ShipCargo"] = new InkList();
-      story.variablesState["Fatigue"] = 85;
-      story.variablesState["ShipClock"] = 5;
-      story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
-      story.variablesState["AP"] = 6;
-      story.ChoosePathString("transit.ship_options");
-      let text = "";
-      while (story.canContinue) text += story.Continue();
-      expect(text).toMatch(/hands are shaking/i);
+      expect(setupAndGetText(85)).toMatch(/hands are shaking/i);
     });
 
     it("shows tier 3 text at fatigue 90+", () => {
-      const story = createStory();
-      story.variablesState["ShipCargo"] = new InkList();
-      story.variablesState["Fatigue"] = 95;
-      story.variablesState["ShipClock"] = 5;
-      story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
-      story.variablesState["AP"] = 6;
-      story.ChoosePathString("transit.ship_options");
-      let text = "";
-      while (story.canContinue) text += story.Continue();
-      expect(text).toMatch(/barely function/i);
+      expect(setupAndGetText(95)).toMatch(/barely function/i);
     });
   });
 
@@ -559,7 +381,10 @@ describe("Fatigue-based task failure", () => {
       const story = setupTransit({
         Fatigue: 0,
         ShipCondition: 80,
-      });
+      }, { navigate: false });
+      story.variablesState["Backlog"] = cargo(story, "MaintTasks.FuelLine");
+      story.ChoosePathString("transit.ship_options");
+      drainText(story);
       const condBefore = story.variablesState["ShipCondition"];
       // Maintenance tasks appear directly; pick the first one (index 0)
       story.ChooseChoiceIndex(0);

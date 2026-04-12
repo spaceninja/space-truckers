@@ -13,64 +13,18 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { InkList } from "inkjs/full";
 import { createStory, L, cargo, drainText } from "../helpers/story.js";
-
-function choiceTexts(story) {
-  return story.currentChoices.map((c) => c.text);
-}
-
-function hasChoice(story, text) {
-  return story.currentChoices.some((c) => c.text.includes(text));
-}
-
-function pickChoice(story, text) {
-  const idx = story.currentChoices.findIndex((c) => c.text.includes(text));
-  if (idx === -1)
-    throw new Error(`Choice not found: "${text}"\nAvailable: ${choiceTexts(story).join(", ")}`);
-  story.ChooseChoiceIndex(idx);
-  drainText(story);
-}
+import {
+  hasChoice,
+  pickChoice,
+  setupTransit as _setupTransit,
+} from "../helpers/integration.js";
 
 /**
- * Set up a story in transit state at ship_options.
- * AP=1 so that spending 1 AP on any task triggers next_day.
+ * Local wrapper: AP=1 so spending 1 AP triggers next_day,
+ * and navigate: false (tests navigate manually after extra setup).
  */
 function setupTransit(overrides = {}) {
-  const s = createStory();
-  s.variablesState["ShipCargo"] = new InkList();
-
-  const defaults = {
-    ShipClock: 5,
-    ShipDestination: L(s, "AllLocations.Mars"),
-    TripDuration: 10,
-    TripDay: 3,
-    FlipDone: true,
-    FlightMode: L(s, "FlightModes.Bal"),
-    PaperworkDone: 1,
-    PaperworkTotal: 1,
-    TripFuelCost: 100,
-    TripFuelPenalty: 0,
-    NavCheckDueDay: 99,
-    NavPenaltyPct: 0,
-    CargoCheckDueDay: 99,
-    CargoCheckPenaltyPct: 0,
-    AP: 1, // 1 AP so next action triggers next_day
-    ActionPointsMax: 6,
-    Fatigue: 0,
-    ShipCondition: 100,
-    
-    ShipFuel: 200,
-    TaskCap: 7,
-    TasksCompletedToday: 0,
-    EventChance: 0,
-    EventCooldownDay: -1,
-    CargoDamagePct: 0,
-  };
-
-  const vars = { ...defaults, ...overrides };
-  for (const [key, value] of Object.entries(vars)) {
-    s.variablesState[key] = value;
-  }
-  return s;
+  return _setupTransit({ AP: 1, ...overrides }, { navigate: false });
 }
 
 describe("Cargo gating", () => {
