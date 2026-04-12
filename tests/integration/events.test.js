@@ -9,124 +9,14 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { InkList } from "inkjs/full";
-import { createStory, L, drainText } from "../helpers/story.js";
-
-function choiceTexts(story) {
-  return story.currentChoices.map((c) => c.text);
-}
-
-function hasChoice(story, text) {
-  return story.currentChoices.some((c) => c.text.includes(text));
-}
-
-function pickChoice(story, text) {
-  const idx = story.currentChoices.findIndex((c) => c.text.includes(text));
-  if (idx === -1)
-    throw new Error(
-      `Choice not found: "${text}"\nAvailable: ${choiceTexts(story).join(", ")}`
-    );
-  story.ChooseChoiceIndex(idx);
-  drainText(story);
-}
-
-function pickChoiceGetText(story, text) {
-  const idx = story.currentChoices.findIndex((c) => c.text.includes(text));
-  if (idx === -1)
-    throw new Error(
-      `Choice not found: "${text}"\nAvailable: ${choiceTexts(story).join(", ")}`
-    );
-  story.ChooseChoiceIndex(idx);
-  let output = "";
-  while (story.canContinue) output += story.Continue();
-  return output;
-}
-
-/**
- * Set up a transit story and navigate to ship_options with event variables set.
- */
-function setupTransit(overrides = {}) {
-  const story = createStory();
-  story.variablesState["ShipCargo"] = new InkList();
-
-  const defaults = {
-    ShipClock: 5,
-    ShipDestination: L(story, "AllLocations.Mars"),
-    TripDuration: 10,
-    TripDay: 3,
-    FlipDone: true,
-    FlightMode: L(story, "FlightModes.Bal"),
-    PaperworkDone: 1,
-    PaperworkTotal: 1,
-    TripFuelCost: 100,
-    TripFuelPenalty: 0,
-    NavCheckDueDay: 99,
-    NavPenaltyPct: 0,
-    CargoCheckDueDay: 99,
-    CargoCheckPenaltyPct: 0,
-    AP: 6,
-    ActionPointsMax: 6,
-    Fatigue: 0,
-    ShipCondition: 100,
-    
-    ShipFuel: 200,
-    TaskCap: 7,
-    TasksCompletedToday: 0,
-    EventChance: 0,
-    EventCooldownDay: -1,
-    CargoDamagePct: 0,
-  };
-
-  const vars = { ...defaults, ...overrides };
-  for (const [key, value] of Object.entries(vars)) {
-    story.variablesState[key] = value;
-  }
-
-  story.ChoosePathString("transit.ship_options");
-  drainText(story);
-  return story;
-}
-
-/**
- * Navigate directly to an event knot and drain intro text.
- */
-function setupEvent(eventKnot, overrides = {}) {
-  const story = createStory();
-  story.variablesState["ShipCargo"] = new InkList();
-
-  const defaults = {
-    ShipClock: 5,
-    ShipDestination: L(story, "AllLocations.Mars"),
-    TripDuration: 10,
-    TripDay: 3,
-    FlipDone: true,
-    FlightMode: L(story, "FlightModes.Bal"),
-    PaperworkDone: 1,
-    PaperworkTotal: 1,
-    TripFuelCost: 100,
-    TripFuelPenalty: 0,
-    AP: 6,
-    ActionPointsMax: 6,
-    Fatigue: 0,
-    ShipCondition: 100,
-    
-    ShipFuel: 200,
-    TaskCap: 7,
-    TasksCompletedToday: 0,
-    EventChance: 0,
-    EventCooldownDay: -1,
-    CargoDamagePct: 0,
-  };
-
-  const vars = { ...defaults, ...overrides };
-  for (const [key, value] of Object.entries(vars)) {
-    story.variablesState[key] = value;
-  }
-
-  story.ChoosePathString(eventKnot);
-  drainText(story);
-  return story;
-}
+import { L, drainText } from "../helpers/story.js";
+import {
+  hasChoice,
+  pickChoice,
+  pickChoiceGetText,
+  setupTransit,
+  setupEvent,
+} from "../helpers/integration.js";
 
 // ---------------------------------------------------------------------------
 // Event triggering
@@ -144,34 +34,12 @@ describe("Event triggering", () => {
     // Fire all general events by calling random_event repeatedly.
     // After all have fired, the pool should be empty and the
     // dispatcher should fall through to ship_options.
-    const story = createStory();
-    story.variablesState["ShipCargo"] = new InkList();
+    const story = setupTransit({}, { navigate: false });
     // Give non-passenger cargo so CargoShift is eligible
     story.variablesState["ShipCargo"] = L(story, "AllCargo.001_Plums");
     // Remove passenger events (no passenger cargo — simulates what transit() does)
     const passengerEvents = story.variablesState["PassengerEvents"];
     story.variablesState["Events"] = story.variablesState["Events"].Without(passengerEvents);
-    story.variablesState["ShipClock"] = 5;
-    story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
-    story.variablesState["TripDuration"] = 10;
-    story.variablesState["TripDay"] = 3;
-    story.variablesState["FlipDone"] = true;
-    story.variablesState["FlightMode"] = L(story, "FlightModes.Bal");
-    story.variablesState["PaperworkDone"] = 1;
-    story.variablesState["PaperworkTotal"] = 1;
-    story.variablesState["TripFuelCost"] = 100;
-    story.variablesState["TripFuelPenalty"] = 0;
-    story.variablesState["AP"] = 6;
-    story.variablesState["ActionPointsMax"] = 6;
-    story.variablesState["Fatigue"] = 0;
-    story.variablesState["ShipCondition"] = 100;
-    
-    story.variablesState["ShipFuel"] = 200;
-    story.variablesState["TaskCap"] = 7;
-    story.variablesState["TasksCompletedToday"] = 0;
-    story.variablesState["EventChance"] = 0;
-    story.variablesState["EventCooldownDay"] = -1;
-    story.variablesState["CargoDamagePct"] = 0;
 
     // Fire all 6 non-passenger events
     for (let i = 0; i < 6; i++) {
@@ -194,37 +62,11 @@ describe("Event triggering", () => {
     // The event will fire and divert before the task list.
     // After the event resolves it returns to ship_options or pass_time,
     // so we just verify we didn't get a clean normal task list immediately.
-    // We set AP=1 so the event resolution doesn't loop forever.
-    const story = createStory();
-    story.variablesState["ShipCargo"] = new InkList();
-    story.variablesState["ShipClock"] = 5;
-    story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
-    story.variablesState["TripDuration"] = 10;
-    story.variablesState["TripDay"] = 3;
-    story.variablesState["FlipDone"] = true;
-    story.variablesState["FlightMode"] = L(story, "FlightModes.Bal");
-    story.variablesState["PaperworkDone"] = 1;
-    story.variablesState["PaperworkTotal"] = 1;
-    story.variablesState["TripFuelCost"] = 100;
-    story.variablesState["TripFuelPenalty"] = 0;
-    story.variablesState["AP"] = 6;
-    story.variablesState["ActionPointsMax"] = 6;
-    story.variablesState["Fatigue"] = 0;
-    story.variablesState["ShipCondition"] = 100;
-    
-    story.variablesState["ShipFuel"] = 200;
-    story.variablesState["TaskCap"] = 7;
-    story.variablesState["TasksCompletedToday"] = 0;
-    story.variablesState["EventChance"] = 100;
-    story.variablesState["EventCooldownDay"] = -1;
-    story.variablesState["CargoDamagePct"] = 0;
-
+    const story = setupTransit({ EventChance: 100 }, { navigate: false });
     story.ChoosePathString("transit.ship_options");
-    // Drain any output text
     let text = "";
     while (story.canContinue) text += story.Continue();
     // Should have fired an event — text should contain event narrative
-    // (not just the normal status line)
     expect(text).not.toBe("");
     // EventChance should have been reset to 0
     expect(story.variablesState["EventChance"]).toBe(0);
@@ -459,30 +301,7 @@ describe("Event: Cargo Shift", () => {
     // Cargo shift requires has_cargo. With empty ShipCargo, it should never
     // be selected. We run the dispatcher multiple times, resetting the
     // Events pool each iteration (events are removed after firing).
-    const story = createStory();
-    story.variablesState["ShipCargo"] = new InkList(); // empty
-    story.variablesState["ShipClock"] = 5;
-    story.variablesState["ShipDestination"] = L(story, "AllLocations.Mars");
-    story.variablesState["TripDay"] = 3;
-    story.variablesState["TripDuration"] = 10;
-    story.variablesState["FlipDone"] = true;
-    story.variablesState["FlightMode"] = L(story, "FlightModes.Bal");
-    story.variablesState["PaperworkDone"] = 1;
-    story.variablesState["PaperworkTotal"] = 1;
-    story.variablesState["TripFuelCost"] = 100;
-    story.variablesState["TripFuelPenalty"] = 0;
-    story.variablesState["AP"] = 6;
-    story.variablesState["ActionPointsMax"] = 6;
-    story.variablesState["Fatigue"] = 0;
-    story.variablesState["ShipCondition"] = 100;
-    
-    story.variablesState["ShipFuel"] = 200;
-    story.variablesState["TaskCap"] = 7;
-    story.variablesState["TasksCompletedToday"] = 0;
-    story.variablesState["EventChance"] = 0;
-    story.variablesState["EventCooldownDay"] = -1;
-    story.variablesState["CargoDamagePct"] = 0;
-
+    const story = setupTransit({}, { navigate: false });
     // Save initial Events list (all active) for resetting between iterations
     const allEvents = story.variablesState["Events"];
 
@@ -582,18 +401,3 @@ describe("Event: Shortcut", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Cargo damage at delivery
-// ---------------------------------------------------------------------------
-
-describe("Cargo damage at delivery", () => {
-  it("CargoDamagePct reduces delivery pay", () => {
-    // This tests the port.ink deliver_cargo stitch logic via integration.
-    // We verify CargoDamagePct > 0 is tracked correctly through transit.
-    // The actual delivery pay reduction is tested in port integration tests.
-    const story = setupTransit({ CargoDamagePct: 0 });
-    // Simulate cargo damage accumulating
-    story.variablesState["CargoDamagePct"] = 15;
-    expect(story.variablesState["CargoDamagePct"]).toBe(15);
-  });
-});

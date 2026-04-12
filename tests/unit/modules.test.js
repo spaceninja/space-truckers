@@ -12,14 +12,18 @@
  *   DroneBayTierName / DroneBayTierPrice
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { InkList } from "inkjs/full";
 import { createStory, L } from "../helpers/story.js";
 
 let story;
 
-beforeEach(() => {
+beforeAll(() => {
   story = createStory();
+});
+
+beforeEach(() => {
+  story.ResetState();
 });
 
 describe("get_module_condition / set_module_condition", () => {
@@ -202,5 +206,21 @@ describe("DroneBayTierPrice", () => {
     const t1 = story.EvaluateFunction("DroneBayTierPrice", [1]);
     const t2 = story.EvaluateFunction("DroneBayTierPrice", [2]);
     expect(t2 - t1).toBe(400);
+  });
+});
+
+describe("has_damaged_modules", () => {
+  it("returns false when no modules are installed", () => {
+    expect(story.EvaluateFunction("has_damaged_modules")).toBe(false);
+  });
+
+  it("returns false when all installed modules are at max condition", () => {
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.DroneBay"), 100]);
+    expect(story.EvaluateFunction("has_damaged_modules")).toBe(false);
+  });
+
+  it("returns true when an installed module is below max condition", () => {
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.DroneBay"), 80]);
+    expect(story.EvaluateFunction("has_damaged_modules")).toBe(true);
   });
 });

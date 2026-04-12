@@ -483,3 +483,78 @@ describe("can_turbo_to", () => {
     expect(result).toBe(false);
   });
 });
+
+// ── has_passenger_cargo ───────────────────────────────────────────────────────
+
+describe("has_passenger_cargo", () => {
+  it("returns true for cargo with Passengers flag", () => {
+    // 304_Colonists: Ceres→Mars, Passengers=1
+    const items = L(story, "AllCargo.304_Colonists");
+    expect(story.EvaluateFunction("has_passenger_cargo", [items])).toBe(true);
+  });
+
+  it("returns false for non-passenger cargo", () => {
+    const items = L(story, "AllCargo.003_Water");
+    expect(story.EvaluateFunction("has_passenger_cargo", [items])).toBe(false);
+  });
+
+  it("returns true when passenger cargo is mixed with regular cargo", () => {
+    const items = cargo(story, "AllCargo.003_Water", "AllCargo.304_Colonists");
+    expect(story.EvaluateFunction("has_passenger_cargo", [items])).toBe(true);
+  });
+
+  it("returns false for empty list", () => {
+    expect(story.EvaluateFunction("has_passenger_cargo", [new InkList()])).toBe(false);
+  });
+});
+
+// ── cargo_is_available ────────────────────────────────────────────────────────
+
+describe("cargo_is_available", () => {
+  it("returns true for cargo originating at the given port", () => {
+    // 003_Water: Earth→Mars — need here=Earth and enough fuel capacity
+    story.variablesState["here"] = L(story, "AllLocations.Earth");
+    story.variablesState["ShipFuelCapacity"] = 2000;
+    const result = story.EvaluateFunction("cargo_is_available", [
+      L(story, "AllCargo.003_Water"),
+      L(story, "AllLocations.Earth"),
+    ]);
+    expect(result).toBe(true);
+  });
+
+  it("returns false for cargo originating at a different port", () => {
+    // 003_Water: Earth→Mars — not available at Luna
+    story.variablesState["here"] = L(story, "AllLocations.Luna");
+    story.variablesState["ShipFuelCapacity"] = 2000;
+    const result = story.EvaluateFunction("cargo_is_available", [
+      L(story, "AllCargo.003_Water"),
+      L(story, "AllLocations.Luna"),
+    ]);
+    expect(result).toBe(false);
+  });
+
+  it("returns false for passenger cargo without the Passenger Module", () => {
+    // 304_Colonists: Ceres→Mars, Passengers=1
+    // Reset module state in case prior tests installed the module
+    story.variablesState["InstalledModules"] = new InkList();
+    story.variablesState["PassengerModuleTier"] = 0;
+    story.variablesState["here"] = L(story, "AllLocations.Ceres");
+    story.variablesState["ShipFuelCapacity"] = 2000;
+    const result = story.EvaluateFunction("cargo_is_available", [
+      L(story, "AllCargo.304_Colonists"),
+      L(story, "AllLocations.Ceres"),
+    ]);
+    expect(result).toBe(false);
+  });
+
+  it("returns true for passenger cargo with the Passenger Module installed", () => {
+    story.variablesState["here"] = L(story, "AllLocations.Ceres");
+    story.variablesState["ShipFuelCapacity"] = 2000;
+    story.EvaluateFunction("install_module", [L(story, "ShipModules.PassengerModule"), 100]);
+    const result = story.EvaluateFunction("cargo_is_available", [
+      L(story, "AllCargo.304_Colonists"),
+      L(story, "AllLocations.Ceres"),
+    ]);
+    expect(result).toBe(true);
+  });
+});
