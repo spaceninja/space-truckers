@@ -1,106 +1,77 @@
 /**
  * Shared helpers for integration tests.
  *
- * Provides setupTransit (transit state factory), setupEvent (event knot
- * factory), and choice-interaction utilities used across all integration
- * test files.
+ * Provides story-setup factories (`setupStory`, `setupStoryAt`) and
+ * choice-interaction utilities used across all integration test files.
  */
 
 import { InkList } from "inkjs/full";
-import { createStory, L, drainText } from "./story.js";
+import { createStory, continueToNextChoice } from "./story.js";
 
 /**
- * Return all current choice texts as an array.
+ * Return the visible label text of each currently available choice as an
+ * array of strings. Used to list options in error messages when a lookup
+ * by choice text fails.
  */
-export function choiceTexts(story) {
+export function getChoiceLabels(story) {
   return story.currentChoices.map((c) => c.text);
 }
 
 /**
- * Return true if a choice containing `text` is available.
+ * Return true if any currently available choice's label contains `text` as a
+ * substring. Matching semantics match `pickChoice`, so a positive result
+ * guarantees a subsequent `pickChoice(story, text)` will succeed.
+ *
+ * Use this to assert presence/absence of a choice without actually selecting
+ * it — e.g. verifying that a gating condition hides or reveals an option.
  */
 export function hasChoice(story, text) {
   return story.currentChoices.some((c) => c.text.includes(text));
 }
 
 /**
- * Pick the choice containing `text`, then drain to the next choice point.
- * Throws if no matching choice is found.
+ * Pick the first choice whose label contains `text`, then advance to the next
+ * choice point. Throws if no matching choice is found, listing the available
+ * labels for debugging.
+ *
+ * Returns the narrative text emitted between the picked choice and the next
+ * choice point. Capture the return value when asserting on that text;
+ * otherwise ignore it.
  */
 export function pickChoice(story, text) {
   const idx = story.currentChoices.findIndex((c) => c.text.includes(text));
   if (idx === -1)
     throw new Error(
-      `Choice not found: "${text}"\nAvailable: ${choiceTexts(story).join(", ")}`
+      `Choice not found: "${text}"\nAvailable: ${getChoiceLabels(story).join(", ")}`,
     );
   story.ChooseChoiceIndex(idx);
-  drainText(story);
+  return continueToNextChoice(story);
 }
 
 /**
- * Pick a choice and return the output text (before draining to next choice point).
- */
-export function pickChoiceGetText(story, text) {
-  const idx = story.currentChoices.findIndex((c) => c.text.includes(text));
-  if (idx === -1)
-    throw new Error(
-      `Choice not found: "${text}"\nAvailable: ${choiceTexts(story).join(", ")}`
-    );
-  story.ChooseChoiceIndex(idx);
-  let output = "";
-  while (story.canContinue) {
-    output += story.Continue();
-  }
-  return output;
-}
-
-/**
- * Default transit state values shared across integration tests.
+ * Default story state values shared across integration tests.
  * Individual tests override specific keys via the overrides parameter.
  */
-const TRANSIT_DEFAULTS = {
-  ShipClock: 5,
-  TripDuration: 10,
-  TripDay: 3,
-  FlipDone: true,
-  PaperworkDone: 1,
-  PaperworkTotal: 1,
-  TripFuelCost: 100,
-  TripFuelPenalty: 0,
-  NavCheckDueDay: 99,
-  NavPenaltyPct: 0,
-  CargoCheckDueDay: 99,
-  CargoCheckPenaltyPct: 0,
-  AP: 6,
-  ActionPointsMax: 6,
-  Fatigue: 0,
-  ShipCondition: 100,
-  ShipFuel: 200,
-  TaskCap: 7,
-  TasksCompletedToday: 0,
-  EventChance: 0,
-  EventCooldownDay: -1,
-  CargoDamagePct: 0,
+const storyStateDefaults = {
+  // example: true,
 };
 
 /**
- * Create a story in transit state and optionally navigate to ship_options.
+ * Create a fresh story and seed its `variablesState` so integration tests
+ * start from a known baseline instead of whatever the Ink source happens to
+ * initialize variables to. Any values passed in `overrides` take precedence
+ * over the shared `storyStateDefaults`, letting each test tweak only the
+ * variables relevant to its scenario.
  *
- * Options:
- *   navigate (default true) — call ChoosePathString("transit.ship_options")
- *     and drain text. Set to false when you need to set additional state
- *     before navigating.
- *
- * Returns the story instance.
+ * `ShipCargo` is explicitly reset to an empty `InkList` so tests start with
+ * an empty cargo hold regardless of the Ink source's initial value.
  */
-export function setupTransit(overrides = {}, { navigate = true } = {}) {
+export function setupStory(overrides = {}) {
   const story = createStory();
   story.variablesState["ShipCargo"] = new InkList();
 
   const vars = {
-    ...TRANSIT_DEFAULTS,
-    ShipDestination: L(story, "AllLocations.Mars"),
-    FlightMode: L(story, "FlightModes.Bal"),
+    ...storyStateDefaults,
     ...overrides,
   };
 
@@ -108,21 +79,21 @@ export function setupTransit(overrides = {}, { navigate = true } = {}) {
     story.variablesState[key] = value;
   }
 
-  if (navigate) {
-    story.ChoosePathString("transit.ship_options");
-    drainText(story);
-  }
-
   return story;
 }
 
 /**
- * Navigate directly to an event knot and drain intro text.
- * Uses the same transit defaults but jumps to a specific knot.
+ * Like `setupStory`, but jumps the story's execution pointer directly to the
+ * given knot (or stitch) path before returning — bypassing whatever choices
+ * would normally lead there. Intro text up to the next choice point is
+ * drained so the returned story is positioned at the first interaction.
+ *
+ * Use when a test needs to assert on gameplay state inside a specific knot
+ * without replaying the opening sequence.
  */
-export function setupEvent(eventKnot, overrides = {}) {
-  const story = setupTransit(overrides, { navigate: false });
-  story.ChoosePathString(eventKnot);
-  drainText(story);
+export function setupStoryAt(knot, overrides = {}) {
+  const story = setupStory(overrides);
+  story.ChoosePathString(knot);
+  continueToNextChoice(story);
   return story;
 }

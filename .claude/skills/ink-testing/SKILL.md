@@ -33,8 +33,8 @@ When encountering existing inline logic that is complex enough to warrant testin
 Whenever a new Ink function is added or an existing one is changed, add a corresponding unit test in `tests/unit/`. Use `story.EvaluateFunction()` to call the function directly:
 
 ```js
-// Pass list values using the L() helper
-const result = story.EvaluateFunction('get_cargo_pay', [L(story, 'AllCargo.003_Water'), 14]);
+// Pass list values using the createListItem() helper
+const result = story.EvaluateFunction('get_cargo_pay', [createListItem(story, 'AllCargo.003_Water'), 14]);
 expect(result).toBe(1680);
 ```
 
@@ -59,9 +59,9 @@ Integration tests drive the story via `pickChoice()` and assert on `variablesSta
 
 All tests share the factory in `tests/helpers/story.js`:
 - `createStory()` — compiles `.ink` source fresh; call once per test or `beforeAll`
-- `L(story, 'ListName.ItemName')` — constructs an `InkList` value for passing to `EvaluateFunction`
-- `cargo(story, ...names)` — builds a multi-item hold by unioning list values
-- `drainText(story)` — advances past output text to the next choice point
+- `createListItem(story, 'ListName.ItemName')` — constructs the `InkList` value representing a single LIST item (needed to cross the JS↔Ink boundary)
+- `createListUnion(story, ...names)` — constructs a multi-item `InkList` by unioning list-item values together
+- `continueToNextChoice(story)` — advances the story until it blocks on a choice point or ends; returns the concatenated output text (usually discarded)
 
 ## Performance
 
