@@ -1,8 +1,7 @@
 /*
 
-	Core Ink standard library function — no unit tests needed.
-
 	Tests if the flow passes a particular gather on this turn.
+	Core Ink standard library function — no unit tests needed.
 
 	Usage:
 
@@ -21,9 +20,8 @@
 
 /*
 
-	Core Ink standard library function — no unit tests needed.
-
 	Tests if the flow passes a particular gather "very recently" - that is, within the last 3 turns.
+	Core Ink standard library function — no unit tests needed.
 
 	Usage: 
 
@@ -42,9 +40,8 @@
 
 /*
 
-	Core Ink standard library function — no unit tests needed.
-
 	Takes the bottom element from a list, and returns it, modifying the list.
+	Core Ink standard library function — no unit tests needed.
 
 	Returns the empty list () if the source list is empty.
 
@@ -62,9 +59,8 @@
 
 /*
 
-	Core Ink standard library function — no unit tests needed.
-
 	Takes a random element from a list, and returns it, modifying the list.
+	Core Ink standard library function — no unit tests needed.
 
 	Returns the empty list () if the source list is empty.
 
@@ -82,9 +78,8 @@
     
 /*
 
-	Core Ink standard library function — no unit tests needed.
-
 	Returns a randomised subset of items from a list, up to a given size.
+	Core Ink standard library function — no unit tests needed.
 
 	Returns the empty list () if the source list is empty, and the complete list if it runs out of items to pick.
 
@@ -138,32 +133,3 @@
     }
 }
 ~ return ()
-
-/*
-
-    Returns true if the given manufacturer's engines are sold at the current port.
-    Kepler: Earth, Luna, Ceres
-    Olympus: Mars, Ceres
-    Huygens: Ganymede, Titan, Ceres
-
-*/
-=== function manufacturer_available_here(mfg)
-{ mfg:
-- Kepler:  ~ return here == Earth or here == Luna or here == Ceres
-- Olympus: ~ return here == Mars or here == Ceres
-- Huygens: ~ return here == Ganymede or here == Titan or here == Ceres
-}
-~ return false
-
-/*
-
-    Returns the full display name of an engine manufacturer.
-
-*/
-=== function manufacturer_name(mfg)
-{ mfg:
-- Kepler:  ~ return "Kepler Drive Systems"
-- Olympus: ~ return "Olympus Propulsion"
-- Huygens: ~ return "Huygens Deepspace"
-}
-~ return "Unknown"
