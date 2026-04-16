@@ -1,12 +1,12 @@
 # TITLE: Space Truckers
 # AUTHOR: Scott Vandehey
 
-INCLUDE port.ink
-INCLUDE ship.ink
-INCLUDE locations.ink
-INCLUDE functions.ink
+INCLUDE src/port.ink
+INCLUDE src/ship.ink
+INCLUDE src/locations.ink
+INCLUDE src/functions/core.ink
+INCLUDE src/functions/storylets.ink
 
 VAR DEBUG = true
-VAR here = Earth
 
 -> arrive_in_port(here)

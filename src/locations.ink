@@ -1,6 +1,8 @@
 LIST AllLocations = None, Transit, Earth, Luna
 LIST LocationStats = Name
 
+VAR here = Earth
+
 /*
 
     Location Database

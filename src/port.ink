@@ -17,7 +17,8 @@ Welcome to {LocationData(port, Name)}!
 - (port_opts)
 + { here == Luna } [Fly to {LocationData(Earth, Name)}] -> transit(Earth)
 + { here == Earth } [Fly to {LocationData(Luna, Name)}] -> transit(Luna)
-+ { DEBUG } [\[DEBUG\] Cheats] -> debug_cheats
++ { DEBUG } [Cheats] -> debug_cheats
++ { DEBUG } [Storylets Demo] -> storylets
 - -> port_opts
 
 /*
