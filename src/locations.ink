@@ -1,7 +1,7 @@
-LIST AllLocations = None, Transit, Earth, Luna
+LIST AllLocations = None, Transit, Luna, Mars
 LIST LocationStats = Name
 
-VAR here = Earth
+VAR here = None
 
 /*
 
@@ -11,8 +11,8 @@ VAR here = Earth
 */
 === function LocationData(id, data)
 { id:
-- Earth:
-    ~ return location_db(data, "Earth")
+- Mars:
+    ~ return location_db(data, "Mars")
 - Luna:
     ~ return location_db(data, "Moon Base")
 - else:

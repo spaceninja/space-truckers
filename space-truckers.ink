@@ -9,4 +9,4 @@ INCLUDE src/functions/storylets.ink
 
 VAR DEBUG = true
 
--> arrive_in_port(here)
+-> port(Luna)
