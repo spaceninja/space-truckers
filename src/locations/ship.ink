@@ -64,7 +64,9 @@ He bumbles off towards the {BobbyLocation}, chirping cheerfully.
 
 === scene_demo
 This is an example of a scene that might play out after you choose how to spend your trip.
-+ [End the scene] -> port(ShipDestination)
+~ temp exit_to = LocationData(ShipDestination, Welcome)
+~ temp exit_name = LocationData(ShipDestination, Name)
++ [Arrive at {exit_name}] -> exit_to
 
 === function bobby_in(location)
 ~ return BobbyLocation == location and not came_from(-> talk_to_bobby)

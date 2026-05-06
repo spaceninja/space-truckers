@@ -1,5 +1,5 @@
 LIST AllLocations = None, Transit, Luna, Mars
-LIST LocationStats = Name
+LIST LocationStats = Name, Welcome
 
 VAR here = None
 
@@ -12,9 +12,9 @@ VAR here = None
 === function LocationData(id, data)
 { id:
 - Mars:
-    ~ return location_db(data, "Mars")
+    ~ return location_db(data, "Mars", -> welcome_to_mars)
 - Luna:
-    ~ return location_db(data, "Moon Base")
+    ~ return location_db(data, "Moon Base", -> welcome_to_luna)
 - else:
     [ Error: no location data associated with {id}. ]
 }
@@ -25,7 +25,8 @@ VAR here = None
     Returns the requested stat for a single location entry.
 
 */
-=== function location_db(id, nameData)
+=== function location_db(id, nameData, welcomeData)
 { id:
 - Name:     ~ return nameData
+- Welcome:  ~ return welcomeData
 }
