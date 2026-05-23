@@ -21,10 +21,13 @@ const DIST_STORY = path.join(DIST_DIR, "story.json");
 // Step 1: Compile Ink → JSON
 console.log("Compiling space-truckers.ink...");
 try {
-  execSync(`node "${path.join(ROOT, "node_modules/.bin/inkjs-compiler")}" "${INK_ENTRY}"`, {
-    cwd: ROOT,
-    stdio: "inherit",
-  });
+  execSync(
+    `node "${path.join(ROOT, "node_modules/.bin/inkjs-compiler")}" "${INK_ENTRY}"`,
+    {
+      cwd: ROOT,
+      stdio: "inherit",
+    },
+  );
 } catch (err) {
   console.error("Ink compilation failed.");
   process.exit(1);
@@ -60,11 +63,5 @@ function copyDir(src, dest) {
 
 console.log("Copying template files into dist/...");
 copyDir(TEMPLATE_DIR, DIST_DIR);
-
-// Step 5: Copy simulator.html into dist/
-const SIMULATOR_SRC = path.join(ROOT, "simulator.html");
-const SIMULATOR_DEST = path.join(DIST_DIR, "simulator.html");
-fs.copyFileSync(SIMULATOR_SRC, SIMULATOR_DEST);
-console.log("Copied simulator.html");
 
 console.log("Build complete → dist/");
